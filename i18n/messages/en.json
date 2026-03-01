@@ -74,10 +74,18 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "pos": "POS",
+    "pos": "Point of Sale",
     "products": "Products",
     "inventory": "Inventory",
     "reports": "Reports",
     "settings": "Settings"
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "subtitle": "404 Error",
+    "description": "The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.",
+    "backHome": "Back to Home",
+    "goToDashboard": "Go to Dashboard",
+    "contact": "If you think this is an error, please contact the system administrator"
   }
 }

@@ -5,6 +5,7 @@ import { ShoppingCart } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { loginFeatures, brandingConfig } from './helper'
 import { LoginForm } from './login-form'
+import { theme } from '@/lib/theme'
 
 export default function LoginPageContent() {
   const t = useTranslations('auth.login')
@@ -12,18 +13,18 @@ export default function LoginPageContent() {
   
   
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-purple-600 p-12 text-white relative overflow-hidden">
+    <div className={`flex min-h-screen ${theme.gradients.background}`}>
+      <div className={`hidden lg:flex lg:w-1/2 ${theme.gradients.primaryBr} p-12 text-white relative overflow-hidden`}>
         <div className="absolute inset-0 bg-grid-white/10"></div>
         <div className="relative z-10 flex flex-col justify-between w-full">
           <div>
             <div className="flex items-center gap-3 mb-8">
-              <div className={`${brandingConfig.containerSize.large} bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center`}>
+              <div className={`${brandingConfig.containerSize.large} bg-white/20 backdrop-blur-sm ${theme.rounded.md} flex items-center justify-center ${theme.shadows.lg}`}>
                 <ShoppingCart className={brandingConfig.iconSize.large} />
               </div>
               <h1 className="text-3xl font-bold">{t('title')}</h1>
             </div>
-            <p className="text-xl text-blue-100 mb-12">
+            <p className="text-xl text-blue-100 mb-12 leading-relaxed">
               {t('tagline')}<br />
               {t('taglineEn')}
             </p>
@@ -33,13 +34,13 @@ export default function LoginPageContent() {
             {loginFeatures.map((feature, index) => {
               const Icon = feature.icon
               return (
-                <div key={index} className="flex items-start gap-4">
-                  <div className={`${brandingConfig.containerSize.medium} bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center shrink-0`}>
+                <div key={index} className="flex items-start gap-4 group">
+                  <div className={`${brandingConfig.containerSize.medium} bg-white/20 backdrop-blur-sm ${theme.rounded.sm} flex items-center justify-center shrink-0 ${theme.shadows.md} group-hover:bg-white/30 transition-all`}>
                     <Icon className={brandingConfig.iconSize.medium} />
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">{t(feature.titleKey)}</h3>
-                    <p className="text-sm text-blue-100">{t(feature.descriptionKey)}</p>
+                    <p className="text-sm text-blue-100 leading-relaxed">{t(feature.descriptionKey)}</p>
                   </div>
                 </div>
               )
@@ -48,17 +49,17 @@ export default function LoginPageContent() {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 bg-white/50 backdrop-blur-sm">
         <div className="w-full max-w-md">
           <div className="absolute top-8 right-8">
             <LanguageSwitcher />
           </div>
           
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <div className={`bg-white ${theme.rounded.xl} ${theme.shadows['2xl']} p-8 ${theme.borders.medium}`}>
             <LoginForm />
           </div>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm text-gray-600 mt-6 font-medium">
             {t('footer')}
           </p>
         </div>

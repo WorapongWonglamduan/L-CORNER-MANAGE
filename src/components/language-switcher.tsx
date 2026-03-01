@@ -2,6 +2,7 @@
 
 import { useParams, usePathname, useRouter } from 'next/navigation'
 import { Globe } from 'lucide-react'
+import { theme } from '@/lib/theme'
 
 export function LanguageSwitcher() {
   const params = useParams()
@@ -16,13 +17,13 @@ export function LanguageSwitcher() {
   }
 
   return (
-    <div className="inline-flex items-center gap-2 bg-white rounded-xl shadow-md border border-gray-200 p-1">
+    <div className={`inline-flex items-center gap-2 bg-white ${theme.rounded.md} ${theme.shadows.md} ${theme.borders.medium} p-1`}>
       <Globe className="w-4 h-4 text-gray-500 ml-2" />
       <button
         onClick={() => switchLanguage('th')}
-        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+        className={`px-4 py-2 text-sm font-semibold ${theme.rounded.sm} transition-all duration-200 ${
           locale === 'th'
-            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+            ? `${theme.gradients.primary} text-white ${theme.shadows.md}`
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
@@ -30,9 +31,9 @@ export function LanguageSwitcher() {
       </button>
       <button
         onClick={() => switchLanguage('en')}
-        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+        className={`px-4 py-2 text-sm font-semibold ${theme.rounded.sm} transition-all duration-200 ${
           locale === 'en'
-            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+            ? `${theme.gradients.primary} text-white ${theme.shadows.md}`
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >

@@ -7,16 +7,29 @@ const intlMiddleware = createMiddleware(routing)
 
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const locale = pathname.split('/')[1] || 'th'
   
-  // Skip auth check for login page and public routes
   const isLoginPage = pathname.includes('/login')
-  const isPublicRoute = isLoginPage || pathname.includes('/api/auth')
+  const isApiRoute = pathname.includes('/api/auth')
   
   // Always run i18n middleware first
   const response = intlMiddleware(request)
   
-  // Skip auth check for public routes
-  if (isPublicRoute) {
+  // Skip auth check for API routes
+  if (isApiRoute) {
+    return response
+  }
+  
+  // Get session
+  const session = await auth()
+  
+  // If user is authenticated and trying to access login page, redirect to dashboard
+  if (isLoginPage && session) {
+    return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url))
+  }
+  
+  // If user is not authenticated and trying to access login page, allow access
+  if (isLoginPage && !session) {
     return response
   }
   
@@ -28,12 +41,8 @@ export default async function middleware(request: NextRequest) {
     pathname.includes('/inventory') ||
     pathname.includes('/reports')
   
-  if (isProtectedRoute) {
-    const session = await auth()
-    if (!session) {
-      const locale = pathname.split('/')[1] || 'th'
-      return NextResponse.redirect(new URL(`/${locale}/login`, request.url))
-    }
+  if (isProtectedRoute && !session) {
+    return NextResponse.redirect(new URL(`/${locale}/login`, request.url))
   }
   
   return response
