@@ -87,5 +87,52 @@
     "backHome": "กลับสู่หน้าหลัก",
     "goToDashboard": "ไปที่แดชบอร์ด",
     "contact": "หากคุณคิดว่านี่เป็นข้อผิดพลาด กรุณาติดต่อผู้ดูแลระบบ"
+  },
+  "settings": {
+    "units": {
+      "title": "จัดการหน่วย",
+      "description": "จัดการหน่วยวัดสินค้าและการแปลงหน่วย",
+      "addUnit": "เพิ่มหน่วย",
+      "editUnit": "แก้ไขหน่วย",
+      "searchPlaceholder": "ค้นหาหน่วย...",
+      "nameTh": "ชื่อ (ไทย)",
+      "nameEn": "ชื่อ (อังกฤษ)",
+      "abbreviationTh": "ตัวย่อ (ไทย)",
+      "abbreviationEn": "ตัวย่อ (อังกฤษ)",
+      "unitType": "ประเภทหน่วย",
+      "unitTypePlaceholder": "เช่น น้ำหนัก, ปริมาตร",
+      "baseUnit": "หน่วยพื้นฐาน",
+      "isBaseUnit": "เป็นหน่วยพื้นฐาน",
+      "isActive": "ใช้งาน",
+      "status": "สถานะ",
+      "actions": "จัดการ",
+      "active": "ใช้งาน",
+      "inactive": "ไม่ใช้งาน",
+      "yes": "ใช่",
+      "no": "ไม่",
+      "loading": "กำลังโหลด...",
+      "noData": "ไม่มีข้อมูล",
+      "confirmDelete": "คุณต้องการลบหน่วยนี้หรือไม่?",
+      "edit": "แก้ไข",
+      "delete": "ลบ",
+      "cancel": "ยกเลิก",
+      "save": "บันทึก",
+      "saving": "กำลังบันทึก...",
+      "nameThPlaceholder": "เช่น กิโลกรัม",
+      "nameEnPlaceholder": "เช่น Kilogram",
+      "abbreviationThPlaceholder": "เช่น กก.",
+      "abbreviationEnPlaceholder": "เช่น kg",
+      "nameThRequired": "กรุณากรอกชื่อภาษาไทย",
+      "nameEnRequired": "กรุณากรอกชื่อภาษาอังกฤษ",
+      "abbreviationThRequired": "กรุณากรอกตัวย่อภาษาไทย",
+      "abbreviationEnRequired": "กรุณากรอกตัวย่อภาษาอังกฤษ"
+    }
+  },
+  "pagination": {
+    "show": "แสดง",
+    "itemsPerPage": "รายการต่อหน้า",
+    "of": "จาก",
+    "previous": "ก่อนหน้า",
+    "next": "ถัดไป"
   }
 }

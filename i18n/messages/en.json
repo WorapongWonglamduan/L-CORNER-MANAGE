@@ -87,5 +87,52 @@
     "backHome": "Back to Home",
     "goToDashboard": "Go to Dashboard",
     "contact": "If you think this is an error, please contact the system administrator"
+  },
+  "settings": {
+    "units": {
+      "title": "Manage Units",
+      "description": "Manage product measurement units and conversions",
+      "addUnit": "Add Unit",
+      "editUnit": "Edit Unit",
+      "searchPlaceholder": "Search units...",
+      "nameTh": "Name (Thai)",
+      "nameEn": "Name (English)",
+      "abbreviationTh": "Abbreviation (Thai)",
+      "abbreviationEn": "Abbreviation (English)",
+      "unitType": "Unit Type",
+      "unitTypePlaceholder": "e.g. Weight, Volume",
+      "baseUnit": "Base Unit",
+      "isBaseUnit": "Is Base Unit",
+      "isActive": "Active",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "yes": "Yes",
+      "no": "No",
+      "loading": "Loading...",
+      "noData": "No data",
+      "confirmDelete": "Are you sure you want to delete this unit?",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "nameThPlaceholder": "e.g. Kilogram",
+      "nameEnPlaceholder": "e.g. Kilogram",
+      "abbreviationThPlaceholder": "e.g. kg",
+      "abbreviationEnPlaceholder": "e.g. kg",
+      "nameThRequired": "Please enter Thai name",
+      "nameEnRequired": "Please enter English name",
+      "abbreviationThRequired": "Please enter Thai abbreviation",
+      "abbreviationEnRequired": "Please enter English abbreviation"
+    }
+  },
+  "pagination": {
+    "show": "Show",
+    "itemsPerPage": "items per page",
+    "of": "of",
+    "previous": "Previous",
+    "next": "Next"
   }
 }

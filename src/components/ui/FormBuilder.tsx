@@ -22,7 +22,8 @@ export type FieldType =
   | "tel"
   | "url"
   | "textarea"
-  | "select";
+  | "select"
+  | "checkbox";
 
 export interface SelectOption {
   value: string | number;
@@ -82,6 +83,7 @@ export function FormBuilder<T extends FieldValues = FieldValues>({
           rules={field.rules}
           render={({ field: { onChange, onBlur, value, ref } }) => (
             <Input
+              {...field}
               ref={ref}
               inputType={field.type}
               id={field.name}
@@ -90,8 +92,10 @@ export function FormBuilder<T extends FieldValues = FieldValues>({
               helperText={field.helperText}
               icon={field.icon}
               error={errors[field.name] as FieldError | undefined}
-              value={value || ""}
-              onChange={onChange}
+              value={field.type === "checkbox" ? undefined : value || ""}
+              checked={field.type === "checkbox" ? value : undefined}
+              onCheckedChange={field.type === "checkbox" ? onChange : undefined}
+              onChange={field.type !== "checkbox" ? onChange : undefined}
               onBlur={onBlur}
               disabled={field.disabled || isLoading}
               autoComplete={field.autoComplete}
