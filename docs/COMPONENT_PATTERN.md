@@ -299,6 +299,94 @@ export const createLoginFormConfig = (
 - [ ] ลบ imports และ code ที่ไม่ใช้แล้วออก
 - [ ] Test ให้แน่ใจว่าทำงานเหมือนเดิม
 
+## React Hooks Best Practices
+
+### ESLint Exhaustive-Deps Pattern
+
+เมื่อเจอ warning `React Hook useCallback has a missing dependency` มี 2 วิธีแก้:
+
+#### วิธีที่ 1: ใส่ dependency ครบ (ไม่แนะนำสำหรับ object/array)
+```typescript
+// ❌ อาจทำให้ re-render บ่อยเกินไป
+const fetchData = useCallback(async () => {
+  // ใช้ filterOptions ทั้งหมด
+  Object.entries(filterOptions).forEach(...)
+}, [filterOptions]); // object reference เปลี่ยนทุกครั้ง
+```
+
+#### วิธีที่ 2: ระบุเฉพาะ properties + ปิด warning (แนะนำ)
+```typescript
+// ✅ ควบคุม re-render ได้ดีกว่า
+const fetchData = useCallback(async () => {
+  // ใช้ filterOptions.page, filterOptions.pageSize
+  // และ iterate filterOptions สำหรับ other filters
+  Object.entries(filterOptions).forEach(...)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [
+  endpoint,
+  filterOptions.page,      // ติดตามเฉพาะที่สำคัญ
+  filterOptions.pageSize,
+  debouncedSearch,
+  setTotalItems,
+  transform,
+]);
+```
+
+**เหตุผล:**
+- `filterOptions` เป็น object ที่ reference เปลี่ยนทุกครั้งที่ state update
+- ถ้าใส่ `filterOptions` ทั้งหมด → `fetchData` จะถูกสร้างใหม่บ่อยเกินไป
+- ระบุเฉพาะ properties ที่สำคัญ (page, pageSize) → ควบคุม re-render ได้ดีกว่า
+- ใช้ `eslint-disable-next-line` เพื่อบอกว่าเราตั้งใจทำแบบนี้
+
+**ตัวอย่างจริงใน `useEntityList` hook:**
+```typescript
+const fetchItems = useCallback(async () => {
+  const params = new URLSearchParams();
+  
+  // ใช้ specific properties
+  params.append("page", filterOptions.page.toString());
+  params.append("pageSize", filterOptions.pageSize.toString());
+  
+  // Iterate ทั้ง object สำหรับ other filters
+  Object.entries(filterOptions).forEach(([key, value]) => {
+    if (key !== "page" && key !== "pageSize" && key !== "search") {
+      params.append(key, String(value));
+    }
+  });
+  
+  // ... fetch logic
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [
+  endpoint,
+  filterOptions.page,      // เฉพาะที่ต้องการ
+  filterOptions.pageSize,
+  debouncedSearch,
+  setTotalItems,
+  transform,
+]);
+```
+
+### Debounce Pattern
+
+ใช้ `useDebounce` สำหรับ search input เพื่อลด API calls:
+
+```typescript
+// ใน hook
+const debouncedSearch = useDebounce(filterOptions.search, 500);
+
+const fetchItems = useCallback(async () => {
+  // ใช้ debouncedSearch แทน filterOptions.search
+  if (debouncedSearch) {
+    params.append("search", String(debouncedSearch));
+  }
+}, [debouncedSearch]); // ไม่ใช้ filterOptions.search
+```
+
+**ประโยชน์:**
+- ลด API calls จากการพิมพ์ทุกตัวอักษร
+- รอให้ user พิมพ์เสร็จก่อน (500ms)
+- ประหยัด bandwidth และ server resources
+
 ## Benefits
 
 1. **Separation of Concerns** - UI และ logic แยกกันชัดเจน
@@ -307,3 +395,4 @@ export const createLoginFormConfig = (
 4. **Maintainability** - แก้ไข logic ไม่กระทบ UI
 5. **Type Safety** - TypeScript ช่วย validate ทุกอย่าง
 6. **Consistency** - ทุกหน้าใช้ pattern เดียวกัน
+7. **Performance** - ควบคุม re-render ด้วย proper dependency management
