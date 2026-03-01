@@ -1,3 +1,5 @@
+import { useRouter, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ShoppingCart,
   Package,
@@ -105,4 +107,30 @@ export const chartConfig = {
     warning: "#f59e0b",
     danger: "#ef4444",
   },
+};
+
+// Dashboard Hook - following the same pattern as useLoginForm
+export const useDashboard = () => {
+  const router = useRouter();
+  const params = useParams();
+  const locale = params.locale as string;
+  const t = useTranslations("dashboard");
+
+  const statsCards = getStatsCards({
+    todaySales: 15420,
+    totalProducts: 248,
+    lowStockItems: 12,
+    totalCustomers: 1847,
+  });
+
+  const handleQuickAction = (href: string) => {
+    router.push(`/${locale}${href}`);
+  };
+
+  return {
+    t,
+    statsCards,
+    quickActions,
+    handleQuickAction,
+  };
 };

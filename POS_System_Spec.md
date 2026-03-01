@@ -7,15 +7,27 @@
 
 ## Table of Contents
 
-1. [Tech Stack](#1-tech-stack)
-2. [ประเภทสินค้า (Product Types)](#2-ประเภทสินค้า-product-types)
-3. [Database Schema](#3-database-schema)
-4. [Prisma Schema](#4-prisma-schema)
-5. [Service Layer](#5-service-layer)
-6. [Pages & Routes](#6-pages--routes)
-7. [API Routes](#7-api-routes)
-8. [Seed Data](#8-seed-data)
-9. [Key Constraints](#9-key-constraints)
+1. [Documentation](#documentation)
+2. [Tech Stack](#1-tech-stack)
+3. [ประเภทสินค้า (Product Types)](#2-ประเภทสินค้า-product-types)
+4. [Database Schema](#3-database-schema)
+5. [Prisma Schema](#4-prisma-schema)
+6. [Service Layer](#5-service-layer)
+7. [Pages & Routes](#6-pages--routes)
+8. [API Routes](#7-api-routes)
+9. [Seed Data](#8-seed-data)
+10. [Key Constraints](#9-key-constraints)
+
+---
+
+## Documentation
+
+📚 **Additional Documentation**
+
+- **[POS_System_Spec.md](./POS_System_Spec.md)** (This file) - Base system specification, database schema, business logic
+- **[docs/COMPONENT_PATTERN.md](./docs/COMPONENT_PATTERN.md)** - Component architecture pattern, best practices, code examples
+
+> **Note:** อ่าน POS_System_Spec.md ก่อนเพื่อเข้าใจระบบโดยรวม จากนั้นอ่าน docs/ เพื่อเข้าใจวิธีการ implement
 
 ---
 

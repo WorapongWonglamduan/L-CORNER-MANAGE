@@ -1,11 +1,8 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
-import { useRouter, useParams } from 'next/navigation'
-import { ArrowUpRight, ArrowDownRight, LogOut } from 'lucide-react'
-import { signOut } from 'next-auth/react'
-import { LanguageSwitcher } from '@/components/language-switcher'
-import { quickActions, getStatsCards } from './helper'
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { Navbar } from '@/components/navbar'
+import { useDashboard } from './helper'
 import { theme } from '@/lib/theme'
 
 interface DashboardContentProps {
@@ -19,60 +16,11 @@ export default function DashboardContent({
   userRoles, 
   userPermissions 
 }: DashboardContentProps) {
-  const t = useTranslations('dashboard')
-  const tAuth = useTranslations('auth')
-  const router = useRouter()
-  const params = useParams()
-  const locale = params.locale as string
-
-  const statsCards = getStatsCards({
-    todaySales: 15420,
-    totalProducts: 248,
-    lowStockItems: 12,
-    totalCustomers: 1847,
-  })
-
-  const handleQuickAction = (href: string) => {
-    router.push(`/${locale}${href}`)
-  }
-
-  const handleLogout = async () => {
-    await signOut({ redirect: false })
-    router.push(`/${locale}/login`)
-    router.refresh()
-  }
+  const { t, statsCards, quickActions, handleQuickAction } = useDashboard()
 
   return (
     <div className={`min-h-screen ${theme.gradients.background}`}>
-      {/* Header */}
-      <div className={`bg-[${theme.colors.primary.main}] ${theme.shadows.lg}`}>
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">L</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">{t('title')}</h1>
-                <p className="text-sm text-blue-200">
-                  {t('welcome')}, <span className="font-semibold text-white">{userName}</span>
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <LanguageSwitcher />
-              <button
-                onClick={handleLogout}
-                className={theme.buttons.ghost}
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="text-sm font-medium">{tAuth('logout')}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Navbar userName={userName} />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6 lg:p-8">
@@ -102,10 +50,10 @@ export default function DashboardContent({
             return (
               <div
                 key={index}
-                className={theme.cards.default}
+                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`${stat.colorClass} w-14 h-14 ${theme.rounded.md} flex items-center justify-center ${theme.shadows.lg}`}>
+                  <div className={`${stat.colorClass} w-14 h-14 rounded-xl flex items-center justify-center shadow-lg`}>
                     <Icon className="w-7 h-7 text-white" />
                   </div>
                   {stat.trend && (
