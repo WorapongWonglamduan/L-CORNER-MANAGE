@@ -38,7 +38,26 @@
   "dashboard": {
     "title": "แดชบอร์ด",
     "welcome": "ยินดีต้อนรับ",
-    "role": "บทบาท"
+    "role": "บทบาท",
+    "permissions": "สิทธิ์การใช้งาน",
+    "stats": {
+      "todaySales": "ยอดขายวันนี้",
+      "totalProducts": "สินค้าทั้งหมด",
+      "lowStock": "สต็อกต่ำ",
+      "customers": "ลูกค้า"
+    },
+    "salesChart": "กราฟยอดขาย",
+    "chartPlaceholder": "กราฟจะแสดงที่นี่",
+    "recentActivity": "กิจกรรมล่าสุด",
+    "activityItem": "มีการอัพเดทข้อมูล",
+    "timeAgo": "{time} นาทีที่แล้ว",
+    "quickActions": {
+      "title": "เมนูด่วน",
+      "newSale": "ขายสินค้า",
+      "addProduct": "เพิ่มสินค้า",
+      "viewReports": "ดูรายงาน",
+      "manageInventory": "จัดการสต็อก"
+    }
   },
   "common": {
     "loading": "กำลังโหลด...",

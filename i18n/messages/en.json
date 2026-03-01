@@ -38,7 +38,26 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome",
-    "role": "Role"
+    "role": "Role",
+    "permissions": "Permissions",
+    "stats": {
+      "todaySales": "Today's Sales",
+      "totalProducts": "Total Products",
+      "lowStock": "Low Stock",
+      "customers": "Customers"
+    },
+    "salesChart": "Sales Chart",
+    "chartPlaceholder": "Chart will be displayed here",
+    "recentActivity": "Recent Activity",
+    "activityItem": "Data updated",
+    "timeAgo": "{time} minutes ago",
+    "quickActions": {
+      "title": "Quick Actions",
+      "newSale": "New Sale",
+      "addProduct": "Add Product",
+      "viewReports": "View Reports",
+      "manageInventory": "Manage Inventory"
+    }
   },
   "common": {
     "loading": "Loading...",

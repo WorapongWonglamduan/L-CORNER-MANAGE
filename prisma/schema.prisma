@@ -25,33 +25,19 @@ model User {
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id                String   @id @default(uuid())
+  name              String   @unique
   display_name_i18n Json
   description_i18n  Json?
-  is_system   Boolean  @default(false)
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  permissions       Json     @default("[]")
+  is_system         Boolean  @default(false)
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
-  user_roles       UserRole[]
-  role_permissions RolePermission[]
+  user_roles UserRole[]
 
   @@map("roles")
-}
-
-model Permission {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  display_name_i18n Json
-  description_i18n  Json?
-  module      String
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-
-  role_permissions RolePermission[]
-
-  @@map("permissions")
 }
 
 model UserRole {
@@ -65,19 +51,6 @@ model UserRole {
 
   @@unique([user_id, role_id])
   @@map("user_roles")
-}
-
-model RolePermission {
-  id            String   @id @default(uuid())
-  role_id       String
-  permission_id String
-  created_at    DateTime @default(now())
-
-  role       Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
-
-  @@unique([role_id, permission_id])
-  @@map("role_permissions")
 }
 
 model Language {

@@ -1,62 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { signIn } from "next-auth/react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useTranslations } from "next-intl";
-
-type LoginFormData = {
-  username: string;
-  password: string;
-};
+import { useHelper } from "./helper";
 
 export function LoginForm() {
-  const router = useRouter();
-  const params = useParams();
-  const locale = params.locale as string;
-  const t = useTranslations("auth.login");
-  const [error, setError] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const loginSchema = z.object({
-    username: z.string().min(1, t("validation.usernameRequired")),
-    password: z.string().min(6, t("validation.passwordMin")),
-  });
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const result = await signIn("credentials", {
-        username: data.username,
-        password: data.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError(t("error"));
-      } else {
-        router.push(`/${locale}`);
-        router.refresh();
-      }
-    } catch {
-      setError(t("serverError"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { register, handleSubmit, onSubmit, errors, error, isLoading, t } = useHelper();
 
   return (
     <div className="space-y-6">
