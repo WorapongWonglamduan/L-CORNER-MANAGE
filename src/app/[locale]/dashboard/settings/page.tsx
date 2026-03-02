@@ -1,24 +1,18 @@
-import { auth } from '@/auth'
-import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
-import SettingsContent from '@/components/pages/settings'
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import SettingsContent from "@/components/pages/settings";
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'settings' })
-  
-  return {
-    title: 'Settings',
-  }
-}
-
-export default async function SettingsPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-  const session = await auth()
+export default async function SettingsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const session = await auth();
 
   if (!session) {
-    redirect(`/${locale}/login`)
+    redirect(`/${locale}/login`);
   }
 
-  return <SettingsContent />
+  return <SettingsContent />;
 }
