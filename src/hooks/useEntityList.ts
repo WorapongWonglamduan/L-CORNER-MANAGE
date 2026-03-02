@@ -62,7 +62,6 @@ export function useEntityList<
     search: "",
     ...initialFilters,
   } as F);
-
   // Debounce search to avoid fetching on every keystroke
   const debouncedSearch = useDebounce(filterOptions.search, debounceDelay);
 

@@ -3,18 +3,22 @@
 import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { useUnitsManager } from "./helper";
-import UnitDialog from "./unit-dialog";
+import { useRawMaterialsManager } from "./helper";
+import RawMaterialDialog from "./raw-material-dialog";
 
-export default function UnitsManager() {
+export default function RawMaterialsManager() {
   const {
     t,
+    rawMaterials,
     units,
-    allUnits,
+    unitsLoading,
+    categories,
+    categoriesLoading,
     loading,
     searchQuery,
     setSearchQuery,
     dialogOpen,
+    editingRawMaterial,
     filterOptions,
     totalItems,
     totalPages,
@@ -31,7 +35,12 @@ export default function UnitsManager() {
     formLoading,
     formError,
     ConfirmDialog,
-  } = useUnitsManager();
+  } = useRawMaterialsManager();
+
+  const getCategoryLabel = (category: { id: string; name_i18n: { th: string; en: string } } | null | undefined) => {
+    if (!category) return "-";
+    return category.name_i18n.th;
+  };
 
   return (
     <div className="space-y-4">
@@ -51,7 +60,7 @@ export default function UnitsManager() {
           className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
         >
           <Plus className="h-4 w-4 mr-2" />
-          {t("addUnit")}
+          {t("addRawMaterial")}
         </Button>
       </div>
 
@@ -62,7 +71,7 @@ export default function UnitsManager() {
             <p className="text-gray-600">{t("loading")}</p>
           </div>
         </div>
-      ) : units.length === 0 ? (
+      ) : rawMaterials.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
           <Package className="h-16 w-16 text-gray-400 mb-4" />
           <p className="text-gray-600 text-lg">{t("noData")}</p>
@@ -70,9 +79,9 @@ export default function UnitsManager() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {units.map((unit) => (
+            {rawMaterials.map((rawMaterial) => (
               <div
-                key={unit.id}
+                key={rawMaterial.id}
                 className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-[#213559] group relative"
               >
                 <div className="flex items-start justify-between mb-4">
@@ -82,23 +91,23 @@ export default function UnitsManager() {
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">
-                        {unit.name_i18n.th}
+                        {rawMaterial.name_i18n.th}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {unit.name_i18n.en}
+                        {rawMaterial.code}
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-1">
                     <button
-                      onClick={() => handleEdit(unit)}
+                      onClick={() => handleEdit(rawMaterial)}
                       className="p-2 hover:bg-[#213559]/10 rounded-lg transition-colors"
                       title={t("edit") || "แก้ไข"}
                     >
                       <Pencil className="h-4 w-4 text-[#213559]" />
                     </button>
                     <button
-                      onClick={() => handleDelete(unit.id)}
+                      onClick={() => handleDelete(rawMaterial.id)}
                       className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                       title={t("delete") || "ลบ"}
                     >
@@ -110,42 +119,65 @@ export default function UnitsManager() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
                     <span className="text-sm text-gray-600">
-                      {t("abbreviationTh")}:
+                      {t("category")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {unit.abbreviation_i18n.th}
+                      {getCategoryLabel(rawMaterial.category)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">{t("unit")}:</span>
+                    <span className="font-semibold text-gray-900">
+                      {rawMaterial.unit?.abbreviation_i18n.th || "-"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
-                      {t("abbreviationEn")}:
+                      {t("costPrice")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {unit.abbreviation_i18n.en}
+                      {rawMaterial.cost_price
+                        ? `฿${Number(rawMaterial.cost_price).toLocaleString()}`
+                        : "-"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
-                      {t("unitType")}:
+                      {t("currentStock")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
-                      {unit.unit_type || "-"}
+                    <span
+                      className={`font-semibold ${
+                        Number(rawMaterial.current_stock) <=
+                        Number(rawMaterial.min_stock)
+                          ? "text-red-600"
+                          : "text-gray-900"
+                      }`}
+                    >
+                      {Number(rawMaterial.current_stock).toLocaleString()}{" "}
+                      {rawMaterial.unit?.abbreviation_i18n.th}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
-                      {t("baseUnit")}:
+                      {t("minStock")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {unit.is_base_unit ? t("yes") : t("no")}
+                      {Number(rawMaterial.min_stock).toLocaleString()}{" "}
+                      {rawMaterial.unit?.abbreviation_i18n.th}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
                       {t("status")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
-                      {unit.is_active ? t("active") : t("inactive")}
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        rawMaterial.is_active
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {rawMaterial.is_active ? t("active") : t("inactive")}
                     </span>
                   </div>
                 </div>
@@ -153,7 +185,7 @@ export default function UnitsManager() {
             ))}
           </div>
 
-          {allUnits.length > 0 && (
+          {rawMaterials.length > 0 && (
             <div className="mt-6">
               <Pagination
                 currentPage={filterOptions.page}
@@ -168,7 +200,7 @@ export default function UnitsManager() {
         </>
       )}
 
-      <UnitDialog
+      <RawMaterialDialog
         open={dialogOpen}
         onClose={handleDialogClose}
         control={formControl}
@@ -177,6 +209,11 @@ export default function UnitsManager() {
         errors={formErrors}
         loading={formLoading}
         error={formError}
+        units={units}
+        unitsLoading={unitsLoading}
+        categories={categories}
+        categoriesLoading={categoriesLoading}
+        isEditing={!!editingRawMaterial}
       />
       
       <ConfirmDialog />

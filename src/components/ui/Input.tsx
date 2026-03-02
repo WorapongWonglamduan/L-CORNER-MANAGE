@@ -90,18 +90,25 @@ export const Input = forwardRef<
           );
 
         case "textarea":
+          const { checked: _checkedTA, onCheckedChange: _onCheckedChangeTA, ...textareaProps } =
+            props as TextareaHTMLAttributes<HTMLTextAreaElement> & {
+              checked?: boolean;
+              onCheckedChange?: (checked: boolean) => void;
+            };
           return (
             <textarea
               ref={ref as React.Ref<HTMLTextAreaElement>}
               className={`${baseInputClass} min-h-[100px] resize-y`}
-              {...(props as TextareaHTMLAttributes<HTMLTextAreaElement>)}
+              {...textareaProps}
             />
           );
 
         case "select":
-          const selectProps =
+          const { checked: _checkedSel, onCheckedChange: _onCheckedChangeSel, options, ...selectProps } =
             props as SelectHTMLAttributes<HTMLSelectElement> & {
               options?: SelectOption[];
+              checked?: boolean;
+              onCheckedChange?: (checked: boolean) => void;
             };
           return (
             <select
@@ -109,7 +116,7 @@ export const Input = forwardRef<
               className={baseInputClass}
               {...selectProps}
             >
-              {selectProps.options?.map((option) => (
+              {options?.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

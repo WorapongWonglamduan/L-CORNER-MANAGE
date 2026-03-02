@@ -81,6 +81,7 @@ model Unit {
   from_conversions     UnitConversion[]   @relation("FromUnit")
   to_conversions       UnitConversion[]   @relation("ToUnit")
   stock_transactions   StockTransaction[]
+  raw_materials        RawMaterial[]      @relation("RawMaterialUnit")
 
   @@map("units")
 }
@@ -463,4 +464,39 @@ model PurchaseOrderItem {
   product_unit   ProductUnit   @relation(fields: [product_unit_id], references: [id])
 
   @@map("purchase_order_items")
+}
+
+model RawMaterialCategory {
+  id         String   @id @default(uuid())
+  name_i18n  Json
+  code       String   @unique
+  type       String   @default("raw_material") // "raw_material" or "product"
+  sort_order Int      @default(0)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  raw_materials RawMaterial[]
+
+  @@map("raw_material_categories")
+}
+
+model RawMaterial {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name_i18n    Json
+  description_i18n Json?
+  category_id  String?
+  unit_id      String
+  cost_price   Decimal? @db.Decimal(15, 2)
+  min_stock    Decimal  @default(0) @db.Decimal(15, 4)
+  current_stock Decimal @default(0) @db.Decimal(15, 4)
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  category RawMaterialCategory? @relation(fields: [category_id], references: [id])
+  unit     Unit                 @relation("RawMaterialUnit", fields: [unit_id], references: [id])
+
+  @@map("raw_materials")
 }

@@ -1,0 +1,42 @@
+"use client";
+
+import { Navbar } from "@/components/navbar";
+import { useTranslations } from "next-intl";
+import { Package, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import RawMaterialsManager from "./raw-materials-manager";
+
+export default function RawMaterialsContent() {
+  const t = useTranslations("settings.rawMaterials");
+  const router = useRouter();
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+
+      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+        <div className="mb-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-gray-600 hover:text-[#213559] mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">กลับ</span>
+          </button>
+          
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-gradient-to-r from-[#213559] to-[#2c4a7a] p-2 rounded-lg shadow-lg shadow-[#213559]/30">
+              <Package className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900">{t("title")}</h1>
+          </div>
+          <p className="text-gray-600">{t("description")}</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <RawMaterialsManager />
+        </div>
+      </div>
+    </div>
+  );
+}

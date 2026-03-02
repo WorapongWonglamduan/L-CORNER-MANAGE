@@ -1,6 +1,6 @@
 'use client'
 
-import { LogOut } from 'lucide-react'
+import { LogOut, Settings } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useRouter, useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -42,6 +42,13 @@ export function Navbar({ userName }: NavbarProps) {
           
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
+            <button
+              onClick={() => router.push(`/${locale}/settings`)}
+              className="flex items-center gap-2 px-4 py-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm font-medium">ตั้งค่า</span>
+            </button>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-white hover:bg-white/10 rounded-lg transition-colors"

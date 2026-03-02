@@ -3,7 +3,7 @@
 import { Navbar } from "@/components/navbar";
 import { useTranslations } from "next-intl";
 import { useRouter, useParams } from "next/navigation";
-import { Settings, Package, ArrowRight } from "lucide-react";
+import { Settings, Package, ArrowRight, Beef, FolderTree } from "lucide-react";
 
 export default function SettingsContent() {
   const t = useTranslations("settings");
@@ -18,6 +18,20 @@ export default function SettingsContent() {
       description: "จัดการหน่วยวัดสินค้าและการแปลงหน่วย",
       icon: Package,
       href: `/${locale}/settings/units`,
+    },
+    {
+      id: "raw-materials",
+      title: "จัดการวัตถุดิบ",
+      description: "จัดการวัตถุดิบและสต็อกวัตถุดิบ",
+      icon: Beef,
+      href: `/${locale}/settings/raw-materials`,
+    },
+    {
+      id: "raw-material-categories",
+      title: "หมวดหมู่วัตถุดิบ/สินค้า",
+      description: "จัดการหมวดหมู่สำหรับวัตถุดิบและสินค้า",
+      icon: FolderTree,
+      href: `/${locale}/settings/raw-material-categories`,
     },
   ];
 

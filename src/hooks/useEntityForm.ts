@@ -12,6 +12,12 @@ interface UseEntityFormOptions<T extends FieldValues, E extends BaseEntity> {
   transformToPayload: (data: T) => unknown;
   transformToForm: (entity: E) => T;
   onSuccess?: () => void;
+  confirmDelete?: (options: {
+    title?: string;
+    description?: string;
+    confirmText?: string;
+    cancelText?: string;
+  }) => Promise<boolean>;
 }
 
 interface UseEntityFormResult<T extends FieldValues, E extends BaseEntity> {
@@ -33,10 +39,17 @@ interface UseEntityFormResult<T extends FieldValues, E extends BaseEntity> {
 }
 
 export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
-  options: UseEntityFormOptions<T, E>
+  options: UseEntityFormOptions<T, E>,
 ): UseEntityFormResult<T, E> {
-  const { formConfig, endpoint, transformToPayload, transformToForm, onSuccess } = options;
-  
+  const {
+    formConfig,
+    endpoint,
+    transformToPayload,
+    transformToForm,
+    onSuccess,
+    confirmDelete,
+  } = options;
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -63,12 +76,24 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
       setError("");
       setDialogOpen(true);
     },
-    [reset, transformToForm]
+    [reset, transformToForm],
   );
 
   const handleDelete = useCallback(
-    async (id: string, confirmMessage = "Are you sure you want to delete this item?") => {
-      if (!confirm(confirmMessage)) return;
+    async (
+      id: string,
+      confirmMessage = "Are you sure you want to delete this item?",
+    ) => {
+      const confirmed = confirmDelete
+        ? await confirmDelete({
+            title: "Confirm Delete",
+            description: confirmMessage,
+            confirmText: "Delete",
+            cancelText: "Cancel",
+          })
+        : confirm(confirmMessage);
+
+      if (!confirmed) return;
 
       try {
         setLoading(true);
@@ -88,7 +113,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
         setLoading(false);
       }
     },
-    [endpoint, onSuccess]
+    [endpoint, onSuccess, confirmDelete],
   );
 
   const handleDialogClose = useCallback(
@@ -99,7 +124,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
         onSuccess?.();
       }
     },
-    [onSuccess]
+    [onSuccess],
   );
 
   const handleFormSubmit = useCallback(
@@ -109,7 +134,9 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
         setError("");
 
         const payload = transformToPayload(data);
-        const url = editingEntity ? `${endpoint}/${editingEntity.id}` : endpoint;
+        const url = editingEntity
+          ? `${endpoint}/${editingEntity.id}`
+          : endpoint;
         const method = editingEntity ? "PUT" : "POST";
 
         const response = await fetch(url, {
@@ -132,7 +159,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
         setLoading(false);
       }
     },
-    [editingEntity, endpoint, transformToPayload, handleDialogClose]
+    [editingEntity, endpoint, transformToPayload, handleDialogClose],
   );
 
   return {
