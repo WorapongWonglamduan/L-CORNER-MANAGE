@@ -1,10 +1,13 @@
 "use client";
 
-import { Plus, Pencil, Trash2, Search, FolderTree } from "lucide-react";
+import { Plus, FolderTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
+import { SearchInput } from "@/components/ui/search-input";
+import { ActionButtons } from "@/components/ui/action-buttons";
+import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useRawMaterialCategoriesManager } from "./helper";
-import RawMaterialCategoryDialog from "./raw-material-category-dialog";
+import { getRawMaterialCategoryFormConfig } from "./config";
 
 export default function RawMaterialCategoriesManager() {
   const {
@@ -46,16 +49,11 @@ export default function RawMaterialCategoriesManager() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder={t("searchPlaceholder")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#213559]"
-          />
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t("searchPlaceholder")}
+        />
         <Button
           onClick={handleCreate}
           className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
@@ -99,22 +97,12 @@ export default function RawMaterialCategoriesManager() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleEdit(category)}
-                      className="p-2 hover:bg-[#213559]/10 rounded-lg transition-colors"
-                      title={t("edit") || "แก้ไข"}
-                    >
-                      <Pencil className="h-4 w-4 text-[#213559]" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(category.id)}
-                      className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                      title={t("delete") || "ลบ"}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </button>
-                  </div>
+                  <ActionButtons
+                    onEdit={() => handleEdit(category)}
+                    onDelete={() => handleDelete(category.id)}
+                    editTitle={t("edit") || "แก้ไข"}
+                    deleteTitle={t("delete") || "ลบ"}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -172,16 +160,21 @@ export default function RawMaterialCategoriesManager() {
         </>
       )}
 
-      <RawMaterialCategoryDialog
+      <EntityDialog
         open={dialogOpen}
         onClose={handleDialogClose}
-        category={editingCategory}
-        onSubmit={handleFormSubmit}
+        title={editingCategory ? t("editCategory") : t("addCategory")}
+        fields={getRawMaterialCategoryFormConfig(t)}
         control={formControl}
         handleSubmit={formHandleSubmit}
+        onSubmit={handleFormSubmit}
         errors={formErrors}
         loading={formLoading}
         error={formError}
+        cancelText={t("cancel")}
+        saveText={t("save")}
+        savingText={t("saving")}
+        maxWidth="2xl"
       />
       
       <ConfirmDialog />

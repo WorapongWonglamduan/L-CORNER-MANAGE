@@ -6,19 +6,22 @@ import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
-import { useUnitsManager } from "./helper";
-import { getUnitFormConfig } from "./config";
+import { useProductsManager } from "./helper";
+import { getProductFormConfig } from "./config";
 
-export default function UnitsManager() {
+export default function ProductsManager() {
   const {
     t,
+    products,
     units,
-    allUnits,
+    unitsLoading,
+    categories,
+    categoriesLoading,
     loading,
     searchQuery,
     setSearchQuery,
     dialogOpen,
-    editingUnit,
+    editingProduct,
     filterOptions,
     totalItems,
     totalPages,
@@ -35,7 +38,22 @@ export default function UnitsManager() {
     formLoading,
     formError,
     ConfirmDialog,
-  } = useUnitsManager();
+  } = useProductsManager();
+
+  const getCategoryLabel = (category: { id: string; name_i18n: { th: string; en: string } } | null | undefined) => {
+    if (!category) return "-";
+    return category.name_i18n.th;
+  };
+
+  const getProductTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      finished_good: "สินค้าสำเร็จรูป",
+      raw_material: "วัตถุดิบ",
+      semi_finished: "สินค้ากึ่งสำเร็จรูป",
+      service: "บริการ",
+    };
+    return types[type] || type;
+  };
 
   return (
     <div className="space-y-4">
@@ -50,7 +68,7 @@ export default function UnitsManager() {
           className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
         >
           <Plus className="h-4 w-4 mr-2" />
-          {t("addUnit")}
+          {t("addProduct")}
         </Button>
       </div>
 
@@ -61,7 +79,7 @@ export default function UnitsManager() {
             <p className="text-gray-600">{t("loading")}</p>
           </div>
         </div>
-      ) : units.length === 0 ? (
+      ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
           <Package className="h-16 w-16 text-gray-400 mb-4" />
           <p className="text-gray-600 text-lg">{t("noData")}</p>
@@ -69,9 +87,9 @@ export default function UnitsManager() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {units.map((unit) => (
+            {products.map((product) => (
               <div
-                key={unit.id}
+                key={product.id}
                 className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-[#213559] group relative"
               >
                 <div className="flex items-start justify-between mb-4">
@@ -81,16 +99,16 @@ export default function UnitsManager() {
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">
-                        {unit.name_i18n.th}
+                        {product.name_i18n.th}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {unit.name_i18n.en}
+                        {product.code}
                       </p>
                     </div>
                   </div>
                   <ActionButtons
-                    onEdit={() => handleEdit(unit)}
-                    onDelete={() => handleDelete(unit.id)}
+                    onEdit={() => handleEdit(product)}
+                    onDelete={() => handleDelete(product.id)}
                     editTitle={t("edit") || "แก้ไข"}
                     deleteTitle={t("delete") || "ลบ"}
                   />
@@ -99,42 +117,46 @@ export default function UnitsManager() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
                     <span className="text-sm text-gray-600">
-                      {t("abbreviationTh")}:
+                      {t("productType")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {unit.abbreviation_i18n.th}
+                      {getProductTypeLabel(product.product_type)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
-                      {t("abbreviationEn")}:
+                      {t("category")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {unit.abbreviation_i18n.en}
+                      {getCategoryLabel(product.category)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">{t("baseUnit")}:</span>
+                    <span className="font-semibold text-gray-900">
+                      {product.base_unit?.abbreviation_i18n.th || "-"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
-                      {t("unitType")}:
+                      {t("minStockLevel")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {unit.unit_type || "-"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
-                      {t("baseUnit")}:
-                    </span>
-                    <span className="font-semibold text-gray-900">
-                      {unit.is_base_unit ? t("yes") : t("no")}
+                      {Number(product.min_stock_level).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
                       {t("status")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
-                      {unit.is_active ? t("active") : t("inactive")}
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        product.is_active
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {product.is_active ? t("active") : t("inactive")}
                     </span>
                   </div>
                 </div>
@@ -142,7 +164,7 @@ export default function UnitsManager() {
             ))}
           </div>
 
-          {allUnits.length > 0 && (
+          {products.length > 0 && (
             <div className="mt-6">
               <Pagination
                 currentPage={filterOptions.page}
@@ -160,18 +182,18 @@ export default function UnitsManager() {
       <EntityDialog
         open={dialogOpen}
         onClose={handleDialogClose}
-        title={editingUnit ? t("editUnit") : t("addUnit")}
-        fields={getUnitFormConfig(t)}
+        title={editingProduct ? t("editProduct") : t("addProduct")}
+        fields={getProductFormConfig(t, units, categories)}
         control={formControl}
         handleSubmit={formHandleSubmit}
         onSubmit={handleFormSubmit}
         errors={formErrors}
-        loading={formLoading}
+        loading={formLoading || unitsLoading || categoriesLoading}
         error={formError}
         cancelText={t("cancel")}
         saveText={t("save")}
         savingText={t("saving")}
-        maxWidth="2xl"
+        maxWidth="3xl"
       />
       
       <ConfirmDialog />

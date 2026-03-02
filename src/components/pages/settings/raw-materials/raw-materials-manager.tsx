@@ -1,10 +1,13 @@
 "use client";
 
-import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
+import { Plus, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
+import { SearchInput } from "@/components/ui/search-input";
+import { ActionButtons } from "@/components/ui/action-buttons";
+import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useRawMaterialsManager } from "./helper";
-import RawMaterialDialog from "./raw-material-dialog";
+import { getRawMaterialFormConfig } from "./config";
 
 export default function RawMaterialsManager() {
   const {
@@ -45,16 +48,11 @@ export default function RawMaterialsManager() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder={t("searchPlaceholder")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#213559]"
-          />
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t("searchPlaceholder")}
+        />
         <Button
           onClick={handleCreate}
           className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
@@ -98,22 +96,12 @@ export default function RawMaterialsManager() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleEdit(rawMaterial)}
-                      className="p-2 hover:bg-[#213559]/10 rounded-lg transition-colors"
-                      title={t("edit") || "แก้ไข"}
-                    >
-                      <Pencil className="h-4 w-4 text-[#213559]" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(rawMaterial.id)}
-                      className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                      title={t("delete") || "ลบ"}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </button>
-                  </div>
+                  <ActionButtons
+                    onEdit={() => handleEdit(rawMaterial)}
+                    onDelete={() => handleDelete(rawMaterial.id)}
+                    editTitle={t("edit") || "แก้ไข"}
+                    deleteTitle={t("delete") || "ลบ"}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -200,20 +188,21 @@ export default function RawMaterialsManager() {
         </>
       )}
 
-      <RawMaterialDialog
+      <EntityDialog
         open={dialogOpen}
         onClose={handleDialogClose}
+        title={editingRawMaterial ? t("editRawMaterial") : t("addRawMaterial")}
+        fields={getRawMaterialFormConfig(t, units, categories)}
         control={formControl}
         handleSubmit={formHandleSubmit}
         onSubmit={handleFormSubmit}
         errors={formErrors}
-        loading={formLoading}
+        loading={formLoading || unitsLoading || categoriesLoading}
         error={formError}
-        units={units}
-        unitsLoading={unitsLoading}
-        categories={categories}
-        categoriesLoading={categoriesLoading}
-        isEditing={!!editingRawMaterial}
+        cancelText={t("cancel")}
+        saveText={t("save")}
+        savingText={t("saving")}
+        maxWidth="3xl"
       />
       
       <ConfirmDialog />

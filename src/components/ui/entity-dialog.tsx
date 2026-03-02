@@ -1,10 +1,10 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import {
   Control,
   UseFormHandleSubmit,
   FieldErrors,
+  FieldValues,
 } from "react-hook-form";
 import {
   Dialog,
@@ -15,51 +15,66 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FormFields } from "@/components/ui/FormFields";
-import { getRawMaterialCategoryFormConfig } from "./config";
-import { RawMaterialCategoryFormData } from "./helper";
+import { FieldConfig } from "@/components/ui/FormBuilder";
 
-interface RawMaterialCategoryDialogProps {
+interface EntityDialogProps<T extends FieldValues> {
   open: boolean;
   onClose: (refresh?: boolean) => void;
-  category: { id: string } | null;
-  onSubmit: (data: RawMaterialCategoryFormData) => Promise<void>;
-  control: Control<RawMaterialCategoryFormData>;
-  handleSubmit: UseFormHandleSubmit<RawMaterialCategoryFormData>;
-  errors: FieldErrors<RawMaterialCategoryFormData>;
+  title: string;
+  fields: FieldConfig<T>[];
+  control: Control<T>;
+  handleSubmit: UseFormHandleSubmit<T>;
+  onSubmit: (data: T) => Promise<void>;
+  errors: FieldErrors<T>;
   loading: boolean;
   error: string | null;
+  cancelText: string;
+  saveText: string;
+  savingText: string;
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
 }
 
-export default function RawMaterialCategoryDialog({
+export function EntityDialog<T extends FieldValues>({
   open,
   onClose,
-  category,
-  onSubmit,
+  title,
+  fields,
   control,
   handleSubmit,
+  onSubmit,
   errors,
   loading,
   error,
-}: RawMaterialCategoryDialogProps) {
-  const t = useTranslations("settings.rawMaterialCategories");
-
-  const formConfig = getRawMaterialCategoryFormConfig(t);
+  cancelText,
+  saveText,
+  savingText,
+  maxWidth = "2xl",
+}: EntityDialogProps<T>) {
+  const maxWidthClass = {
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-lg",
+    xl: "max-w-xl",
+    "2xl": "max-w-2xl",
+    "3xl": "max-w-3xl",
+  }[maxWidth];
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${maxWidthClass} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
-          <DialogTitle>
-            {category ? t("editCategory") : t("addCategory")}
+          <DialogTitle className="text-[#213559] text-xl font-bold">
+            {title}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-4">
             <FormFields
-              fields={formConfig}
+              fields={fields}
               control={control}
               errors={errors}
+              isLoading={loading}
             />
           </div>
 
@@ -89,14 +104,14 @@ export default function RawMaterialCategoryDialog({
               onClick={() => onClose()}
               disabled={loading}
             >
-              {t("cancel")}
+              {cancelText}
             </Button>
             <Button
               type="submit"
               disabled={loading}
               className="bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white"
             >
-              {loading ? t("saving") : t("save")}
+              {loading ? savingText : saveText}
             </Button>
           </DialogFooter>
         </form>

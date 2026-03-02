@@ -67,7 +67,6 @@ export async function GET(request: NextRequest) {
     });
 
     console.log("[API] Found categories:", categories.length);
-    console.log("[API] Categories:", categories);
 
     return NextResponse.json({
       items: categories,
