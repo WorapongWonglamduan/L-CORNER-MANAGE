@@ -379,7 +379,7 @@ model SaleItem {
   id               String   @id @default(uuid())
   sale_id          String
   product_id       String
-  product_unit_id  String
+  product_unit_id  String?
   recipe_id        String?
   quantity         Decimal  @db.Decimal(15, 4)
   unit_price       Decimal  @db.Decimal(15, 2)
@@ -393,7 +393,7 @@ model SaleItem {
 
   sale         Sale              @relation(fields: [sale_id], references: [id])
   product      Product           @relation(fields: [product_id], references: [id])
-  product_unit ProductUnit       @relation(fields: [product_unit_id], references: [id])
+  product_unit ProductUnit?      @relation(fields: [product_unit_id], references: [id])
   recipe       Recipe?           @relation(fields: [recipe_id], references: [id])
   toppings     SaleItemTopping[]
 

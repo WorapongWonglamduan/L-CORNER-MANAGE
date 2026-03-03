@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Search, ShoppingCart, X, Trash2, Grid3x3 } from "lucide-react";
 import { ProductCard } from "./product-card";
 import { usePOSManager } from "./helper";
 import { Button } from "@/components/ui/button";
+import { CheckoutModal } from "./checkout-modal";
+import { toast } from "@/lib/toast";
 
 export default function POSContent() {
   const {
@@ -23,8 +26,23 @@ export default function POSContent() {
     getCartItemQuantity,
     cartTotal,
     cartItemCount,
+    checkout,
     locale,
   } = usePOSManager();
+
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+
+  const handleCheckout = async (paymentMethod: string) => {
+    try {
+      const result = await checkout(paymentMethod);
+      toast.success(`ชำระเงินสำเร็จ - บันทึกการขาย ${cartItemCount} รายการ (เลขที่: ${result.sale_number || 'N/A'})`);
+      clearCart();
+      setIsCheckoutModalOpen(false);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถบันทึกการขายได้";
+      toast.error(`เกิดข้อผิดพลาด: ${errorMessage}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -234,7 +252,10 @@ export default function POSContent() {
                 </div>
               </div>
 
-              <Button className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all">
+              <Button 
+                onClick={() => setIsCheckoutModalOpen(true)}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all"
+              >
                 ชำระเงิน
               </Button>
             </div>
@@ -257,12 +278,24 @@ export default function POSContent() {
                 ฿{(cartTotal * 1.07).toLocaleString()}
               </div>
             </div>
-            <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-bold rounded-xl shadow-lg">
+            <Button 
+              onClick={() => setIsCheckoutModalOpen(true)}
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-bold rounded-xl shadow-lg"
+            >
               ชำระเงิน
             </Button>
           </div>
         </div>
       )}
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        cartTotal={cartTotal}
+        cartItemCount={cartItemCount}
+        onConfirm={handleCheckout}
+      />
     </div>
   );
 }

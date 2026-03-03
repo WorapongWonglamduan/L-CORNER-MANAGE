@@ -362,5 +362,13 @@
     "of": "of",
     "previous": "Previous",
     "next": "Next"
+  },
+  "sales": {
+    "errors": {
+      "insufficientStock": "Insufficient stock for {productName}. Available: {available}, Required: {required}",
+      "noRecipe": "No recipe found for semi-finished product: {productName}",
+      "productNotFound": "Product not found: {productId}",
+      "insufficientIngredient": "Insufficient stock for ingredient {ingredientName}. Available: {available}, Required: {required}"
+    }
   }
 }

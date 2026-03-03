@@ -362,5 +362,13 @@
     "of": "จาก",
     "previous": "ก่อนหน้า",
     "next": "ถัดไป"
+  },
+  "sales": {
+    "errors": {
+      "insufficientStock": "สต็อกไม่เพียงพอสำหรับ {productName} มีอยู่: {available} ต้องการ: {required}",
+      "noRecipe": "ไม่พบสูตรสำหรับสินค้ากึ่งสำเร็จรูป: {productName}",
+      "productNotFound": "ไม่พบสินค้า: {productId}",
+      "insufficientIngredient": "สต็อกวัตถุดิบไม่เพียงพอสำหรับ {ingredientName} มีอยู่: {available} ต้องการ: {required}"
+    }
   }
 }

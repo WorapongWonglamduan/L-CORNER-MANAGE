@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 interface Product {
   id: string;
   code: string;
@@ -61,11 +62,19 @@ export function usePOSManager() {
   const t = useTranslations("pos");
   const locale = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [optionsData, setOptionsData] = useState<{
+    productTypes: Category[];
+    categories: Category[];
+    warehouseId: string | null;
+  }>({
+    productTypes: [],
+    categories: [],
+    warehouseId: null,
+  });
 
   // Fetch products
   useEffect(() => {
@@ -75,7 +84,7 @@ export function usePOSManager() {
         const params = new URLSearchParams({
           pageSize: "100",
           isActive: "true",
-          type: "semi_finished,finished_good", // Filter เฉพาะสินค้าที่ขายได้
+          type: `${PRODUCTS_TYPES.SEMI_FINISHED},${PRODUCTS_TYPES.FINISHED_GOOD}`,
         });
 
         if (selectedCategory) {
@@ -99,21 +108,52 @@ export function usePOSManager() {
     fetchProducts();
   }, [selectedCategory, searchQuery]);
 
-  // Fetch categories
+  // Fetch product types, categories, and warehouse
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchInitialData = async () => {
       try {
-        const response = await fetch(
-          "/api/product-types?pageSize=100&isActive=true&type=product",
-        );
-        const data = await response.json();
-        setCategories(data.items || []);
+        const [productTypesRes, categoriesRes, warehouseRes] = await Promise.all([
+          fetch(
+            `/api/product-types?pageSize=100&isActive=true&type=${PRODUCTS_TYPES.FINISHED_GOOD},${PRODUCTS_TYPES.SEMI_FINISHED}`,
+          ),
+          fetch("/api/categories?pageSize=100&isActive=true"),
+          fetch("/api/warehouses?pageSize=1").catch(() => null),
+        ]);
+
+        const newOptionsData = { ...optionsData };
+
+        // Parse product types
+        if (productTypesRes.ok) {
+          const productTypesData = await productTypesRes.json();
+          newOptionsData.productTypes = productTypesData.items || [];
+        }
+
+        // Parse categories
+        if (categoriesRes.ok) {
+          const categoriesData = await categoriesRes.json();
+          newOptionsData.categories = categoriesData.items || [];
+        }
+
+        // Parse warehouse (optional)
+        if (warehouseRes && warehouseRes.ok) {
+          const warehouseData = await warehouseRes.json();
+          if (warehouseData.items && warehouseData.items.length > 0) {
+            newOptionsData.warehouseId = warehouseData.items[0].id;
+          }
+        } else {
+          console.warn(
+            "Warehouse API not available. Please create a warehouse first.",
+          );
+        }
+
+        setOptionsData(newOptionsData);
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error("Error fetching initial data:", error);
       }
     };
 
-    fetchCategories();
+    fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const addToCart = useCallback(
@@ -182,10 +222,53 @@ export function usePOSManager() {
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const checkout = useCallback(
+    async (paymentMethod: string) => {
+      try {
+        if (!optionsData.warehouseId) {
+          throw new Error("ไม่พบข้อมูลคลังสินค้า กรุณาติดต่อผู้ดูแลระบบ");
+        }
+
+        const items = cart.map((item) => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          unit_price: item.price,
+        }));
+
+        const response = await fetch("/api/sales", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            warehouse_id: optionsData.warehouseId,
+            items,
+            payment_method: paymentMethod,
+            discount_amount: 0,
+            tax_rate: 7,
+            note: "",
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to create sale");
+        }
+
+        const result = await response.json();
+        return result;
+      } catch (error) {
+        console.error("Checkout error:", error);
+        throw error;
+      }
+    },
+    [cart, optionsData.warehouseId],
+  );
+
   return {
     t,
     products,
-    categories,
+    categories: optionsData.productTypes,
     loading,
     selectedCategory,
     setSelectedCategory,
@@ -199,6 +282,7 @@ export function usePOSManager() {
     getCartItemQuantity,
     cartTotal,
     cartItemCount,
+    checkout,
     locale,
   };
 }

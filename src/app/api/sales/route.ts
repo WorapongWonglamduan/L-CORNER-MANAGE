@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getLocale, getTranslations } from "next-intl/server";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 // Helper function to deduct stock based on product type
 async function deductStock(
@@ -8,8 +10,10 @@ async function deductStock(
   quantity: number,
   warehouseId: string,
   saleId: string,
-  userId?: string
+  userId?: string,
 ) {
+  const locale = await getLocale();
+  const t = await getTranslations({ locale, namespace: "sales.errors" });
   // Get product with its type and recipes
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -30,13 +34,13 @@ async function deductStock(
   });
 
   if (!product) {
-    throw new Error(`Product not found: ${productId}`);
+    throw new Error(t("productNotFound", { productId }));
   }
 
   const productType = product.product_type.type;
 
   // FINISHED_GOOD: Deduct stock from the product itself
-  if (productType === "finished_good") {
+  if (productType === PRODUCTS_TYPES.FINISHED_GOOD) {
     const currentStock = await prisma.stock.findUnique({
       where: {
         product_id_warehouse_id: {
@@ -49,11 +53,7 @@ async function deductStock(
     const currentQty = currentStock?.quantity || 0;
     const newQty = Number(currentQty) - quantity;
 
-    if (newQty < 0) {
-      throw new Error(
-        `Insufficient stock for ${product.name_i18n.th}. Available: ${currentQty}, Required: ${quantity}`
-      );
-    }
+    // Allow negative stock - no validation
 
     // Update stock
     await prisma.stock.upsert({
@@ -88,30 +88,50 @@ async function deductStock(
         quantity_after: newQty,
         reference_id: saleId,
         reference_type: "sale",
-        note: `ขายสินค้าสำเร็จรูป: ${product.name_i18n.th}`,
+        note: `ขายสินค้าสำเร็จรูป: ${product.name_i18n[locale]}`,
         created_by: userId,
       },
     });
   }
   // SEMI_FINISHED: Deduct stock from ingredients based on recipe
-  else if (productType === "semi_finished") {
-    const defaultRecipe = product.recipes[0];
-
-    if (!defaultRecipe || defaultRecipe.ingredients.length === 0) {
-      throw new Error(
-        `No recipe found for semi-finished product: ${product.name_i18n.th}`
-      );
+  else if (productType === PRODUCTS_TYPES.SEMI_FINISHED) {
+    // Filter only default recipes
+    const defaultRecipes = product.recipes.filter(r => r.is_default);
+    
+    if (defaultRecipes.length === 0) {
+      const productName = product.name_i18n[locale];
+      throw new Error(t("noRecipe", { productName }));
     }
+    
+    // Use only the first default recipe to avoid duplicate deductions
+    const defaultRecipe = defaultRecipes[0];
+    
+    if (!defaultRecipe.ingredients || defaultRecipe.ingredients.length === 0) {
+      const productName = product.name_i18n[locale];
+      throw new Error(t("noRecipe", { productName }));
+    }
+
+    console.log('DEBUG: Using recipe:', defaultRecipe.name_i18n, 'with', defaultRecipe.ingredients.length, 'ingredients');
 
     // Deduct each ingredient
     for (const recipeIngredient of defaultRecipe.ingredients) {
       const ingredientQty = Number(recipeIngredient.quantity) * quantity;
       const ingredient = recipeIngredient.ingredient;
+      const ingredientProductId = recipeIngredient.ingredient_id;
+      
+      console.log('DEBUG Stock Deduction:', {
+        productName: product.name_i18n[locale],
+        ingredientName: ingredient.name_i18n[locale],
+        recipeQuantity: recipeIngredient.quantity,
+        saleQuantity: quantity,
+        calculatedIngredientQty: ingredientQty,
+        ingredientProductId
+      });
 
       const currentStock = await prisma.stock.findUnique({
         where: {
           product_id_warehouse_id: {
-            product_id: ingredient.id,
+            product_id: ingredientProductId,
             warehouse_id: warehouseId,
           },
         },
@@ -120,23 +140,19 @@ async function deductStock(
       const currentQty = currentStock?.quantity || 0;
       const newQty = Number(currentQty) - ingredientQty;
 
-      if (newQty < 0) {
-        throw new Error(
-          `Insufficient stock for ingredient ${ingredient.name_i18n.th}. Available: ${currentQty}, Required: ${ingredientQty}`
-        );
-      }
+      // Allow negative stock - no validation
 
       // Update stock
       await prisma.stock.upsert({
         where: {
           product_id_warehouse_id: {
-            product_id: ingredient.id,
+            product_id: ingredientProductId,
             warehouse_id: warehouseId,
           },
         },
         update: { quantity: newQty },
         create: {
-          product_id: ingredient.id,
+          product_id: ingredientProductId,
           warehouse_id: warehouseId,
           quantity: newQty,
         },
@@ -144,14 +160,14 @@ async function deductStock(
 
       // Update current_stock in product
       await prisma.product.update({
-        where: { id: ingredient.id },
+        where: { id: ingredientProductId },
         data: { current_stock: newQty },
       });
 
       // Create stock transaction
       await prisma.stockTransaction.create({
         data: {
-          product_id: ingredient.id,
+          product_id: ingredientProductId,
           warehouse_id: warehouseId,
           transaction_type: "sale",
           quantity: -ingredientQty,
@@ -161,7 +177,7 @@ async function deductStock(
           quantity_in_unit: ingredientQty,
           reference_id: saleId,
           reference_type: "sale",
-          note: `ใช้วัตถุดิบสำหรับ ${product.name_i18n.th} (${quantity} ${product.base_unit.name_i18n?.th || "หน่วย"})`,
+          note: `ใช้วัตถุดิบสำหรับ ${product.name_i18n[locale]} (${quantity})`,
           created_by: userId,
         },
       });
@@ -246,11 +262,11 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / pageSize),
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching sales:", error);
     return NextResponse.json(
       { error: error.message || "Failed to fetch sales" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -277,7 +293,7 @@ export async function POST(request: NextRequest) {
     if (!warehouse_id || !items || items.length === 0) {
       return NextResponse.json(
         { error: "Warehouse and items are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -288,30 +304,16 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.product_id },
-        include: {
-          product_units: {
-            where: { id: item.product_unit_id },
-            include: { unit: true },
-          },
-        },
       });
 
       if (!product) {
         return NextResponse.json(
           { error: `Product not found: ${item.product_id}` },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
-      const productUnit = product.product_units[0];
-      if (!productUnit) {
-        return NextResponse.json(
-          { error: `Product unit not found: ${item.product_unit_id}` },
-          { status: 400 }
-        );
-      }
-
-      const unitPrice = item.unit_price || productUnit.selling_price || 0;
+      const unitPrice = item.unit_price || product.selling_price || 0;
       const quantity = item.quantity;
       const itemDiscount = item.discount_amount || 0;
       const totalAmount = Number(unitPrice) * quantity - itemDiscount;
@@ -320,15 +322,15 @@ export async function POST(request: NextRequest) {
 
       processedItems.push({
         product_id: item.product_id,
-        product_unit_id: item.product_unit_id,
+        product_unit_id: null,
         recipe_id: item.recipe_id || null,
         quantity,
         unit_price: unitPrice,
         discount_amount: itemDiscount,
         total_amount: totalAmount,
-        cost_price: productUnit.cost_price,
-        base_quantity: quantity * Number(productUnit.conversion_to_base),
-        note: item.note,
+        cost_price: product.cost_price || 0,
+        base_quantity: quantity,
+        note: item.note || null,
       });
     }
 
@@ -380,13 +382,15 @@ export async function POST(request: NextRequest) {
       });
 
       // Deduct stock for each item
+      console.log('DEBUG: Total sale items:', newSale.items.length);
       for (const item of newSale.items) {
+        console.log('DEBUG: Calling deductStock for product_id:', item.product_id, 'quantity:', item.base_quantity);
         await deductStock(
           item.product_id,
           Number(item.base_quantity),
           warehouse_id,
           newSale.id,
-          session.user?.id
+          session.user?.id,
         );
       }
 
@@ -418,11 +422,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(completeSale, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating sale:", error);
     return NextResponse.json(
       { error: error.message || "Failed to create sale" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
