@@ -1,6 +1,7 @@
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { setRequestLocale } from 'next-intl/server'
+import { ToastProvider } from '@/components/ui/toast-provider'
 
 const locales = ['th', 'en']
 
@@ -22,6 +23,7 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       {children}
+      <ToastProvider />
     </NextIntlClientProvider>
   )
 }

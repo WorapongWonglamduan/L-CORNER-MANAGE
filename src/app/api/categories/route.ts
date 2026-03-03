@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { Prisma } from "@prisma/client";
 
-// GET /api/product-types - ดึงรายการประเภทสินค้าทั้งหมด
+// GET /api/categories - ดึงรายการหมวดหมู่ทั้งหมด
 export async function GET(request: NextRequest) {
   try {
-    console.log("[API] Fetching product types...");
+    console.log("[API] Fetching categories...");
 
     const session = await auth();
     console.log(
@@ -23,28 +23,19 @@ export async function GET(request: NextRequest) {
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
     const searchQuery = searchParams.get("search") || "";
     const isActive = searchParams.get("isActive");
-    const type = searchParams.get("type");
 
     console.log("[API] Query params:", {
       page,
       pageSize,
       searchQuery,
       isActive,
-      type,
     });
 
     // Build where clause
-    const where: Prisma.ProductTypeWhereInput = {};
+    const where: Prisma.CategoryWhereInput = {};
 
-    if (type && type !== null) {
-      where.type = type;
-    }
-
-    if (searchQuery) {
-      where.OR = [
-        { code: { contains: searchQuery, mode: Prisma.QueryMode.insensitive } },
-      ];
-    }
+    // Note: Cannot search by name_i18n directly with JSON field
+    // Search functionality would need to be implemented differently
 
     if (isActive !== null && isActive !== undefined) {
       where.is_active = isActive === "true";
@@ -54,36 +45,36 @@ export async function GET(request: NextRequest) {
     console.log("[API] Executing Prisma count query...");
 
     // Get total count
-    const total = await prisma.productType.count({ where });
+    const total = await prisma.category.count({ where });
     console.log("[API] Total count:", total);
 
     console.log("[API] Executing Prisma findMany query...");
     // Get paginated data
-    const types = await prisma.productType.findMany({
+    const categories = await prisma.category.findMany({
       where,
       orderBy: { sort_order: "asc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
 
-    console.log("[API] Found types:", types.length);
+    console.log("[API] Found categories:", categories.length);
 
     return NextResponse.json({
-      items: types,
+      items: categories,
       total,
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     });
   } catch (error) {
-    console.error("Error fetching product types:", error);
+    console.error("Error fetching categories:", error);
     console.error("Error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json(
       {
-        error: "Failed to fetch product types",
+        error: "Failed to fetch categories",
         details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
@@ -91,7 +82,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/product-types - สร้างประเภทสินค้าใหม่
+// POST /api/categories - สร้างหมวดหมู่ใหม่
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -100,52 +91,30 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { code, name_i18n, icon, /*  type, */ sort_order, is_active } = body;
+    const { name_i18n, parent_id, sort_order, is_active } = body;
 
     // Validation
-    if (!code || !name_i18n /* || !type */) {
+    if (!name_i18n) {
       return NextResponse.json(
-        { error: "Code, name, and type are required" },
+        { error: "Name is required" },
         { status: 400 },
       );
     }
 
-    // Validate type
-    // if (!["raw_material", "product", "semi_finished", "finished_good"].includes(type)) {
-    //   return NextResponse.json(
-    //     { error: "Type must be 'raw_material', 'product', 'semi_finished', or 'finished_good'" },
-    //     { status: 400 },
-    //   );
-    // }
-
-    // Check if code already exists
-    const existing = await prisma.productType.findUnique({
-      where: { code },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "Product type code already exists" },
-        { status: 400 },
-      );
-    }
-
-    const productType = await prisma.productType.create({
+    const category = await prisma.category.create({
       data: {
-        code,
         name_i18n,
-        icon,
-        // type,
+        parent_id: parent_id || null,
         sort_order: sort_order ? parseInt(sort_order) : 0,
         is_active: is_active ?? true,
       },
     });
 
-    return NextResponse.json(productType, { status: 201 });
+    return NextResponse.json(category, { status: 201 });
   } catch (error) {
-    console.error("Error creating product type:", error);
+    console.error("Error creating category:", error);
     return NextResponse.json(
-      { error: "Failed to create product type" },
+      { error: "Failed to create category" },
       { status: 500 },
     );
   }

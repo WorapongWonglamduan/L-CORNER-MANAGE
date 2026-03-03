@@ -78,7 +78,8 @@ export async function PUT(
   }
 }
 
-// DELETE /api/units/[id] - ลบหน่วย (soft delete โดยตั้ง is_active = false)
+// DELETE /api/units/[id] - ลบหน่วย
+// Query params: ?hard=true สำหรับ hard delete, ไม่ระบุหรือ false จะเป็น soft delete
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -90,23 +91,93 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const hardDelete = searchParams.get("hard") === "true";
 
     // Check if unit exists
     const existingUnit = await prisma.unit.findUnique({
       where: { id },
+      include: {
+        _count: {
+          select: {
+            products_as_base: true,
+            product_units: true,
+            raw_materials: true,
+            recipe_ingredients: true,
+            toppings: true,
+          },
+        },
+      },
     });
 
     if (!existingUnit) {
       return NextResponse.json({ error: "Unit not found" }, { status: 404 });
     }
 
-    // Soft delete
+    // Hard delete - check for relations first
+    if (hardDelete) {
+      const hasRelations = 
+        existingUnit._count.products_as_base > 0 || 
+        existingUnit._count.product_units > 0 ||
+        existingUnit._count.raw_materials > 0 ||
+        existingUnit._count.recipe_ingredients > 0 ||
+        existingUnit._count.toppings > 0;
+
+      if (hasRelations) {
+        const errors = [];
+        if (existingUnit._count.products_as_base > 0) {
+          errors.push(`${existingUnit._count.products_as_base} products (as base unit)`);
+        }
+        if (existingUnit._count.product_units > 0) {
+          errors.push(`${existingUnit._count.product_units} product units`);
+        }
+        if (existingUnit._count.raw_materials > 0) {
+          errors.push(`${existingUnit._count.raw_materials} raw materials`);
+        }
+        if (existingUnit._count.recipe_ingredients > 0) {
+          errors.push(`${existingUnit._count.recipe_ingredients} recipe ingredients`);
+        }
+        if (existingUnit._count.toppings > 0) {
+          errors.push(`${existingUnit._count.toppings} toppings`);
+        }
+
+        return NextResponse.json(
+          { 
+            error: `Cannot delete unit with existing: ${errors.join(", ")}`,
+            details: {
+              products_as_base: existingUnit._count.products_as_base,
+              product_units: existingUnit._count.product_units,
+              raw_materials: existingUnit._count.raw_materials,
+              recipe_ingredients: existingUnit._count.recipe_ingredients,
+              toppings: existingUnit._count.toppings,
+            },
+          },
+          { status: 400 }
+        );
+      }
+
+      // Perform hard delete
+      await prisma.unit.delete({
+        where: { id },
+      });
+
+      return NextResponse.json({ 
+        message: "Unit permanently deleted successfully",
+        deleted: true,
+      });
+    }
+
+    // Soft delete (default)
     const unit = await prisma.unit.update({
       where: { id },
       data: { is_active: false },
     });
 
-    return NextResponse.json({ message: "Unit deleted successfully", unit });
+    return NextResponse.json({ 
+      message: "Unit deactivated successfully", 
+      unit,
+      deleted: false,
+    });
   } catch (error) {
     console.error("Error deleting unit:", error);
     return NextResponse.json(

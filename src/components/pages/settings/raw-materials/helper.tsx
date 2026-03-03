@@ -4,6 +4,7 @@ import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 import { useEffect, useState } from "react";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 export interface RawMaterialFormData {
   code: string;
@@ -117,9 +118,7 @@ export function useRawMaterialsManager() {
       try {
         const [unitsRes, productTypesRes] = await Promise.all([
           fetch("/api/units?pageSize=100&isActive=true"),
-          fetch(
-            "/api/product-types?pageSize=100&isActive=true",
-          ),
+          fetch("/api/product-types?pageSize=100&isActive=true"),
         ]);
 
         const unitsData = await unitsRes.json();
@@ -127,7 +126,12 @@ export function useRawMaterialsManager() {
 
         setOptionsData({
           units: unitsData.items || [],
-          productTypes: productTypesData.items || [],
+          productTypes:
+            productTypesData.items.filter((item) =>
+              [PRODUCTS_TYPES.INGREDIENT, PRODUCTS_TYPES.CONTAINER].includes(
+                item.type,
+              ),
+            ) || [],
         });
       } catch (error) {
         console.error("Error fetching data:", error);

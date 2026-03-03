@@ -52,7 +52,7 @@ export async function PUT(
       name_i18n,
       description_i18n,
       category_id,
-      product_type,
+      product_type_id,
       base_unit_id,
       image_url,
       is_active,
@@ -60,7 +60,10 @@ export async function PUT(
       has_expiry,
       min_stock_level,
       low_stock_threshold,
+      current_stock,
       track_stock,
+      selling_price,
+      cost_price,
     } = body;
 
     // Check if product exists
@@ -93,7 +96,7 @@ export async function PUT(
         name_i18n,
         description_i18n: description_i18n || null,
         category_id: category_id || null,
-        product_type,
+        product_type_id,
         base_unit_id,
         image_url: image_url || null,
         is_active,
@@ -101,11 +104,15 @@ export async function PUT(
         has_expiry,
         min_stock_level: min_stock_level || 0,
         low_stock_threshold: low_stock_threshold || 0,
+        current_stock: current_stock ?? undefined,
         track_stock,
+        selling_price: selling_price ?? undefined,
+        cost_price: cost_price ?? undefined,
       },
       include: {
         category: true,
         base_unit: true,
+        product_type: true,
       },
     });
 

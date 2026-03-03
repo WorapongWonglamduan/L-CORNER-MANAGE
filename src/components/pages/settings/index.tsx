@@ -3,7 +3,7 @@
 import { Navbar } from "@/components/navbar";
 import { useTranslations } from "next-intl";
 import { useRouter, useParams } from "next/navigation";
-import { Settings, Package, ArrowRight, Beef, FolderTree } from "lucide-react";
+import { Settings, Package, ArrowRight, Beef, FolderTree, Folder } from "lucide-react";
 
 export default function SettingsContent() {
   const t = useTranslations("settings");
@@ -18,6 +18,13 @@ export default function SettingsContent() {
       description: t("units.description"),
       icon: Package,
       href: `/${locale}/settings/units`,
+    },
+    {
+      id: "categories",
+      title: t("categories.title"),
+      description: t("categories.description"),
+      icon: Folder,
+      href: `/${locale}/settings/categories`,
     },
     {
       id: "raw-materials",

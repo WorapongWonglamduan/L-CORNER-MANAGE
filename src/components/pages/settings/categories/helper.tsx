@@ -4,43 +4,37 @@ import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 
-export interface UnitFormData {
+export interface CategoryFormData {
   name_th: string;
   name_en: string;
-  abbreviation_th: string;
-  abbreviation_en: string;
-  unit_type?: string;
-  is_base_unit: boolean;
+  parent_id?: string;
+  sort_order?: number;
   is_active: boolean;
 }
 
-interface Unit {
+interface Category {
   id: string;
   name_i18n: {
     th: string;
     en: string;
   };
-  abbreviation_i18n: {
-    th: string;
-    en: string;
-  };
-  unit_type: string | null;
-  is_base_unit: boolean;
+  parent_id?: string;
+  sort_order: number;
   is_active: boolean;
   created_at: string;
 }
 
-interface UnitsFilterOptions extends FilterOptions {
+interface CategoriesFilterOptions extends FilterOptions {
   search?: string;
   isActive?: boolean;
 }
 
-export function useUnitsManager() {
-  const t = useTranslations("settings.units");
+export function useCategoriesManager() {
+  const t = useTranslations("settings.categories");
   const { confirm, ConfirmDialog } = useConfirm();
 
   const {
-    items: units,
+    items: categories,
     loading,
     totalItems,
     totalPages,
@@ -49,8 +43,8 @@ export function useUnitsManager() {
     handlePageSizeChange,
     handleSearchChange,
     refetch,
-  } = useEntityList<Unit, UnitsFilterOptions>({
-    endpoint: "/api/units",
+  } = useEntityList<Category, CategoriesFilterOptions>({
+    endpoint: "/api/categories",
     initialFilters: {
       search: "",
     },
@@ -62,47 +56,39 @@ export function useUnitsManager() {
     errors,
     loading: formLoading,
     error: formError,
-    editingEntity: editingUnit,
+    editingEntity,
     dialogOpen,
     handleCreate,
     handleEdit,
     handleDelete,
     handleDialogClose,
     handleFormSubmit,
-  } = useEntityForm<UnitFormData, Unit>({
+  } = useEntityForm<CategoryFormData, Category>({
     formConfig: {
       defaultValues: {
         name_th: "",
         name_en: "",
-        abbreviation_th: "",
-        abbreviation_en: "",
-        unit_type: "",
-        is_base_unit: false,
+        parent_id: "",
+        sort_order: 0,
         is_active: true,
       },
     },
-    endpoint: "/api/units",
+    endpoint: "/api/categories",
     transformToPayload: (data) => ({
       name_i18n: {
         th: data.name_th,
         en: data.name_en,
       },
-      abbreviation_i18n: {
-        th: data.abbreviation_th,
-        en: data.abbreviation_en,
-      },
-      unit_type: data.unit_type || null,
-      is_base_unit: data.is_base_unit,
+      parent_id: data.parent_id || null,
+      sort_order: data.sort_order,
       is_active: data.is_active,
     }),
-    transformToForm: (unit) => ({
-      name_th: unit.name_i18n.th,
-      name_en: unit.name_i18n.en,
-      abbreviation_th: unit.abbreviation_i18n.th,
-      abbreviation_en: unit.abbreviation_i18n.en,
-      unit_type: unit.unit_type || "",
-      is_base_unit: unit.is_base_unit,
-      is_active: unit.is_active,
+    transformToForm: (category) => ({
+      name_th: category.name_i18n.th,
+      name_en: category.name_i18n.en,
+      parent_id: category.parent_id || "",
+      sort_order: category.sort_order,
+      is_active: category.is_active,
     }),
     onSuccess: refetch,
     confirmDelete: confirm,
@@ -110,19 +96,19 @@ export function useUnitsManager() {
 
   return {
     t,
-    units,
-    allUnits: units,
+    categories,
+    allCategories: categories || [],
     loading,
     searchQuery: filterOptions.search || "",
     setSearchQuery: handleSearchChange,
     dialogOpen,
-    editingUnit,
+    editingCategory: editingEntity,
     filterOptions,
     totalItems,
     totalPages,
     handleCreate,
     handleEdit,
-    handleDelete: (id: string) => handleDelete(id, t("confirmDelete"), true),
+    handleDelete: (id: string) => handleDelete(id, t("confirmDelete")),
     handleDialogClose,
     handleFormSubmit,
     handlePageChange,

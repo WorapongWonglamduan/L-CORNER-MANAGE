@@ -81,7 +81,6 @@ model Unit {
   from_conversions     UnitConversion[]   @relation("FromUnit")
   to_conversions       UnitConversion[]   @relation("ToUnit")
   stock_transactions   StockTransaction[]
-  raw_materials        RawMaterial[]      @relation("RawMaterialUnit")
 
   @@map("units")
 }
@@ -146,9 +145,17 @@ model Product {
   is_active           Boolean   @default(true)
   has_serial          Boolean   @default(false)
   has_expiry          Boolean   @default(false)
+  
+  // Stock management
   min_stock_level     Decimal   @default(0) @db.Decimal(15, 4)
   low_stock_threshold Decimal   @default(0) @db.Decimal(15, 4)
+  current_stock       Decimal   @default(0) @db.Decimal(15, 4)
   track_stock         Boolean   @default(true)
+  
+  // Pricing (merged from ProductUnit for base unit)
+  selling_price       Decimal?  @db.Decimal(15, 2)
+  cost_price          Decimal?  @db.Decimal(15, 2)
+  
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
   deleted_at          DateTime?
@@ -167,6 +174,10 @@ model Product {
   sale_items             SaleItem[]
   purchase_order_items   PurchaseOrderItem[]
   sale_item_toppings     SaleItemTopping[]    @relation("ToppingIngredientProduct")
+  
+  @@index([product_type_id])
+  @@index([category_id])
+  @@index([is_active])
 
   @@map("products")
 }
@@ -479,27 +490,9 @@ model ProductType {
   updated_at DateTime @updatedAt
 
   products      Product[]
-  raw_materials RawMaterial[]
 
   @@map("product_types")
 }
 
-model RawMaterial {
-  id           String   @id @default(uuid())
-  code         String   @unique
-  name_i18n    Json
-  description_i18n Json?
-  type_id      String?
-  unit_id      String
-  cost_price   Decimal? @db.Decimal(15, 2)
-  min_stock    Decimal  @default(0) @db.Decimal(15, 4)
-  current_stock Decimal @default(0) @db.Decimal(15, 4)
-  is_active    Boolean  @default(true)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
-  type ProductType? @relation(fields: [type_id], references: [id])
-  unit Unit         @relation("RawMaterialUnit", fields: [unit_id], references: [id])
-
-  @@map("raw_materials")
-}
+// RawMaterial model removed - merged into Product model
+// Use product_type_id to distinguish between raw materials and finished products

@@ -45,6 +45,7 @@ export default function AddProductContent() {
   const formFields = getProductFormConfig(
     optionsData.categories,
     optionsData.units,
+    optionsData.productTypes,
     t,
     locale,
   );
@@ -110,13 +111,20 @@ export default function AddProductContent() {
                 {formFields.map((field) => (
                   <Input
                     key={field.name}
-                    {...register(field.name as keyof ProductFormData, field.rules)}
+                    {...register(
+                      field.name as keyof ProductFormData,
+                      field.rules,
+                    )}
                     inputType={field.type}
                     label={field.label}
                     placeholder={field.placeholder}
                     options={field.options}
                     rows={field.rows}
-                    error={errors[field.name as keyof typeof errors] as FieldError | undefined}
+                    error={
+                      errors[field.name as keyof typeof errors] as
+                        | FieldError
+                        | undefined
+                    }
                     containerClassName={field.gridCols || ""}
                     required={!!field.rules?.required}
                   />
@@ -144,7 +152,7 @@ export default function AddProductContent() {
                   <Button
                     type="button"
                     onClick={() =>
-                      append({ raw_material_id: "", quantity: 0, unit_id: "" })
+                      append({ ingredient_id: "", quantity: 0, unit_id: "" })
                     }
                     className="bg-orange-500 hover:bg-orange-600 text-white"
                   >
@@ -168,21 +176,23 @@ export default function AddProductContent() {
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                           <Input
                             {...register(
-                              `recipe_ingredients.${index}.raw_material_id` as const,
+                              `recipe_ingredients.${index}.ingredient_id` as const,
                               {
                                 required: "กรุณาเลือกวัตถุดิบ",
                               },
                             )}
                             inputType="select"
-                            label={t("rawMaterial")}
+                            label={t("ingredient")}
                             options={[
-                              { value: "", label: t("selectRawMaterial") },
                               ...optionsData.rawMaterials.map((rm) => ({
                                 value: rm.id,
                                 label: `${rm.name_i18n.th} (${rm.code})`,
                               })),
                             ]}
-                            error={errors.recipe_ingredients?.[index]?.raw_material_id}
+                            error={
+                              errors.recipe_ingredients?.[index]
+                                ?.ingredient_id
+                            }
                             required
                           />
 
@@ -216,7 +226,6 @@ export default function AddProductContent() {
                             inputType="select"
                             label={t("unit")}
                             options={[
-                              { value: "", label: t("selectUnit") },
                               ...optionsData.units.map((unit) => ({
                                 value: unit.id,
                                 label: unit.abbreviation_i18n.th,
@@ -253,12 +262,19 @@ export default function AddProductContent() {
                 {priceStockConfig.slice(0, 2).map((field) => (
                   <Input
                     key={field.name}
-                    {...register(field.name as keyof ProductFormData, field.rules)}
+                    {...register(
+                      field.name as keyof ProductFormData,
+                      field.rules,
+                    )}
                     inputType="number"
                     label={field.label}
                     placeholder={field.placeholder}
                     step="0.01"
-                    error={errors[field.name as keyof typeof errors] as FieldError | undefined}
+                    error={
+                      errors[field.name as keyof typeof errors] as
+                        | FieldError
+                        | undefined
+                    }
                     required={!!field.rules?.required}
                   />
                 ))}
@@ -274,11 +290,18 @@ export default function AddProductContent() {
                 {priceStockConfig.slice(2).map((field) => (
                   <Input
                     key={field.name}
-                    {...register(field.name as keyof ProductFormData, field.rules)}
+                    {...register(
+                      field.name as keyof ProductFormData,
+                      field.rules,
+                    )}
                     inputType="number"
                     label={field.label}
                     placeholder={field.placeholder}
-                    error={errors[field.name as keyof typeof errors] as FieldError | undefined}
+                    error={
+                      errors[field.name as keyof typeof errors] as
+                        | FieldError
+                        | undefined
+                    }
                     required={!!field.rules?.required}
                   />
                 ))}
@@ -298,7 +321,10 @@ export default function AddProductContent() {
                       inputType="checkbox"
                       id={field.name}
                     />
-                    <label htmlFor={field.name} className="text-gray-700 font-medium cursor-pointer">
+                    <label
+                      htmlFor={field.name}
+                      className="text-gray-700 font-medium cursor-pointer"
+                    >
                       {field.label}
                     </label>
                   </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
-// GET /api/raw-materials/[id] - ดึงข้อมูลวัตถุดิบตาม ID
+// GET /api/raw-materials/[id] - ดึงข้อมูลวัตถุดิบตาม ID (จาก products table)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,20 +15,38 @@ export async function GET(
 
     const { id } = await params;
 
-    const rawMaterial = await prisma.rawMaterial.findUnique({
+    const product = await prisma.product.findUnique({
       where: { id },
       include: {
-        unit: true,
-        type: true,
+        base_unit: true,
+        product_type: true,
       },
     });
 
-    if (!rawMaterial) {
+    if (!product) {
       return NextResponse.json(
-        { error: "Raw material not found" },
+        { error: "Product not found" },
         { status: 404 }
       );
     }
+
+    // Transform to match old raw_materials format
+    const rawMaterial = {
+      id: product.id,
+      code: product.code,
+      name_i18n: product.name_i18n,
+      description_i18n: product.description_i18n,
+      type_id: product.product_type_id,
+      unit_id: product.base_unit_id,
+      cost_price: product.cost_price,
+      min_stock: product.min_stock_level,
+      current_stock: product.current_stock,
+      is_active: product.is_active,
+      created_at: product.created_at,
+      updated_at: product.updated_at,
+      unit: product.base_unit,
+      type: product.product_type,
+    };
 
     return NextResponse.json(rawMaterial);
   } catch (error) {
@@ -40,7 +58,7 @@ export async function GET(
   }
 }
 
-// PUT /api/raw-materials/[id] - อัพเดทข้อมูลวัตถุดิบ
+// PUT /api/raw-materials/[id] - อัพเดทข้อมูลวัตถุดิบ (ใน products table)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -65,50 +83,68 @@ export async function PUT(
       is_active,
     } = body;
 
-    // Check if raw material exists
-    const existing = await prisma.rawMaterial.findUnique({
+    // Check if product exists
+    const existing = await prisma.product.findUnique({
       where: { id },
     });
 
     if (!existing) {
       return NextResponse.json(
-        { error: "Raw material not found" },
+        { error: "Product not found" },
         { status: 404 }
       );
     }
 
     // Check if code is being changed and if new code already exists
     if (code && code !== existing.code) {
-      const codeExists = await prisma.rawMaterial.findUnique({
+      const codeExists = await prisma.product.findUnique({
         where: { code },
       });
 
       if (codeExists) {
         return NextResponse.json(
-          { error: "Raw material code already exists" },
+          { error: "Product code already exists" },
           { status: 400 }
         );
       }
     }
 
-    const rawMaterial = await prisma.rawMaterial.update({
+    const product = await prisma.product.update({
       where: { id },
       data: {
         code: code || existing.code,
         name_i18n: name_i18n || existing.name_i18n,
         description_i18n: description_i18n !== undefined ? description_i18n : existing.description_i18n,
-        type_id: type_id !== undefined ? type_id : existing.type_id,
-        unit_id: unit_id || existing.unit_id,
+        product_type_id: type_id !== undefined ? type_id : existing.product_type_id,
+        base_unit_id: unit_id || existing.base_unit_id,
         cost_price: cost_price !== undefined ? cost_price : existing.cost_price,
-        min_stock: min_stock !== undefined ? min_stock : existing.min_stock,
+        min_stock_level: min_stock !== undefined ? min_stock : existing.min_stock_level,
         current_stock: current_stock !== undefined ? current_stock : existing.current_stock,
         is_active: is_active !== undefined ? is_active : existing.is_active,
       },
       include: {
-        unit: true,
-        type: true,
+        base_unit: true,
+        product_type: true,
       },
     });
+
+    // Transform to match old raw_materials format
+    const rawMaterial = {
+      id: product.id,
+      code: product.code,
+      name_i18n: product.name_i18n,
+      description_i18n: product.description_i18n,
+      type_id: product.product_type_id,
+      unit_id: product.base_unit_id,
+      cost_price: product.cost_price,
+      min_stock: product.min_stock_level,
+      current_stock: product.current_stock,
+      is_active: product.is_active,
+      created_at: product.created_at,
+      updated_at: product.updated_at,
+      unit: product.base_unit,
+      type: product.product_type,
+    };
 
     return NextResponse.json(rawMaterial);
   } catch (error) {
@@ -120,7 +156,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/raw-materials/[id] - ลบวัตถุดิบ
+// DELETE /api/raw-materials/[id] - ลบวัตถุดิบ (soft delete)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -133,20 +169,25 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Check if raw material exists
-    const existing = await prisma.rawMaterial.findUnique({
+    // Check if product exists
+    const existing = await prisma.product.findUnique({
       where: { id },
     });
 
     if (!existing) {
       return NextResponse.json(
-        { error: "Raw material not found" },
+        { error: "Product not found" },
         { status: 404 }
       );
     }
 
-    await prisma.rawMaterial.delete({
+    // Soft delete
+    await prisma.product.update({
       where: { id },
+      data: {
+        deleted_at: new Date(),
+        is_active: false,
+      },
     });
 
     return NextResponse.json({ message: "Raw material deleted successfully" });

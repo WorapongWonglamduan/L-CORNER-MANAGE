@@ -32,19 +32,19 @@ export const getProductTypeFormConfig = (
     label: `${t("icon")}`,
     placeholder: "🥬",
   },
-  {
-    name: "type",
-    type: INPUT_TYPES.SELECT,
-    label: `${t("type")}`,
-    placeholder: t("typePlaceholder"),
-    rules: { required: t("typeRequired") },
-    options: [
-      { value: "raw_material", label: t("typeRawMaterial") },
-      { value: "product", label: t("typeProduct") },
-      { value: "semi_finished", label: t("typeSemiFinished") },
-      { value: "finished_good", label: t("typeFinishedGood") },
-    ],
-  },
+  // {
+  //   name: "type",
+  //   type: INPUT_TYPES.SELECT,
+  //   label: `${t("type")}`,
+  //   placeholder: t("typePlaceholder"),
+  //   rules: { required: t("typeRequired") },
+  //   options: [
+  //     { value: "raw_material", label: t("typeRawMaterial") },
+  //     { value: "product", label: t("typeProduct") },
+  //     { value: "semi_finished", label: t("typeSemiFinished") },
+  //     { value: "finished_good", label: t("typeFinishedGood") },
+  //   ],
+  // },
   {
     name: "sort_order",
     type: INPUT_TYPES.NUMBER,

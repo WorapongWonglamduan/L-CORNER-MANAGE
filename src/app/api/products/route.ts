@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (productType) {
-      where.product_type = productType;
+      where.product_type_id = productType;
     }
 
     // Get total count
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/products - สร้างสินค้าใหม่
+// POST /api/products - สร้างสินค้าใหม่ (with transaction)
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       name_i18n,
       description_i18n,
       category_id,
-      product_type,
+      product_type_id,
       base_unit_id,
       image_url,
       is_active,
@@ -106,11 +106,16 @@ export async function POST(request: NextRequest) {
       has_expiry,
       min_stock_level,
       low_stock_threshold,
+      current_stock,
       track_stock,
+      selling_price,
+      cost_price,
+      product_units,
+      recipes,
     } = body;
 
     // Validation
-    if (!code || !name_i18n || !product_type || !base_unit_id) {
+    if (!code || !name_i18n || !product_type_id || !base_unit_id) {
       return NextResponse.json(
         { error: "Code, name, product type, and base unit are required" },
         { status: 400 },
@@ -129,26 +134,83 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const product = await prisma.product.create({
-      data: {
-        code,
-        name_i18n,
-        description_i18n: description_i18n || null,
-        category_id: category_id || null,
-        product_type,
-        base_unit_id,
-        image_url: image_url || null,
-        is_active: is_active ?? true,
-        has_serial: has_serial ?? false,
-        has_expiry: has_expiry ?? false,
-        min_stock_level: min_stock_level || 0,
-        low_stock_threshold: low_stock_threshold || 0,
-        track_stock: track_stock ?? true,
-      },
-      include: {
-        category: true,
-        base_unit: true,
-      },
+    // Use transaction to create product with nested relations
+    const product = await prisma.$transaction(async (tx) => {
+      return await tx.product.create({
+        data: {
+          code,
+          name_i18n,
+          description_i18n: description_i18n || null,
+          category_id: category_id || null,
+          product_type_id,
+          base_unit_id,
+          image_url: image_url || null,
+          is_active: is_active ?? true,
+          has_serial: has_serial ?? false,
+          has_expiry: has_expiry ?? false,
+          min_stock_level: min_stock_level || 0,
+          low_stock_threshold: low_stock_threshold || 0,
+          current_stock: current_stock || 0,
+          track_stock: track_stock ?? true,
+          selling_price: selling_price || null,
+          cost_price: cost_price || null,
+          
+          // Nested create for product_units (if provided)
+          product_units: product_units?.length > 0 ? {
+            create: product_units.map((unit: any) => ({
+              unit_id: unit.unit_id,
+              is_base_unit: unit.is_base_unit ?? false,
+              is_selling_unit: unit.is_selling_unit ?? true,
+              is_purchase_unit: unit.is_purchase_unit ?? false,
+              selling_price: unit.selling_price || null,
+              cost_price: unit.cost_price || null,
+              conversion_to_base: unit.conversion_to_base || 1,
+              barcode: unit.barcode || null,
+            }))
+          } : undefined,
+          
+          // Nested create for recipes (if provided)
+          recipes: recipes?.length > 0 ? {
+            create: recipes.map((recipe: any) => ({
+              name_i18n: recipe.name_i18n,
+              is_default: recipe.is_default ?? true,
+              serving_qty: recipe.serving_qty || 1,
+              serving_unit_id: recipe.serving_unit_id || null,
+              
+              // Nested create for recipe ingredients
+              ingredients: recipe.ingredients?.length > 0 ? {
+                create: recipe.ingredients.map((ing: any) => ({
+                  ingredient_id: ing.ingredient_id,
+                  quantity: ing.quantity,
+                  unit_id: ing.unit_id,
+                  is_optional: ing.is_optional ?? false,
+                  note_i18n: ing.note_i18n || null,
+                }))
+              } : undefined,
+            }))
+          } : undefined,
+        },
+        include: {
+          category: true,
+          base_unit: true,
+          product_type: true,
+          product_units: {
+            include: {
+              unit: true,
+            },
+          },
+          recipes: {
+            include: {
+              ingredients: {
+                include: {
+                  ingredient: true,
+                  unit: true,
+                },
+              },
+            },
+          },
+        },
+      });
     });
 
     return NextResponse.json(product, { status: 201 });

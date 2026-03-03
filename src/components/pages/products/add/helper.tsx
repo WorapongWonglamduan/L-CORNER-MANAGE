@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { useRouter, useParams } from "next/navigation";
 
 interface RecipeIngredient {
-  raw_material_id: string;
+  ingredient_id: string;
   quantity: number;
   unit_id: string;
 }
@@ -17,12 +17,13 @@ export interface ProductFormData {
   description_th?: string;
   description_en?: string;
   category_id?: string;
-  product_type: string;
+  product_type_id: string;
   base_unit_id: string;
   selling_price: number;
   cost_price?: number;
   min_stock_level?: number;
   low_stock_threshold?: number;
+  current_stock?: number;
   image_url?: string;
   track_stock: boolean;
   has_serial: boolean;
@@ -49,8 +50,18 @@ interface RawMaterial {
   base_unit_id: string;
 }
 
+interface ProductType {
+  id: string;
+  code: string;
+  name_i18n: { th: string; en: string };
+  icon?: string;
+  type: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
 interface RecipeIngredientData {
-  raw_material_id: string;
+  ingredient_id: string;
   quantity: number;
   unit_id: string;
 }
@@ -61,7 +72,7 @@ interface ProductData {
   name_i18n: { th: string; en: string };
   description_i18n?: { th: string; en: string };
   category_id?: string;
-  product_type: string;
+  product_type_id: string;
   base_unit_id: string;
   image_url?: string;
   track_stock: boolean;
@@ -70,14 +81,14 @@ interface ProductData {
   is_active: boolean;
   min_stock_level?: number;
   low_stock_threshold?: number;
-  product_units?: Array<{
-    selling_price?: number;
-    cost_price?: number;
-  }>;
-  recipe?: {
+  current_stock?: number;
+  selling_price?: number;
+  cost_price?: number;
+  recipes?: Array<{
     id?: string;
-    recipe_ingredients?: RecipeIngredientData[];
-  };
+    name_i18n: { th: string; en: string };
+    ingredients?: RecipeIngredientData[];
+  }>;
 }
 
 interface UseProductFormProps {
@@ -85,19 +96,24 @@ interface UseProductFormProps {
   isEdit?: boolean;
 }
 
-export function useProductForm({ product, isEdit = false }: UseProductFormProps = {}) {
+export function useProductForm({
+  product,
+  isEdit = false,
+}: UseProductFormProps = {}) {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
-  
+
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [optionsData, setOptionsData] = useState<{
     categories: Category[];
+    productTypes: ProductType[];
     units: Unit[];
     rawMaterials: RawMaterial[];
   }>({
     categories: [],
+    productTypes: [],
     units: [],
     rawMaterials: [],
   });
@@ -117,26 +133,27 @@ export function useProductForm({ product, isEdit = false }: UseProductFormProps 
           description_th: product.description_i18n?.th || "",
           description_en: product.description_i18n?.en || "",
           category_id: product.category_id || "",
-          product_type: product.product_type,
+          product_type_id: product.product_type_id,
           base_unit_id: product.base_unit_id,
-          selling_price: product.product_units?.[0]?.selling_price || 0,
-          cost_price: product.product_units?.[0]?.cost_price || 0,
+          selling_price: product.selling_price || 0,
+          cost_price: product.cost_price || 0,
           min_stock_level: product.min_stock_level || 0,
           low_stock_threshold: product.low_stock_threshold || 0,
+          current_stock: product.current_stock || 0,
           image_url: product.image_url || "",
           track_stock: product.track_stock,
           has_serial: product.has_serial,
           has_expiry: product.has_expiry,
           is_active: product.is_active,
           recipe_ingredients:
-            product.recipe?.recipe_ingredients?.map((ri) => ({
-              raw_material_id: ri.raw_material_id,
+            product.recipes?.[0]?.ingredients?.map((ri) => ({
+              ingredient_id: ri.ingredient_id,
               quantity: ri.quantity,
               unit_id: ri.unit_id,
             })) || [],
         }
       : {
-          product_type: "semi_finished",
+          product_type_id: "",
           track_stock: true,
           has_serial: false,
           has_expiry: false,
@@ -150,24 +167,31 @@ export function useProductForm({ product, isEdit = false }: UseProductFormProps 
     name: "recipe_ingredients",
   });
 
-  const productType = watch("product_type");
-  const showRecipe = productType === "semi_finished";
+  const productTypeId = watch("product_type_id");
+  console.log("productTypeId ->", productTypeId);
+  const showRecipe =
+    productTypeId ===
+    optionsData.productTypes.find((pt) => pt.type === "semi_finished")?.id;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [categoriesRes, unitsRes, rawMaterialsRes] = await Promise.all([
-          fetch("/api/product-types?pageSize=100&isActive=true&type=product"),
-          fetch("/api/units?pageSize=100&isActive=true"),
-          fetch("/api/raw-materials?pageSize=100&isActive=true"),
-        ]);
+        const [categoriesRes, productType, unitsRes, rawMaterialsRes] =
+          await Promise.all([
+            fetch("/api/categories?pageSize=100&isActive=true"),
+            fetch("/api/product-types?pageSize=100&isActive=true"),
+            fetch("/api/units?pageSize=100&isActive=true"),
+            fetch("/api/raw-materials?pageSize=100&isActive=true"),
+          ]);
 
         const categoriesData = await categoriesRes.json();
+        const productTypeData = await productType.json();
         const unitsData = await unitsRes.json();
         const rawMaterialsData = await rawMaterialsRes.json();
 
         setOptionsData({
           categories: categoriesData.items || [],
+          productTypes: productTypeData.items || [],
           units: unitsData.items || [],
           rawMaterials: rawMaterialsData.items || [],
         });
@@ -199,7 +223,7 @@ export function useProductForm({ product, isEdit = false }: UseProductFormProps 
               }
             : null,
         category_id: data.category_id || null,
-        product_type: data.product_type,
+        product_type_id: data.product_type_id,
         base_unit_id: data.base_unit_id,
         image_url: data.image_url || null,
         is_active: data.is_active,
@@ -207,19 +231,42 @@ export function useProductForm({ product, isEdit = false }: UseProductFormProps 
         has_expiry: data.has_expiry,
         min_stock_level: data.min_stock_level || 0,
         low_stock_threshold: data.low_stock_threshold || 0,
+        current_stock: data.current_stock || 0,
         track_stock: data.track_stock,
+        selling_price: data.selling_price || null,
+        cost_price: data.cost_price || null,
+        
+        // Include recipes if semi-finished product
+        recipes: showRecipe && data.recipe_ingredients.length > 0 ? [
+          {
+            name_i18n: {
+              th: `สูตร${data.name_th}`,
+              en: `Recipe for ${data.name_en}`,
+            },
+            is_default: true,
+            serving_qty: 1,
+            serving_unit_id: data.base_unit_id,
+            ingredients: data.recipe_ingredients.map((ing) => ({
+              ingredient_id: ing.ingredient_id,
+              quantity: ing.quantity,
+              unit_id: ing.unit_id,
+            })),
+          },
+        ] : undefined,
       };
 
-      let productId = product?.id;
-
-      if (isEdit && productId) {
-        const response = await fetch(`/api/products/${productId}`, {
+      // Single API call with all data
+      if (isEdit && product?.id) {
+        const response = await fetch(`/api/products/${product.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
-        if (!response.ok) throw new Error("Failed to update product");
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to update product");
+        }
       } else {
         const response = await fetch("/api/products", {
           method: "POST",
@@ -227,66 +274,9 @@ export function useProductForm({ product, isEdit = false }: UseProductFormProps 
           body: JSON.stringify(payload),
         });
 
-        if (!response.ok) throw new Error("Failed to create product");
-        const newProduct = await response.json();
-        productId = newProduct.id;
-      }
-
-      if (data.selling_price && productId) {
-        await fetch("/api/product-units", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            product_id: productId,
-            unit_id: data.base_unit_id,
-            is_base_unit: true,
-            is_selling_unit: true,
-            selling_price: data.selling_price,
-            cost_price: data.cost_price || null,
-            conversion_to_base: 1,
-          }),
-        });
-      }
-
-      if (showRecipe && data.recipe_ingredients.length > 0 && productId) {
-        if (isEdit && product?.recipe?.id) {
-          await fetch(`/api/recipes/${product.recipe.id}`, {
-            method: "DELETE",
-          });
-        }
-
-        const recipeResponse = await fetch("/api/recipes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            product_id: productId,
-            name_i18n: {
-              th: `สูตร${data.name_th}`,
-              en: `Recipe for ${data.name_en}`,
-            },
-            yield_quantity: 1,
-            yield_unit_id: data.base_unit_id,
-            is_active: true,
-          }),
-        });
-
-        if (recipeResponse.ok) {
-          const recipe = await recipeResponse.json();
-
-          for (const ingredient of data.recipe_ingredients) {
-            if (ingredient.raw_material_id && ingredient.quantity > 0) {
-              await fetch("/api/recipe-ingredients", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  recipe_id: recipe.id,
-                  raw_material_id: ingredient.raw_material_id,
-                  quantity: ingredient.quantity,
-                  unit_id: ingredient.unit_id,
-                }),
-              });
-            }
-          }
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to create product");
         }
       }
 

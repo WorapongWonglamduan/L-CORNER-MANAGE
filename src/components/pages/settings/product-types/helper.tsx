@@ -54,7 +54,6 @@ export function useProductTypesManager() {
       search: "",
     },
   });
-  console.log("types ->", types);
 
   const {
     control,
@@ -76,7 +75,7 @@ export function useProductTypesManager() {
         name_th: "",
         name_en: "",
         icon: "",
-        type: "product",
+        type: "",
         sort_order: 0,
         is_active: true,
       },

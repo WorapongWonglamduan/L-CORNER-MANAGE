@@ -1,8 +1,3 @@
-export const productTypes = [
-  { value: "semi_finished", label: "แบบปรุง", icon: "🥬" },
-  { value: "finished_good", label: "สำเร็จรูป", icon: "🍱" },
-];
-
 interface Category {
   id: string;
   name_i18n: { th: string; en: string };
@@ -12,6 +7,12 @@ interface Unit {
   id: string;
   name_i18n: { th: string; en: string };
   abbreviation_i18n: { th: string; en: string };
+}
+
+interface ProductType {
+  id: string;
+  code: string;
+  name_i18n: { th: string; en: string };
 }
 
 import { FieldConfig } from "@/components/ui/FormBuilder";
@@ -28,6 +29,7 @@ export interface ProductFormField extends Omit<FieldConfig, "name" | "rules"> {
 export const getProductFormConfig = (
   categories: Category[],
   units: Unit[],
+  productsTypes: ProductType[],
   t: (key: string) => string,
   locale: string = "th",
 ): ProductFormField[] => [
@@ -39,14 +41,16 @@ export const getProductFormConfig = (
     rules: { required: t("codeRequired") },
   },
   {
-    name: "product_type",
+    name: "product_type_id",
     label: t("productType"),
     type: INPUT_TYPES.SELECT,
     rules: { required: t("productTypeRequired") },
-    options: productTypes.map((type) => ({
-      value: type.value,
-      label: `${type.icon} ${type.label}`,
-    })),
+    options: [
+      ...productsTypes.map((type) => ({
+        value: type.id,
+        label: `${type.name_i18n[locale]}`,
+      })),
+    ],
   },
   {
     name: "name_th",
@@ -68,7 +72,6 @@ export const getProductFormConfig = (
     type: INPUT_TYPES.SELECT,
     rules: { required: t("categoryRequired") },
     options: [
-      { value: "", label: `-- ${t("category")} --` },
       ...categories.map((cat) => ({
         value: cat.id,
         label: `${cat.name_i18n[locale]}`,
@@ -81,7 +84,6 @@ export const getProductFormConfig = (
     type: INPUT_TYPES.SELECT,
     rules: { required: t("baseUnitRequired") },
     options: [
-      { value: "", label: `-- ${t("baseUnit")} --` },
       ...units.map((unit) => ({
         value: unit.id,
         label: `${unit.name_i18n[locale]} (${unit.abbreviation_i18n[locale]})`,

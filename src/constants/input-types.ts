@@ -1,19 +1,27 @@
-export const INPUT_TYPES = {
-  TEXT: "text",
-  EMAIL: "email",
-  PASSWORD: "password",
-  NUMBER: "number",
-  TEL: "tel",
-  URL: "url",
-  DATE: "date",
-  TIME: "time",
-  DATETIME_LOCAL: "datetime-local",
-  FILE: "file",
-  SEARCH: "search",
-  COLOR: "color",
-  TEXTAREA: "textarea",
-  SELECT: "select",
-  CHECKBOX: "checkbox",
-} as const;
+export enum INPUT_TYPES {
+  TEXT = "text",
+  EMAIL = "email",
+  PASSWORD = "password",
+  NUMBER = "number",
+  TEL = "tel",
+  URL = "url",
+  DATE = "date",
+  TIME = "time",
+  DATETIME_LOCAL = "datetime-local",
+  FILE = "file",
+  SEARCH = "search",
+  COLOR = "color",
+  TEXTAREA = "textarea",
+  SELECT = "select",
+  CHECKBOX = "checkbox",
+}
 
-export type InputType = (typeof INPUT_TYPES)[keyof typeof INPUT_TYPES];
+export enum PRODUCTS_TYPES {
+  PRODUCT = "product",
+  SEMI_FINISHED = "semi_finished",
+  CONTAINER = "container",
+  FINISHED_GOOD = "finished_good",
+  INGREDIENT = "ingredient",
+}
+
+export type InputType = `${INPUT_TYPES}`;

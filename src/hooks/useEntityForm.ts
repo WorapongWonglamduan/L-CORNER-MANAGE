@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useForm, UseFormProps } from "react-hook-form";
 import { FieldValues } from "react-hook-form";
+import { toast } from "@/lib/toast";
 
 interface BaseEntity {
   id: string;
@@ -32,7 +33,11 @@ interface UseEntityFormResult<T extends FieldValues, E extends BaseEntity> {
   dialogOpen: boolean;
   handleCreate: () => void;
   handleEdit: (entity: E) => void;
-  handleDelete: (id: string, confirmMessage?: string) => Promise<void>;
+  handleDelete: (
+    id: string,
+    confirmMessage?: string,
+    hard?: boolean,
+  ) => Promise<void>;
   handleDialogClose: (refresh?: boolean) => void;
   handleFormSubmit: (data: T) => Promise<void>;
   setDialogOpen: (open: boolean) => void;
@@ -85,6 +90,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
     async (
       id: string,
       confirmMessage = "Are you sure you want to delete this item?",
+      hard = false,
     ) => {
       const confirmed = confirmDelete
         ? await confirmDelete({
@@ -99,18 +105,23 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
 
       try {
         setLoading(true);
-        const response = await fetch(`${endpoint}/${id}`, {
+        const response = await fetch(`${endpoint}/${id}?hard=${hard}`, {
           method: "DELETE",
         });
 
         if (!response.ok) {
-          throw new Error("Failed to delete item");
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to delete item");
         }
 
         onSuccess?.();
+        toast.success("Item deleted successfully");
       } catch (err) {
         console.error("Error deleting item:", err);
-        setError(err instanceof Error ? err.message : "Failed to delete item");
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to delete item";
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }

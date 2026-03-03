@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
-// GET /api/raw-materials - ดึงรายการวัตถุดิบทั้งหมด
+// GET /api/raw-materials - ดึงรายการวัตถุดิบทั้งหมด (จาก products table)
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -17,15 +18,22 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get("isActive");
     const typeId = searchParams.get("type_id");
 
-    // Build where clause
-    const where: Record<string, unknown> = {};
+    // Build where clause - query from products table
+    const where: Record<string, unknown> = {
+      // Filter raw material and semi-finished product types
+      product_type: {
+        type: {
+          in: [PRODUCTS_TYPES.INGREDIENT, PRODUCTS_TYPES.CONTAINER],
+        },
+      },
+    };
 
     if (isActive !== null) {
       where.is_active = isActive === "true";
     }
 
     if (typeId) {
-      where.type_id = typeId;
+      where.product_type_id = typeId;
     }
 
     if (search) {
@@ -36,23 +44,41 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Get total count
-    const total = await prisma.rawMaterial.count({ where });
+    // Get total count from products
+    const total = await prisma.product.count({ where });
 
-    // Get paginated data
-    const rawMaterials = await prisma.rawMaterial.findMany({
+    // Get paginated data from products
+    const rawMaterials = await prisma.product.findMany({
       where,
       include: {
-        unit: true,
-        type: true,
+        base_unit: true,
+        product_type: true,
       },
       orderBy: { created_at: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
 
+    // Transform to match old raw_materials format
+    const items = rawMaterials.map((product) => ({
+      id: product.id,
+      code: product.code,
+      name_i18n: product.name_i18n,
+      description_i18n: product.description_i18n,
+      type_id: product.product_type_id,
+      unit_id: product.base_unit_id,
+      cost_price: product.cost_price,
+      min_stock: product.min_stock_level,
+      current_stock: product.current_stock,
+      is_active: product.is_active,
+      created_at: product.created_at,
+      updated_at: product.updated_at,
+      unit: product.base_unit,
+      type: product.product_type,
+    }));
+
     return NextResponse.json({
-      items: rawMaterials,
+      items,
       total,
       page,
       pageSize,
@@ -67,7 +93,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/raw-materials - สร้างวัตถุดิบใหม่
+// POST /api/raw-materials - สร้างวัตถุดิบใหม่ (ใน products table)
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -89,42 +115,64 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validation
-    if (!code || !name_i18n || !unit_id) {
+    if (!code || !name_i18n || !unit_id || !type_id) {
       return NextResponse.json(
-        { error: "code, name_i18n, and unit_id are required" },
+        { error: "code, name_i18n, unit_id, and type_id are required" },
         { status: 400 },
       );
     }
 
     // Check if code already exists
-    const existing = await prisma.rawMaterial.findUnique({
+    const existing = await prisma.product.findUnique({
       where: { code },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: "Raw material code already exists" },
+        { error: "Product code already exists" },
         { status: 400 },
       );
     }
 
-    const rawMaterial = await prisma.rawMaterial.create({
+    // Create as product with raw_material type
+    const product = await prisma.product.create({
       data: {
         code,
         name_i18n,
         description_i18n: description_i18n || null,
-        type_id: type_id || null,
-        unit_id,
+        product_type_id: type_id,
+        base_unit_id: unit_id,
         cost_price: cost_price || null,
-        min_stock: min_stock || 0,
+        min_stock_level: min_stock || 0,
         current_stock: current_stock || 0,
         is_active: is_active ?? true,
+        track_stock: true,
+        has_serial: false,
+        has_expiry: false,
       },
       include: {
-        unit: true,
-        type: true,
+        base_unit: true,
+        product_type: true,
       },
     });
+
+    // Transform to match old raw_materials format
+    const rawMaterial = {
+      id: product.id,
+      code: product.code,
+      name_i18n: product.name_i18n,
+      description_i18n: product.description_i18n,
+      type_id: product.product_type_id,
+      unit_id: product.base_unit_id,
+      cost_price: product.cost_price,
+      min_stock: product.min_stock_level,
+      current_stock: product.current_stock,
+      is_active: product.is_active,
+      created_at: product.created_at,
+      updated_at: product.updated_at,
+      unit: product.base_unit,
+      type: product.product_type,
+    };
 
     return NextResponse.json(rawMaterial, { status: 201 });
   } catch (error) {
