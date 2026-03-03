@@ -8,28 +8,28 @@ export const getRawMaterialCategoryFormConfig = (
   {
     name: "code",
     type: INPUT_TYPES.TEXT,
-    label: `${t("code")} *`,
+    label: `${t("code")}`,
     placeholder: t("codePlaceholder"),
     rules: { required: t("codeRequired") },
   },
   {
     name: "name_th",
     type: INPUT_TYPES.TEXT,
-    label: `${t("nameTh")} *`,
+    label: `${t("nameTh")}`,
     placeholder: t("nameThPlaceholder"),
     rules: { required: t("nameThRequired") },
   },
   {
     name: "name_en",
     type: INPUT_TYPES.TEXT,
-    label: `${t("nameEn")} *`,
+    label: `${t("nameEn")}`,
     placeholder: t("nameEnPlaceholder"),
     rules: { required: t("nameEnRequired") },
   },
   {
     name: "type",
     type: INPUT_TYPES.SELECT,
-    label: `${t("type")} *`,
+    label: `${t("type")}`,
     placeholder: t("typePlaceholder"),
     rules: { required: t("typeRequired") },
     options: [

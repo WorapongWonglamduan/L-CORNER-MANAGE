@@ -89,6 +89,9 @@
     "contact": "If you think this is an error, please contact the system administrator"
   },
   "settings": {
+    "title": "Settings",
+    "pageTitle": "System Settings",
+    "pageDescription": "Manage various system settings",
     "units": {
       "title": "Manage Units",
       "description": "Manage product measurement units and conversions",
@@ -174,6 +177,10 @@
       "save": "Save",
       "saving": "Saving..."
     },
+    "categories": {
+      "title": "Raw Material/Product Categories",
+      "description": "Manage categories for raw materials and products"
+    },
     "rawMaterialCategories": {
       "title": "Manage Categories",
       "description": "Manage categories for raw materials and products",
@@ -252,7 +259,29 @@
       "delete": "Delete",
       "cancel": "Cancel",
       "save": "Save",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "addNewProduct": "Add New Product",
+      "fillProductInfo": "Fill in product information to add to the system",
+      "backToPOS": "Back to POS",
+      "basicInfo": "Basic Information",
+      "recipeTitle": "Recipe / Ingredients Used",
+      "recipeDescription": "Specify raw materials and quantities used in production",
+      "addIngredient": "Add Ingredient",
+      "noIngredients": "No ingredients yet. Click \"Add Ingredient\" to start",
+      "rawMaterial": "Raw Material",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "selectRawMaterial": "-- Select Raw Material --",
+      "selectUnit": "-- Select Unit --",
+      "price": "Price",
+      "sellingPrice": "Selling Price",
+      "sellingPriceRequired": "Please enter selling price",
+      "costPrice": "Cost Price",
+      "stock": "Stock",
+      "minStock": "Minimum Stock",
+      "lowStockAlert": "Low Stock Alert",
+      "settings": "Settings",
+      "saveProduct": "Save Product"
     }
   },
   "pagination": {

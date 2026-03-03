@@ -10,21 +10,21 @@ export const getRawMaterialFormConfig = (
   {
     name: "code",
     type: INPUT_TYPES.TEXT,
-    label: `${t("code")} *`,
+    label: `${t("code")}`,
     placeholder: t("codePlaceholder"),
     rules: { required: t("codeRequired") },
   },
   {
     name: "name_th",
     type: INPUT_TYPES.TEXT,
-    label: `${t("nameTh")} *`,
+    label: `${t("nameTh")}`,
     placeholder: t("nameThPlaceholder"),
     rules: { required: t("nameThRequired") },
   },
   {
     name: "name_en",
     type: INPUT_TYPES.TEXT,
-    label: `${t("nameEn")} *`,
+    label: `${t("nameEn")}`,
     placeholder: t("nameEnPlaceholder"),
     rules: { required: t("nameEnRequired") },
   },
@@ -53,7 +53,7 @@ export const getRawMaterialFormConfig = (
   {
     name: "unit_id",
     type: INPUT_TYPES.SELECT,
-    label: `${t("unit")} *`,
+    label: `${t("unit")}`,
     placeholder: t("unitPlaceholder"),
     rules: { required: t("unitRequired") },
     options: units.map((unit) => ({

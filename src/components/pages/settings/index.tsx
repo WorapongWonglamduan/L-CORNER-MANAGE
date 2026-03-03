@@ -14,22 +14,22 @@ export default function SettingsContent() {
   const settingCards = [
     {
       id: "units",
-      title: "จัดการหน่วย",
-      description: "จัดการหน่วยวัดสินค้าและการแปลงหน่วย",
+      title: t("units.title"),
+      description: t("units.description"),
       icon: Package,
       href: `/${locale}/settings/units`,
     },
     {
       id: "raw-materials",
-      title: "จัดการวัตถุดิบ",
-      description: "จัดการวัตถุดิบและสต็อกวัตถุดิบ",
+      title: t("rawMaterials.title"),
+      description: t("rawMaterials.description"),
       icon: Beef,
       href: `/${locale}/settings/raw-materials`,
     },
     {
       id: "raw-material-categories",
-      title: "หมวดหมู่วัตถุดิบ/สินค้า",
-      description: "จัดการหมวดหมู่สำหรับวัตถุดิบและสินค้า",
+      title: t("categories.title"),
+      description: t("categories.description"),
       icon: FolderTree,
       href: `/${locale}/settings/raw-material-categories`,
     },
@@ -45,9 +45,9 @@ export default function SettingsContent() {
             <div className="bg-gradient-to-r from-[#213559] to-[#2c4a7a] p-2 rounded-lg shadow-lg shadow-[#213559]/30">
               <Settings className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">ตั้งค่าระบบ</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t("pageTitle")}</h1>
           </div>
-          <p className="text-gray-600">จัดการการตั้งค่าต่างๆ ของระบบ</p>
+          <p className="text-gray-600">{t("pageDescription")}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

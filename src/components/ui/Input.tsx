@@ -6,7 +6,7 @@ import {
   TextareaHTMLAttributes,
   SelectHTMLAttributes,
 } from "react";
-import { FieldError } from "react-hook-form";
+import { FieldError, FieldErrors } from "react-hook-form";
 import { theme } from "@/lib/theme";
 import { LucideIcon } from "lucide-react";
 import { Check } from "lucide-react";
@@ -18,11 +18,12 @@ export type { InputType };
 
 export interface BaseInputProps {
   label?: string;
-  error?: FieldError | string;
+  error?: FieldError | string | FieldErrors;
   helperText?: string;
   icon?: LucideIcon;
   containerClassName?: string;
   inputType?: InputType;
+  required?: boolean;
 }
 
 export interface SelectOption {
@@ -53,11 +54,16 @@ export const Input = forwardRef<
       containerClassName,
       className,
       inputType = "text",
+      required,
       ...props
     },
     ref,
   ) => {
-    const errorMessage = typeof error === "string" ? error : error?.message;
+    const errorMessage: string | undefined = typeof error === "string" 
+      ? error 
+      : error && typeof error === "object" && "message" in error && typeof error.message === "string"
+        ? error.message 
+        : undefined;
 
     const baseInputClass = `${theme.inputs.default} ${Icon ? "pl-11" : ""} ${
       errorMessage ? "border-red-500 focus:border-red-500" : ""
@@ -155,6 +161,7 @@ export const Input = forwardRef<
             className="block text-sm font-semibold text-gray-700 mb-2"
           >
             {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
           </label>
         )}
 

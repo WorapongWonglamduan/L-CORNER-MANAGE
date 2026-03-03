@@ -51,6 +51,7 @@ export function FormFields<T extends FieldValues = FieldValues>({
               autoComplete={field.autoComplete}
               options={field.options}
               rows={field.rows}
+              required={!!field.rules?.required}
             />
           )}
         />

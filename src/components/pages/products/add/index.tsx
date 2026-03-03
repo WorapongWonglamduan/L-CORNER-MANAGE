@@ -1,94 +1,330 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Package,
+  Save,
+  Loader2,
+  Plus,
+  Trash2,
+  ChefHat,
+} from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { ProductForm } from "./product-form";
-
-interface Category {
-  id: string;
-  name_i18n: { th: string; en: string };
-}
-
-interface Unit {
-  id: string;
-  name_i18n: { th: string; en: string };
-  abbreviation_i18n: { th: string; en: string };
-}
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { useProductForm, type ProductFormData } from "./helper";
+import {
+  getProductFormConfig,
+  getPriceStockConfig,
+  getSettingsConfig,
+} from "./config";
+import { FieldError } from "react-hook-form";
 
 export default function AddProductContent() {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [loading, setLoading] = useState(true);
+  const t = useTranslations("settings.products");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [categoriesRes, unitsRes] = await Promise.all([
-          fetch("/api/raw-material-categories?pageSize=100&isActive=true&type=product"),
-          fetch("/api/units?pageSize=100&isActive=true"),
-        ]);
+  const {
+    register,
+    handleSubmit,
+    errors,
+    loading,
+    dataLoading,
+    optionsData,
+    fields,
+    append,
+    remove,
+    showRecipe,
+    onSubmit,
+  } = useProductForm();
 
-        const categoriesData = await categoriesRes.json();
-        const unitsData = await unitsRes.json();
+  const formFields = getProductFormConfig(
+    optionsData.categories,
+    optionsData.units,
+    t,
+  );
+  const priceStockConfig = getPriceStockConfig(t);
+  const settingsConfig = getSettingsConfig(t);
 
-        setCategories(categoriesData.items || []);
-        setUnits(unitsData.items || []);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#213559] mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg">{t("loadingUnits")}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       <div className="max-w-7xl mx-auto p-6 lg:p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push(`/${locale}/pos`)}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#213559] mb-4 transition-colors group"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">กลับไปหน้า POS</span>
-          </button>
+        <button
+          onClick={() => router.push(`/${locale}/pos`)}
+          className="flex items-center gap-2 text-gray-600 hover:text-[#213559] mb-6 transition-colors group"
+        >
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="font-medium">{t("backToPOS")}</span>
+        </button>
 
-          <div className="flex items-center gap-4 mb-3">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#213559] to-[#2c4a7a] rounded-2xl shadow-xl flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#213559] to-[#2c4a7a] bg-clip-text text-transparent">
-                เพิ่มสินค้าใหม่
-              </h1>
-              <p className="text-gray-600 mt-1">
-                กรอกข้อมูลสินค้าเพื่อเพิ่มเข้าสู่ระบบ
-              </p>
-            </div>
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-14 h-14 bg-[#213559] rounded-xl flex items-center justify-center">
+            <Package className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-[#213559]">
+              {t("addNewProduct")}
+            </h1>
+            <p className="text-gray-600 mt-1">{t("fillProductInfo")}</p>
           </div>
         </div>
 
-        {/* Form */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#213559] mx-auto mb-4"></div>
-              <p className="text-gray-600 text-lg">กำลังโหลดข้อมูล...</p>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        >
+          <div className="lg:col-span-2 space-y-6">
+            {/* Basic Information */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <Package className="w-5 h-5 text-[#213559]" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {t("basicInfo")}
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {formFields.map((field) => (
+                  <Input
+                    key={field.name}
+                    {...register(field.name as keyof ProductFormData, field.rules)}
+                    inputType={field.type}
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    options={field.options}
+                    rows={field.rows}
+                    error={errors[field.name as keyof typeof errors] as FieldError | undefined}
+                    containerClassName={field.gridCols || ""}
+                    required={!!field.rules?.required}
+                  />
+                ))}
+              </div>
             </div>
+
+            {/* Recipe Section */}
+            {showRecipe && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                      <ChefHat className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">
+                        {t("recipeTitle")}
+                      </h2>
+                      <p className="text-sm text-gray-600">
+                        {t("recipeDescription")}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      append({ raw_material_id: "", quantity: 0, unit_id: "" })
+                    }
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t("addIngredient")}
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {fields.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <ChefHat className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p>{t("noIngredients")}</p>
+                    </div>
+                  ) : (
+                    fields.map((field, index) => (
+                      <div
+                        key={field.id}
+                        className="flex gap-3 items-start bg-gray-50 p-4 rounded-lg"
+                      >
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <Input
+                            {...register(
+                              `recipe_ingredients.${index}.raw_material_id` as const,
+                              {
+                                required: "กรุณาเลือกวัตถุดิบ",
+                              },
+                            )}
+                            inputType="select"
+                            label={t("rawMaterial")}
+                            options={[
+                              { value: "", label: t("selectRawMaterial") },
+                              ...optionsData.rawMaterials.map((rm) => ({
+                                value: rm.id,
+                                label: `${rm.name_i18n.th} (${rm.code})`,
+                              })),
+                            ]}
+                            error={errors.recipe_ingredients?.[index]?.raw_material_id}
+                            required
+                          />
+
+                          <Input
+                            {...register(
+                              `recipe_ingredients.${index}.quantity` as const,
+                              {
+                                required: "กรุณาระบุจำนวน",
+                                valueAsNumber: true,
+                                min: {
+                                  value: 0.01,
+                                  message: "จำนวนต้องมากกว่า 0",
+                                },
+                              },
+                            )}
+                            inputType="number"
+                            label={t("quantity")}
+                            placeholder="0.00"
+                            step="0.01"
+                            error={errors.recipe_ingredients?.[index]?.quantity}
+                            required
+                          />
+
+                          <Input
+                            {...register(
+                              `recipe_ingredients.${index}.unit_id` as const,
+                              {
+                                required: "กรุณาเลือกหน่วย",
+                              },
+                            )}
+                            inputType="select"
+                            label={t("unit")}
+                            options={[
+                              { value: "", label: t("selectUnit") },
+                              ...optionsData.units.map((unit) => ({
+                                value: unit.id,
+                                label: unit.abbreviation_i18n.th,
+                              })),
+                            ]}
+                            error={errors.recipe_ingredients?.[index]?.unit_id}
+                            required
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => remove(index)}
+                          className="mt-6 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <ProductForm categories={categories} units={units} />
-        )}
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Price */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                {t("price")}
+              </h3>
+              <div className="space-y-4">
+                {priceStockConfig.slice(0, 2).map((field) => (
+                  <Input
+                    key={field.name}
+                    {...register(field.name as keyof ProductFormData, field.rules)}
+                    inputType="number"
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    step="0.01"
+                    error={errors[field.name as keyof typeof errors] as FieldError | undefined}
+                    required={!!field.rules?.required}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Stock */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                {t("stock")}
+              </h3>
+              <div className="space-y-4">
+                {priceStockConfig.slice(2).map((field) => (
+                  <Input
+                    key={field.name}
+                    {...register(field.name as keyof ProductFormData, field.rules)}
+                    inputType="number"
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    error={errors[field.name as keyof typeof errors] as FieldError | undefined}
+                    required={!!field.rules?.required}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Settings */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                {t("settings")}
+              </h3>
+              <div className="space-y-3">
+                {settingsConfig.map((field) => (
+                  <div key={field.name} className="flex items-center gap-3">
+                    <Input
+                      {...register(field.name as keyof ProductFormData)}
+                      inputType="checkbox"
+                      id={field.name}
+                    />
+                    <label htmlFor={field.name} className="text-gray-700 font-medium cursor-pointer">
+                      {field.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full py-6 text-lg bg-green-600 hover:bg-green-700 text-white shadow-lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  {t("saving")}
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5 mr-2" />
+                  {t("saveProduct")}
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
