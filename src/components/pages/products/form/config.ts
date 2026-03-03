@@ -133,11 +133,17 @@ export const getPriceStockConfig = (
     placeholder: "0",
   },
   {
-    name: "low_stock_threshold",
-    label: t("lowStockAlert"),
+    name: "current_stock",
+    label: t("currentStock"),
     type: INPUT_TYPES.NUMBER,
     placeholder: "0",
   },
+  // {
+  //   name: "low_stock_threshold",
+  //   label: t("lowStockAlert"),
+  //   type: INPUT_TYPES.NUMBER,
+  //   placeholder: "0",
+  // },
 ];
 
 export const getSettingsConfig = (

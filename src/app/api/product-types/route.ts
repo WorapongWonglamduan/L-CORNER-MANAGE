@@ -37,7 +37,12 @@ export async function GET(request: NextRequest) {
     const where: Prisma.ProductTypeWhereInput = {};
 
     if (type && type !== null) {
-      where.type = type;
+      const types = type.split(",").map((t) => t.trim());
+      if (types.length > 1) {
+        where.type = { in: types };
+      } else {
+        where.type = type;
+      }
     }
 
     if (searchQuery) {

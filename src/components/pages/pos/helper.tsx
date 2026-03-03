@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
-
+import { useLocale } from "next-intl";
 interface Product {
   id: string;
   code: string;
@@ -16,6 +16,14 @@ interface Product {
       en: string;
     };
   } | null;
+  product_type?: {
+    id: string;
+    name_i18n: {
+      th: string;
+      en: string;
+    };
+    type: string;
+  };
   base_unit?: {
     id: string;
     abbreviation_i18n: {
@@ -24,12 +32,12 @@ interface Product {
     };
   };
   min_stock_level: number;
+  current_stock: number;
+  selling_price: number | null;
+  cost_price: number | null;
+  available_quantity: number; // คำนวณจาก server-side
   is_active: boolean;
   image_url: string | null;
-  product_units?: Array<{
-    selling_price: number | null;
-    is_selling_unit: boolean;
-  }>;
 }
 
 interface Category {
@@ -51,6 +59,7 @@ interface CartItem {
 
 export function usePOSManager() {
   const t = useTranslations("pos");
+  const locale = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,12 +75,13 @@ export function usePOSManager() {
         const params = new URLSearchParams({
           pageSize: "100",
           isActive: "true",
+          type: "semi_finished,finished_good", // Filter เฉพาะสินค้าที่ขายได้
         });
-        
+
         if (selectedCategory) {
           params.append("categoryId", selectedCategory);
         }
-        
+
         if (searchQuery) {
           params.append("search", searchQuery);
         }
@@ -94,7 +104,7 @@ export function usePOSManager() {
     const fetchCategories = async () => {
       try {
         const response = await fetch(
-          "/api/product-types?pageSize=100&isActive=true&type=product"
+          "/api/product-types?pageSize=100&isActive=true&type=product",
         );
         const data = await response.json();
         setCategories(data.items || []);
@@ -106,34 +116,36 @@ export function usePOSManager() {
     fetchCategories();
   }, []);
 
-  const addToCart = useCallback((productId: string) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
+  const addToCart = useCallback(
+    (productId: string) => {
+      const product = products.find((p) => p.id === productId);
+      if (!product) return;
 
-    const sellingUnit = product.product_units?.find((u) => u.is_selling_unit);
-    const price = sellingUnit?.selling_price || 0;
+      const price = product.selling_price || 0;
 
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === productId);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === productId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [
-        ...prev,
-        {
-          id: productId,
-          name: product.name_i18n.th,
-          price: Number(price),
-          quantity: 1,
-          image: product.image_url || undefined,
-        },
-      ];
-    });
-  }, [products]);
+      setCart((prev) => {
+        const existing = prev.find((item) => item.id === productId);
+        if (existing) {
+          return prev.map((item) =>
+            item.id === productId
+              ? { ...item, quantity: item.quantity + 1 }
+              : item,
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: productId,
+            name: product.name_i18n.th,
+            price: Number(price),
+            quantity: 1,
+            image: product.image_url || undefined,
+          },
+        ];
+      });
+    },
+    [products],
+  );
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
@@ -141,8 +153,8 @@ export function usePOSManager() {
     } else {
       setCart((prev) =>
         prev.map((item) =>
-          item.id === productId ? { ...item, quantity } : item
-        )
+          item.id === productId ? { ...item, quantity } : item,
+        ),
       );
     }
   }, []);
@@ -160,12 +172,12 @@ export function usePOSManager() {
       const item = cart.find((item) => item.id === productId);
       return item?.quantity || 0;
     },
-    [cart]
+    [cart],
   );
 
   const cartTotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
-    0
+    0,
   );
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -187,5 +199,6 @@ export function usePOSManager() {
     getCartItemQuantity,
     cartTotal,
     cartItemCount,
+    locale,
   };
 }

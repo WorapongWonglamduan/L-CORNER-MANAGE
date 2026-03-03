@@ -39,7 +39,9 @@ export default function AddProductContent() {
     append,
     remove,
     showRecipe,
+    isFinishedGood,
     onSubmit,
+    isEdit,
   } = useProductForm();
 
   const formFields = getProductFormConfig(
@@ -50,7 +52,7 @@ export default function AddProductContent() {
     locale,
   );
   const priceStockConfig = getPriceStockConfig(t);
-  const settingsConfig = getSettingsConfig(t);
+  // const settingsConfig = getSettingsConfig(t);
 
   if (dataLoading) {
     return (
@@ -72,11 +74,11 @@ export default function AddProductContent() {
 
       <div className="max-w-7xl mx-auto p-6 lg:p-8">
         <button
-          onClick={() => router.push(`/${locale}/pos`)}
+          onClick={() => router.push(`/${locale}/products/list`)}
           className="flex items-center gap-2 text-gray-600 hover:text-[#213559] mb-6 transition-colors group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">{t("backToPOS")}</span>
+          <span className="font-medium">กลับไปรายการสินค้า</span>
         </button>
 
         <div className="flex items-center gap-4 mb-8">
@@ -85,9 +87,11 @@ export default function AddProductContent() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-[#213559]">
-              {t("addNewProduct")}
+              {isEdit ? t("editProduct") : t("addNewProduct")}
             </h1>
-            <p className="text-gray-600 mt-1">{t("fillProductInfo")}</p>
+            <p className="text-gray-600 mt-1">
+              {isEdit ? "แก้ไขข้อมูลสินค้า" : t("fillProductInfo")}
+            </p>
           </div>
         </div>
 
@@ -137,8 +141,8 @@ export default function AddProductContent() {
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-                      <ChefHat className="w-5 h-5 text-orange-600" />
+                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <ChefHat className="w-5 h-5 text-[#213559]" />
                     </div>
                     <div>
                       <h2 className="text-lg font-bold text-gray-900">
@@ -154,7 +158,7 @@ export default function AddProductContent() {
                     onClick={() =>
                       append({ ingredient_id: "", quantity: 0, unit_id: "" })
                     }
-                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                    className="bg-[#213559] hover:bg-[#1a2a47] text-white"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t("addIngredient")}
@@ -285,31 +289,50 @@ export default function AddProductContent() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
                 {t("stock")}
+                {isFinishedGood && (
+                  <span className="text-red-500 ml-1">*</span>
+                )}
               </h3>
               <div className="space-y-4">
-                {priceStockConfig.slice(2).map((field) => (
-                  <Input
-                    key={field.name}
-                    {...register(
-                      field.name as keyof ProductFormData,
-                      field.rules,
-                    )}
-                    inputType="number"
-                    label={field.label}
-                    placeholder={field.placeholder}
-                    error={
-                      errors[field.name as keyof typeof errors] as
-                        | FieldError
-                        | undefined
-                    }
-                    required={!!field.rules?.required}
-                  />
-                ))}
+                {priceStockConfig.slice(2).map((field) => {
+                  const isRequired = isFinishedGood && 
+                    (field.name === "min_stock_level" || field.name === "current_stock");
+                  
+                  const validationRules = isRequired
+                    ? {
+                        required:
+                          field.name === "min_stock_level"
+                            ? "กรุณาระบุสต็อกขั้นต่ำ"
+                            : field.name === "current_stock"
+                            ? "กรุณาระบุสต็อกปัจจุบัน"
+                            : field.rules?.required,
+                      }
+                    : field.rules;
+
+                  return (
+                    <Input
+                      key={field.name}
+                      {...register(
+                        field.name as keyof ProductFormData,
+                        validationRules,
+                      )}
+                      inputType="number"
+                      label={field.label}
+                      placeholder={field.placeholder}
+                      error={
+                        errors[field.name as keyof typeof errors] as
+                          | FieldError
+                          | undefined
+                      }
+                      required={isRequired || !!field.rules?.required}
+                    />
+                  );
+                })}
               </div>
             </div>
 
             {/* Settings */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
                 {t("settings")}
               </h3>
@@ -330,13 +353,13 @@ export default function AddProductContent() {
                   </div>
                 ))}
               </div>
-            </div>
+            </div> */}
 
             {/* Submit Button */}
             <Button
               type="submit"
               disabled={loading}
-              className="w-full py-6 text-lg bg-green-600 hover:bg-green-700 text-white shadow-lg"
+              className="w-full py-6 text-lg bg-[#213559] hover:bg-[#1a2a47] text-white shadow-lg"
             >
               {loading ? (
                 <>

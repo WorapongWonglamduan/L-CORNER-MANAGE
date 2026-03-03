@@ -23,26 +23,27 @@ export default function POSContent() {
     getCartItemQuantity,
     cartTotal,
     cartItemCount,
+    locale,
   } = usePOSManager();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navbar />
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)]">
         {/* Left Sidebar - Categories */}
-        <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
+        <div className="lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto">
           <div className="p-4 border-b border-gray-200">
             <h2 className="font-bold text-lg text-gray-900 flex items-center gap-2">
               <Grid3x3 className="w-5 h-5 text-[#213559]" />
               หมวดหมู่สินค้า
             </h2>
           </div>
-          
-          <div className="p-2">
+
+          <div className="p-2 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible">
             <button
               onClick={() => setSelectedCategory(null)}
-              className={`w-full text-left px-4 py-3 rounded-lg mb-1 transition-all ${
+              className={`whitespace-nowrap lg:w-full text-left px-4 py-3 rounded-lg transition-all ${
                 selectedCategory === null
                   ? "bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg"
                   : "hover:bg-gray-100 text-gray-700"
@@ -50,18 +51,20 @@ export default function POSContent() {
             >
               <span className="font-medium">ทั้งหมด</span>
             </button>
-            
+
             {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`w-full text-left px-4 py-3 rounded-lg mb-1 transition-all ${
+                className={`whitespace-nowrap lg:w-full text-left px-4 py-3 rounded-lg transition-all ${
                   selectedCategory === category.id
                     ? "bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg"
                     : "hover:bg-gray-100 text-gray-700"
                 }`}
               >
-                <span className="font-medium">{category.name_i18n.th}</span>
+                <span className="font-medium">
+                  {category.name_i18n[locale]}
+                </span>
               </button>
             ))}
           </div>
@@ -69,7 +72,7 @@ export default function POSContent() {
 
         {/* Main Content - Products */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6">
+          <div className="p-4 lg:p-6 pb-24 lg:pb-6">
             {/* Search Bar */}
             <div className="mb-6">
               <div className="relative max-w-2xl">
@@ -100,22 +103,17 @@ export default function POSContent() {
                 <p className="text-gray-600 text-lg">ไม่พบสินค้า</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className="grid  xl:grid-cols-4 2xl:grid-cols-4 gap-4">
                 {products.map((product) => {
-                  const sellingUnit = product.product_units?.find(
-                    (u) => u.is_selling_unit
-                  );
-                  const price = sellingUnit?.selling_price || 0;
-
                   return (
                     <ProductCard
                       key={product.id}
                       id={product.id}
-                      name={product.name_i18n.th}
-                      price={Number(price)}
+                      name={product.name_i18n[locale]}
+                      price={Number(product.selling_price) || 0}
                       image={product.image_url || undefined}
-                      category={product.category?.name_i18n.th}
-                      stock={Number(product.min_stock_level)}
+                      category={product.category?.name_i18n[locale]}
+                      stock={product.available_quantity || 0}
                       onAdd={addToCart}
                       quantity={getCartItemQuantity(product.id)}
                       onQuantityChange={updateQuantity}
@@ -127,8 +125,8 @@ export default function POSContent() {
           </div>
         </div>
 
-        {/* Right Sidebar - Cart */}
-        <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+        {/* Right Sidebar - Cart (Desktop) */}
+        <div className="hidden lg:flex lg:w-96 bg-white border-l border-gray-200 flex-col">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-bold text-xl text-gray-900 flex items-center gap-2">
@@ -145,9 +143,7 @@ export default function POSContent() {
                 </button>
               )}
             </div>
-            <p className="text-gray-500 text-sm">
-              {cartItemCount} รายการ
-            </p>
+            <p className="text-gray-500 text-sm">{cartItemCount} รายการ</p>
           </div>
 
           {/* Cart Items */}
@@ -175,7 +171,7 @@ export default function POSContent() {
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <button
@@ -198,7 +194,7 @@ export default function POSContent() {
                           +
                         </button>
                       </div>
-                      
+
                       <div className="text-right">
                         <p className="text-sm text-gray-500">
                           ฿{item.price.toLocaleString()} x {item.quantity}
@@ -245,6 +241,28 @@ export default function POSContent() {
           )}
         </div>
       </div>
+
+      {/* Mobile Cart Bar (Bottom) */}
+      {cart.length > 0 && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-2xl z-50">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <ShoppingCart className="w-5 h-5 text-[#213559]" />
+                <span className="font-bold text-gray-900">
+                  {cartItemCount} รายการ
+                </span>
+              </div>
+              <div className="text-xl font-bold text-[#213559]">
+                ฿{(cartTotal * 1.07).toLocaleString()}
+              </div>
+            </div>
+            <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-bold rounded-xl shadow-lg">
+              ชำระเงิน
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -131,8 +131,8 @@
       "abbreviationEnRequired": "กรุณากรอกตัวย่อภาษาอังกฤษ"
     },
     "rawMaterials": {
-      "title": "จัดการวัตถุดิบ",
-      "description": "จัดการวัตถุดิบและสต็อกวัตถุดิบ",
+      "title": "จัดการวัตถุดิบ / ภาชนะ",
+      "description": "จัดการวัตถุดิบภาชนะและสต็อกวัตถุดิบ",
       "addRawMaterial": "เพิ่มวัตถุดิบ",
       "editRawMaterial": "แก้ไขวัตถุดิบ",
       "searchPlaceholder": "ค้นหาวัตถุดิบ...",
@@ -311,6 +311,7 @@
       "costPrice": "ราคาทุน",
       "stock": "สต็อก",
       "minStock": "สต็อกขั้นต่ำ",
+      "currentStock": "สต็อกปัจจุบัน",
       "lowStockAlert": "เกณฑ์แจ้งเตือน",
       "settings": "ตั้งค่า",
       "saveProduct": "บันทึกสินค้า"

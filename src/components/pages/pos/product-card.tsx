@@ -41,25 +41,26 @@ export function ProductCard({
   };
 
   const isOutOfStock = stock <= 0;
+  const isLowStock = stock > 0 && stock <= 10;
 
   return (
     <div
-      className={`group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden ${
-        isOutOfStock ? "opacity-60" : "hover:scale-105"
+      className={`group relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 ${
+        isOutOfStock ? "opacity-60 cursor-not-allowed" : "hover:border-[#213559]/30 cursor-pointer"
       }`}
     >
       {/* Image */}
-      <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+      <div className="relative h-44 bg-gradient-to-br from-[#213559]/5 to-[#213559]/10 overflow-hidden">
         {image ? (
           <Image
             src={image}
             alt={name}
             fill
-            className="object-cover group-hover:scale-110 transition-transform duration-300"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#213559] to-[#2c4a7a] rounded-full flex items-center justify-center">
+            <div className="w-18 h-18 bg-gradient-to-br from-[#213559] to-[#2c4a7a] rounded-2xl flex items-center justify-center shadow-lg">
               <span className="text-3xl font-bold text-white">
                 {name.charAt(0)}
               </span>
@@ -69,14 +70,21 @@ export function ProductCard({
         
         {/* Stock Badge */}
         {isOutOfStock && (
-          <div className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+          <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
             หมด
+          </div>
+        )}
+        
+        {/* Low Stock Badge */}
+        {isLowStock && (
+          <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
+            เหลือ {stock}
           </div>
         )}
         
         {/* Quantity Badge */}
         {quantity > 0 && (
-          <div className="absolute top-2 left-2 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+          <div className="absolute top-3 left-3 bg-green-500 text-white w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shadow-lg ring-2 ring-white">
             {quantity}
           </div>
         )}
@@ -85,21 +93,24 @@ export function ProductCard({
       {/* Content */}
       <div className="p-4">
         {category && (
-          <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">
-            {category}
-          </p>
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#213559]"></div>
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+              {category}
+            </p>
+          </div>
         )}
-        <h3 className="font-bold text-gray-900 text-lg mb-2 line-clamp-2 min-h-[3.5rem]">
+        <h3 className="font-bold text-gray-900 text-base mb-3 line-clamp-2 min-h-10 leading-tight">
           {name}
         </h3>
         
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-2xl font-bold bg-gradient-to-r from-[#213559] to-[#2c4a7a] bg-clip-text text-transparent">
+        <div className="flex items-baseline justify-between mb-4">
+          <div className="text-xl font-bold text-[#213559]">
             ฿{price.toLocaleString()}
           </div>
-          {stock > 0 && stock <= 10 && (
-            <span className="text-xs text-orange-600 font-medium">
-              เหลือ {stock}
+          {stock > 10 && (
+            <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">
+              มีสินค้า
             </span>
           )}
         </div>
@@ -108,29 +119,29 @@ export function ProductCard({
         {!isOutOfStock && (
           <div className="flex gap-2">
             {quantity > 0 ? (
-              <div className="flex items-center justify-between w-full bg-gradient-to-r from-[#213559] to-[#2c4a7a] rounded-xl p-2">
+              <div className="flex items-center justify-between w-full bg-gradient-to-r from-[#213559] to-[#2c4a7a] rounded-lg p-1.5 shadow-md">
                 <button
                   onClick={handleDecrement}
-                  className="w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                  className="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-md transition-all active:scale-95"
                 >
-                  <Minus className="w-5 h-5 text-white" />
+                  <Minus className="w-4 h-4 text-white" />
                 </button>
-                <span className="text-xl font-bold text-white px-4">
+                <span className="text-lg font-bold text-white px-3">
                   {quantity}
                 </span>
                 <button
                   onClick={handleIncrement}
-                  className="w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                  className="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-md transition-all active:scale-95"
                 >
-                  <Plus className="w-5 h-5 text-white" />
+                  <Plus className="w-4 h-4 text-white" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={handleIncrement}
-                className="w-full bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white py-3 rounded-xl font-semibold hover:shadow-xl hover:shadow-[#213559]/40 transition-all flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white py-2.5 rounded-lg font-semibold hover:shadow-lg hover:shadow-[#213559]/30 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
                 เพิ่มลงตะกร้า
               </button>
             )}

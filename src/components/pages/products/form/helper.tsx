@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useRouter, useParams } from "next/navigation";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 interface RecipeIngredient {
   ingredient_id: string;
@@ -91,21 +92,16 @@ interface ProductData {
   }>;
 }
 
-interface UseProductFormProps {
-  product?: ProductData;
-  isEdit?: boolean;
-}
-
-export function useProductForm({
-  product,
-  isEdit = false,
-}: UseProductFormProps = {}) {
+export function useProductForm() {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
+  const productId = params.id as string | undefined;
+  const isEdit = !!productId;
 
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [product, setProduct] = useState<ProductData | null>(null);
   const [optionsData, setOptionsData] = useState<{
     categories: Category[];
     productTypes: ProductType[];
@@ -123,43 +119,17 @@ export function useProductForm({
     handleSubmit,
     control,
     watch,
+    reset,
     formState: { errors },
   } = useForm<ProductFormData>({
-    defaultValues: product
-      ? {
-          code: product.code,
-          name_th: product.name_i18n.th,
-          name_en: product.name_i18n.en,
-          description_th: product.description_i18n?.th || "",
-          description_en: product.description_i18n?.en || "",
-          category_id: product.category_id || "",
-          product_type_id: product.product_type_id,
-          base_unit_id: product.base_unit_id,
-          selling_price: product.selling_price || 0,
-          cost_price: product.cost_price || 0,
-          min_stock_level: product.min_stock_level || 0,
-          low_stock_threshold: product.low_stock_threshold || 0,
-          current_stock: product.current_stock || 0,
-          image_url: product.image_url || "",
-          track_stock: product.track_stock,
-          has_serial: product.has_serial,
-          has_expiry: product.has_expiry,
-          is_active: product.is_active,
-          recipe_ingredients:
-            product.recipes?.[0]?.ingredients?.map((ri) => ({
-              ingredient_id: ri.ingredient_id,
-              quantity: ri.quantity,
-              unit_id: ri.unit_id,
-            })) || [],
-        }
-      : {
-          product_type_id: "",
-          track_stock: true,
-          has_serial: false,
-          has_expiry: false,
-          is_active: true,
-          recipe_ingredients: [],
-        },
+    defaultValues: {
+      product_type_id: "",
+      track_stock: true,
+      has_serial: false,
+      has_expiry: false,
+      is_active: true,
+      recipe_ingredients: [],
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -168,26 +138,39 @@ export function useProductForm({
   });
 
   const productTypeId = watch("product_type_id");
-  console.log("productTypeId ->", productTypeId);
+
   const showRecipe =
     productTypeId ===
     optionsData.productTypes.find((pt) => pt.type === "semi_finished")?.id;
 
+  const isFinishedGood =
+    productTypeId ===
+    optionsData.productTypes.find((pt) => pt.type === "finished_good")?.id;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [categoriesRes, productType, unitsRes, rawMaterialsRes] =
-          await Promise.all([
-            fetch("/api/categories?pageSize=100&isActive=true"),
-            fetch("/api/product-types?pageSize=100&isActive=true"),
-            fetch("/api/units?pageSize=100&isActive=true"),
-            fetch("/api/raw-materials?pageSize=100&isActive=true"),
-          ]);
+        const promises = [
+          fetch("/api/categories?pageSize=100&isActive=true"),
+          fetch(
+            `/api/product-types?pageSize=100&isActive=true&type=${PRODUCTS_TYPES.SEMI_FINISHED},${PRODUCTS_TYPES.FINISHED_GOOD}`,
+          ),
+          fetch("/api/units?pageSize=100&isActive=true"),
+          fetch("/api/raw-materials?pageSize=100&isActive=true"),
+        ];
 
-        const categoriesData = await categoriesRes.json();
-        const productTypeData = await productType.json();
-        const unitsData = await unitsRes.json();
-        const rawMaterialsData = await rawMaterialsRes.json();
+        if (isEdit && productId) {
+          promises.push(fetch(`/api/products/${productId}`));
+        }
+
+        const responses = await Promise.all(promises);
+        const [
+          categoriesData,
+          productTypeData,
+          unitsData,
+          rawMaterialsData,
+          productData,
+        ] = await Promise.all(responses.map((r) => r.json()));
 
         setOptionsData({
           categories: categoriesData.items || [],
@@ -195,6 +178,38 @@ export function useProductForm({
           units: unitsData.items || [],
           rawMaterials: rawMaterialsData.items || [],
         });
+
+        if (isEdit && productData && !productData.error) {
+          setProduct(productData);
+          reset({
+            code: productData.code || "",
+            name_th: productData.name_i18n?.th || "",
+            name_en: productData.name_i18n?.en || "",
+            description_th: productData.description_i18n?.th || "",
+            description_en: productData.description_i18n?.en || "",
+            category_id: productData.category_id || "",
+            product_type_id: productData.product_type_id || "",
+            base_unit_id: productData.base_unit_id || "",
+            selling_price: productData.selling_price || 0,
+            cost_price: productData.cost_price || 0,
+            min_stock_level: productData.min_stock_level || 0,
+            low_stock_threshold: productData.low_stock_threshold || 0,
+            current_stock: productData.current_stock || 0,
+            image_url: productData.image_url || "",
+            track_stock: productData.track_stock ?? true,
+            has_serial: productData.has_serial ?? false,
+            has_expiry: productData.has_expiry ?? false,
+            is_active: productData.is_active ?? true,
+            recipe_ingredients:
+              productData.recipes?.[0]?.ingredients?.map(
+                (ri: RecipeIngredientData) => ({
+                  ingredient_id: ri.ingredient_id,
+                  quantity: ri.quantity,
+                  unit_id: ri.unit_id,
+                }),
+              ) || [],
+          });
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -203,7 +218,7 @@ export function useProductForm({
     };
 
     fetchData();
-  }, []);
+  }, [isEdit, productId, reset]);
 
   const onSubmit = async (data: ProductFormData) => {
     try {
@@ -235,24 +250,27 @@ export function useProductForm({
         track_stock: data.track_stock,
         selling_price: data.selling_price || null,
         cost_price: data.cost_price || null,
-        
+
         // Include recipes if semi-finished product
-        recipes: showRecipe && data.recipe_ingredients.length > 0 ? [
-          {
-            name_i18n: {
-              th: `สูตร${data.name_th}`,
-              en: `Recipe for ${data.name_en}`,
-            },
-            is_default: true,
-            serving_qty: 1,
-            serving_unit_id: data.base_unit_id,
-            ingredients: data.recipe_ingredients.map((ing) => ({
-              ingredient_id: ing.ingredient_id,
-              quantity: ing.quantity,
-              unit_id: ing.unit_id,
-            })),
-          },
-        ] : undefined,
+        recipes:
+          showRecipe && data.recipe_ingredients.length > 0
+            ? [
+                {
+                  name_i18n: {
+                    th: `สูตร${data.name_th}`,
+                    en: `Recipe for ${data.name_en}`,
+                  },
+                  is_default: true,
+                  serving_qty: 1,
+                  serving_unit_id: data.base_unit_id,
+                  ingredients: data.recipe_ingredients.map((ing) => ({
+                    ingredient_id: ing.ingredient_id,
+                    quantity: ing.quantity,
+                    unit_id: ing.unit_id,
+                  })),
+                },
+              ]
+            : undefined,
       };
 
       // Single API call with all data
@@ -281,7 +299,7 @@ export function useProductForm({
       }
 
       alert(isEdit ? "แก้ไขสินค้าสำเร็จ!" : "เพิ่มสินค้าสำเร็จ!");
-      router.push(`/${locale}/pos`);
+      router.push(`/${locale}/products/list`);
     } catch (error) {
       console.error("Error saving product:", error);
       alert("เกิดข้อผิดพลาดในการบันทึกสินค้า");
@@ -303,6 +321,8 @@ export function useProductForm({
     append,
     remove,
     showRecipe,
+    isFinishedGood,
     onSubmit,
+    isEdit,
   };
 }

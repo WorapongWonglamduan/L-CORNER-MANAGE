@@ -118,7 +118,9 @@ export function useRawMaterialsManager() {
       try {
         const [unitsRes, productTypesRes] = await Promise.all([
           fetch("/api/units?pageSize=100&isActive=true"),
-          fetch("/api/product-types?pageSize=100&isActive=true"),
+          fetch(
+            `/api/product-types?pageSize=100&isActive=true&type=${PRODUCTS_TYPES.INGREDIENT},${PRODUCTS_TYPES.CONTAINER}`,
+          ),
         ]);
 
         const unitsData = await unitsRes.json();
@@ -126,12 +128,7 @@ export function useRawMaterialsManager() {
 
         setOptionsData({
           units: unitsData.items || [],
-          productTypes:
-            productTypesData.items.filter((item) =>
-              [PRODUCTS_TYPES.INGREDIENT, PRODUCTS_TYPES.CONTAINER].includes(
-                item.type,
-              ),
-            ) || [],
+          productTypes: productTypesData.items || [],
         });
       } catch (error) {
         console.error("Error fetching data:", error);

@@ -131,11 +131,11 @@
       "abbreviationEnRequired": "Please enter English abbreviation"
     },
     "rawMaterials": {
-      "title": "Manage Raw Materials",
-      "description": "Manage raw materials and inventory",
+      "title": "Manage Ingredients / Container",
+      "description": "Manage ingredients and inventory",
       "addRawMaterial": "Add Raw Material",
       "editRawMaterial": "Edit Raw Material",
-      "searchPlaceholder": "Search raw materials...",
+      "searchPlaceholder": "Search ingredients...",
       "code": "Code",
       "codePlaceholder": "e.g. RM001",
       "codeRequired": "Please enter code",
@@ -182,7 +182,7 @@
     },
     "categories": {
       "title": "Raw Material/Product Categories",
-      "description": "Manage categories for raw materials and products",
+      "description": "Manage categories for ingredients and products",
       "addCategory": "Add Category",
       "editCategory": "Edit Category",
       "searchPlaceholder": "Search categories...",
@@ -213,7 +213,7 @@
     },
     "rawMaterialCategories": {
       "title": "Manage Categories",
-      "description": "Manage categories for raw materials and products",
+      "description": "Manage categories for ingredients and products",
       "addCategory": "Add Category",
       "editCategory": "Edit Category",
       "searchPlaceholder": "Search categories...",
@@ -296,7 +296,7 @@
       "backToPOS": "Back to POS",
       "basicInfo": "Basic Information",
       "recipeTitle": "Recipe / Ingredients Used",
-      "recipeDescription": "Specify raw materials and quantities used in production",
+      "recipeDescription": "Specify ingredients and quantities used in production",
       "addIngredient": "Add Ingredient",
       "noIngredients": "No ingredients yet. Click \"Add Ingredient\" to start",
       "ingredient": "Ingredient",
@@ -311,6 +311,7 @@
       "costPrice": "Cost Price",
       "stock": "Stock",
       "minStock": "Minimum Stock",
+      "currentStock": "Current Stock",
       "lowStockAlert": "Low Stock Alert",
       "settings": "Settings",
       "saveProduct": "Save Product"

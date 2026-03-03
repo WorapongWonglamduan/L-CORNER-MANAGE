@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { Prisma } from "@prisma/client";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 // GET /api/products - ดึงรายการสินค้าทั้งหมด
 export async function GET(request: NextRequest) {
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get("isActive");
     const categoryId = searchParams.get("categoryId");
     const productType = searchParams.get("productType");
+    const type = searchParams.get("type");
 
     // Build where clause
     const where: Prisma.ProductWhereInput = {
@@ -42,6 +44,13 @@ export async function GET(request: NextRequest) {
       where.product_type_id = productType;
     }
 
+    if (type && type !== null) {
+      const types = type.split(",").map((t) => t.trim());
+      where.product_type = {
+        type: { in: types },
+      };
+    }
+
     // Get total count
     const total = await prisma.product.count({ where });
 
@@ -55,11 +64,44 @@ export async function GET(request: NextRequest) {
             name_i18n: true,
           },
         },
+        product_type: {
+          select: {
+            id: true,
+            name_i18n: true,
+            type: true,
+          },
+        },
         base_unit: {
           select: {
             id: true,
             name_i18n: true,
             abbreviation_i18n: true,
+          },
+        },
+        recipes: {
+          where: {
+            is_default: true,
+            is_active: true,
+          },
+          include: {
+            ingredients: {
+              include: {
+                ingredient: {
+                  select: {
+                    id: true,
+                    name_i18n: true,
+                    current_stock: true,
+                  },
+                },
+                unit: {
+                  select: {
+                    id: true,
+                    name_i18n: true,
+                    abbreviation_i18n: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -68,8 +110,43 @@ export async function GET(request: NextRequest) {
       take: pageSize,
     });
 
+    // คำนวณ available_quantity สำหรับแต่ละสินค้า
+    const productsWithAvailability = products.map((product) => {
+      let available_quantity = 0;
+
+      // FINISHED_GOOD: ใช้ current_stock ของตัวเอง
+      if (product.product_type.type === PRODUCTS_TYPES.FINISHED_GOOD) {
+        available_quantity = Number(product.current_stock) || 0;
+      }
+      // SEMI_FINISHED: คำนวณจากวัตถุดิบในสูตร
+      else if (product.product_type.type === PRODUCTS_TYPES.SEMI_FINISHED) {
+        const defaultRecipe = product.recipes[0];
+
+        if (defaultRecipe && defaultRecipe.ingredients.length > 0) {
+          // หาจำนวนที่ผลิตได้สูงสุดจากวัตถุดิบแต่ละตัว
+          const maxQuantities = defaultRecipe.ingredients.map((ingredient) => {
+            const ingredientStock =
+              Number(ingredient.ingredient.current_stock) || 0;
+            const requiredPerUnit = Number(ingredient.quantity);
+
+            if (requiredPerUnit <= 0) return 0;
+
+            return Math.floor(ingredientStock / requiredPerUnit);
+          });
+
+          // ใช้ค่าที่น้อยที่สุด (bottleneck)
+          available_quantity = Math.min(...maxQuantities, 999);
+        }
+      }
+
+      return {
+        ...product,
+        available_quantity,
+      };
+    });
+
     return NextResponse.json({
-      items: products,
+      items: productsWithAvailability,
       total,
       page,
       pageSize,
@@ -154,41 +231,50 @@ export async function POST(request: NextRequest) {
           track_stock: track_stock ?? true,
           selling_price: selling_price || null,
           cost_price: cost_price || null,
-          
+
           // Nested create for product_units (if provided)
-          product_units: product_units?.length > 0 ? {
-            create: product_units.map((unit: any) => ({
-              unit_id: unit.unit_id,
-              is_base_unit: unit.is_base_unit ?? false,
-              is_selling_unit: unit.is_selling_unit ?? true,
-              is_purchase_unit: unit.is_purchase_unit ?? false,
-              selling_price: unit.selling_price || null,
-              cost_price: unit.cost_price || null,
-              conversion_to_base: unit.conversion_to_base || 1,
-              barcode: unit.barcode || null,
-            }))
-          } : undefined,
-          
+          product_units:
+            product_units?.length > 0
+              ? {
+                  create: product_units.map((unit) => ({
+                    unit_id: unit.unit_id,
+                    is_base_unit: unit.is_base_unit ?? false,
+                    is_selling_unit: unit.is_selling_unit ?? true,
+                    is_purchase_unit: unit.is_purchase_unit ?? false,
+                    selling_price: unit.selling_price || null,
+                    cost_price: unit.cost_price || null,
+                    conversion_to_base: unit.conversion_to_base || 1,
+                    barcode: unit.barcode || null,
+                  })),
+                }
+              : undefined,
+
           // Nested create for recipes (if provided)
-          recipes: recipes?.length > 0 ? {
-            create: recipes.map((recipe: any) => ({
-              name_i18n: recipe.name_i18n,
-              is_default: recipe.is_default ?? true,
-              serving_qty: recipe.serving_qty || 1,
-              serving_unit_id: recipe.serving_unit_id || null,
-              
-              // Nested create for recipe ingredients
-              ingredients: recipe.ingredients?.length > 0 ? {
-                create: recipe.ingredients.map((ing: any) => ({
-                  ingredient_id: ing.ingredient_id,
-                  quantity: ing.quantity,
-                  unit_id: ing.unit_id,
-                  is_optional: ing.is_optional ?? false,
-                  note_i18n: ing.note_i18n || null,
-                }))
-              } : undefined,
-            }))
-          } : undefined,
+          recipes:
+            recipes?.length > 0
+              ? {
+                  create: recipes.map((recipe) => ({
+                    name_i18n: recipe.name_i18n,
+                    is_default: recipe.is_default ?? true,
+                    serving_qty: recipe.serving_qty || 1,
+                    serving_unit_id: recipe.serving_unit_id || null,
+
+                    // Nested create for recipe ingredients
+                    ingredients:
+                      recipe.ingredients?.length > 0
+                        ? {
+                            create: recipe.ingredients.map((ing) => ({
+                              ingredient_id: ing.ingredient_id,
+                              quantity: ing.quantity,
+                              unit_id: ing.unit_id,
+                              is_optional: ing.is_optional ?? false,
+                              note_i18n: ing.note_i18n || null,
+                            })),
+                          }
+                        : undefined,
+                  })),
+                }
+              : undefined,
         },
         include: {
           category: true,
