@@ -53,7 +53,7 @@ export const Input = forwardRef<
       icon: Icon,
       containerClassName,
       className,
-      inputType = "text",
+      inputType = INPUT_TYPES.TEXT,
       required,
       ...props
     },
@@ -71,7 +71,7 @@ export const Input = forwardRef<
 
     const renderInput = () => {
       switch (inputType) {
-        case "checkbox":
+        case INPUT_TYPES.CHECKBOX:
           const { checked, onCheckedChange, id } =
             props as InputHTMLAttributes<HTMLInputElement> & {
               checked?: boolean;
@@ -95,7 +95,7 @@ export const Input = forwardRef<
             </button>
           );
 
-        case "textarea":
+        case INPUT_TYPES.TEXTAREA:
           const { checked: _checkedTA, onCheckedChange: _onCheckedChangeTA, ...textareaProps } =
             props as TextareaHTMLAttributes<HTMLTextAreaElement> & {
               checked?: boolean;
@@ -109,7 +109,7 @@ export const Input = forwardRef<
             />
           );
 
-        case "select":
+        case INPUT_TYPES.SELECT:
           const { checked: _checkedSel, onCheckedChange: _onCheckedChangeSel, options, ...selectProps } =
             props as SelectHTMLAttributes<HTMLSelectElement> & {
               options?: SelectOption[];
@@ -122,6 +122,7 @@ export const Input = forwardRef<
               className={baseInputClass}
               {...selectProps}
             >
+              <option value="">-- เลือก --</option>
               {options?.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -130,12 +131,18 @@ export const Input = forwardRef<
             </select>
           );
 
-        case "text":
-        case "email":
-        case "password":
-        case "number":
-        case "tel":
-        case "url":
+        case INPUT_TYPES.TEXT:
+        case INPUT_TYPES.EMAIL:
+        case INPUT_TYPES.PASSWORD:
+        case INPUT_TYPES.NUMBER:
+        case INPUT_TYPES.TEL:
+        case INPUT_TYPES.URL:
+        case INPUT_TYPES.DATE:
+        case INPUT_TYPES.TIME:
+        case INPUT_TYPES.DATETIME_LOCAL:
+        case INPUT_TYPES.FILE:
+        case INPUT_TYPES.SEARCH:
+        case INPUT_TYPES.COLOR:
         default:
           const { checked: _checked, onCheckedChange: _onCheckedChange, ...inputProps } =
             props as InputHTMLAttributes<HTMLInputElement> & {

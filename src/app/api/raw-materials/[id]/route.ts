@@ -19,7 +19,7 @@ export async function GET(
       where: { id },
       include: {
         unit: true,
-        category: true,
+        type: true,
       },
     });
 
@@ -57,7 +57,7 @@ export async function PUT(
       code,
       name_i18n,
       description_i18n,
-      category_id,
+      type_id,
       unit_id,
       cost_price,
       min_stock,
@@ -97,7 +97,7 @@ export async function PUT(
         code: code || existing.code,
         name_i18n: name_i18n || existing.name_i18n,
         description_i18n: description_i18n !== undefined ? description_i18n : existing.description_i18n,
-        category_id: category_id !== undefined ? category_id : existing.category_id,
+        type_id: type_id !== undefined ? type_id : existing.type_id,
         unit_id: unit_id || existing.unit_id,
         cost_price: cost_price !== undefined ? cost_price : existing.cost_price,
         min_stock: min_stock !== undefined ? min_stock : existing.min_stock,
@@ -106,7 +106,7 @@ export async function PUT(
       },
       include: {
         unit: true,
-        category: true,
+        type: true,
       },
     });
 

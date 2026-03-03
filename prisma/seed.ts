@@ -15,8 +15,34 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("🌱 Starting seed...");
 
-  // Create Roles
-  console.log("� Creating roles...");
+  // Define permissions
+  console.log("🔑 Defining permissions...");
+  const allPermissions = [
+    "users.view", "users.create", "users.update", "users.delete",
+    "products.view", "products.create", "products.update", "products.delete",
+    "inventory.view", "inventory.adjust",
+    "sales.view", "sales.create", "sales.void",
+    "purchases.view", "purchases.create", "purchases.receive",
+    "reports.view",
+    "settings.view", "settings.update",
+  ];
+
+  const managerPermissions = [
+    "products.view", "products.create", "products.update", "products.delete",
+    "inventory.view", "inventory.adjust",
+    "sales.view", "sales.create", "sales.void",
+    "purchases.view", "purchases.create", "purchases.receive",
+    "reports.view",
+  ];
+
+  const cashierPermissions = [
+    "inventory.view",
+    "sales.view", "sales.create",
+    "products.view",
+  ];
+
+  // Create Roles with permissions
+  console.log("👥 Creating roles...");
   const adminRole = await prisma.role.upsert({
     where: { name: "admin" },
     update: {},
@@ -24,6 +50,7 @@ async function main() {
       name: "admin",
       display_name_i18n: { th: "ผู้ดูแลระบบ", en: "Administrator" },
       description_i18n: { th: "เข้าถึงทุกฟังก์ชันในระบบ", en: "Full system access" },
+      permissions: allPermissions,
       is_system: true,
       is_active: true,
     },
@@ -36,6 +63,7 @@ async function main() {
       name: "manager",
       display_name_i18n: { th: "ผู้จัดการ", en: "Manager" },
       description_i18n: { th: "จัดการสินค้า สต็อก และรายงาน", en: "Manage products, inventory, and reports" },
+      permissions: managerPermissions,
       is_system: true,
       is_active: true,
     },
@@ -48,115 +76,11 @@ async function main() {
       name: "cashier",
       display_name_i18n: { th: "พนักงานขาย", en: "Cashier" },
       description_i18n: { th: "ขายสินค้าและดูสต็อก", en: "Sales and view inventory" },
+      permissions: cashierPermissions,
       is_system: true,
       is_active: true,
     },
   });
-
-  // Create Permissions
-  console.log("🔑 Creating permissions...");
-  const permissions = [
-    // Users module
-    { name: "users.view", display_name_i18n: { th: "ดูผู้ใช้", en: "View Users" }, module: "users" },
-    { name: "users.create", display_name_i18n: { th: "สร้างผู้ใช้", en: "Create Users" }, module: "users" },
-    { name: "users.update", display_name_i18n: { th: "แก้ไขผู้ใช้", en: "Update Users" }, module: "users" },
-    { name: "users.delete", display_name_i18n: { th: "ลบผู้ใช้", en: "Delete Users" }, module: "users" },
-    
-    // Products module
-    { name: "products.view", display_name_i18n: { th: "ดูสินค้า", en: "View Products" }, module: "products" },
-    { name: "products.create", display_name_i18n: { th: "สร้างสินค้า", en: "Create Products" }, module: "products" },
-    { name: "products.update", display_name_i18n: { th: "แก้ไขสินค้า", en: "Update Products" }, module: "products" },
-    { name: "products.delete", display_name_i18n: { th: "ลบสินค้า", en: "Delete Products" }, module: "products" },
-    
-    // Inventory module
-    { name: "inventory.view", display_name_i18n: { th: "ดูสต็อก", en: "View Inventory" }, module: "inventory" },
-    { name: "inventory.adjust", display_name_i18n: { th: "ปรับสต็อก", en: "Adjust Inventory" }, module: "inventory" },
-    
-    // Sales module
-    { name: "sales.view", display_name_i18n: { th: "ดูการขาย", en: "View Sales" }, module: "sales" },
-    { name: "sales.create", display_name_i18n: { th: "ขายสินค้า", en: "Create Sales" }, module: "sales" },
-    { name: "sales.void", display_name_i18n: { th: "ยกเลิกการขาย", en: "Void Sales" }, module: "sales" },
-    
-    // Purchases module
-    { name: "purchases.view", display_name_i18n: { th: "ดูใบสั่งซื้อ", en: "View Purchases" }, module: "purchases" },
-    { name: "purchases.create", display_name_i18n: { th: "สร้างใบสั่งซื้อ", en: "Create Purchases" }, module: "purchases" },
-    { name: "purchases.receive", display_name_i18n: { th: "รับสินค้า", en: "Receive Purchases" }, module: "purchases" },
-    
-    // Reports module
-    { name: "reports.view", display_name_i18n: { th: "ดูรายงาน", en: "View Reports" }, module: "reports" },
-    
-    // Settings module
-    { name: "settings.view", display_name_i18n: { th: "ดูการตั้งค่า", en: "View Settings" }, module: "settings" },
-    { name: "settings.update", display_name_i18n: { th: "แก้ไขการตั้งค่า", en: "Update Settings" }, module: "settings" },
-  ];
-
-  const createdPermissions = [];
-  for (const perm of permissions) {
-    const permission = await prisma.permission.upsert({
-      where: { name: perm.name },
-      update: {},
-      create: perm,
-    });
-    createdPermissions.push(permission);
-  }
-
-  // Assign all permissions to admin role
-  console.log("🔗 Assigning permissions to roles...");
-  for (const permission of createdPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        role_id_permission_id: {
-          role_id: adminRole.id,
-          permission_id: permission.id,
-        },
-      },
-      update: {},
-      create: {
-        role_id: adminRole.id,
-        permission_id: permission.id,
-      },
-    });
-  }
-
-  // Assign manager permissions
-  const managerPermissions = createdPermissions.filter(p => 
-    p.module !== 'users' && p.module !== 'settings'
-  );
-  for (const permission of managerPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        role_id_permission_id: {
-          role_id: managerRole.id,
-          permission_id: permission.id,
-        },
-      },
-      update: {},
-      create: {
-        role_id: managerRole.id,
-        permission_id: permission.id,
-      },
-    });
-  }
-
-  // Assign cashier permissions
-  const cashierPermissions = createdPermissions.filter(p => 
-    ['inventory.view', 'sales.view', 'sales.create', 'products.view'].includes(p.name)
-  );
-  for (const permission of cashierPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        role_id_permission_id: {
-          role_id: cashierRole.id,
-          permission_id: permission.id,
-        },
-      },
-      update: {},
-      create: {
-        role_id: cashierRole.id,
-        permission_id: permission.id,
-      },
-    });
-  }
 
   // Create admin user
   console.log("�👤 Creating admin user...");
@@ -340,9 +264,64 @@ async function main() {
     },
   });
 
-  console.log("🏢 Creating warehouse...");
-  const warehouse = await prisma.warehouse.create({
-    data: {
+  console.log("🏷️ Creating product types...");
+  const productTypeRawMaterial = await prisma.productType.upsert({
+    where: { code: "RAW_MATERIAL" },
+    update: {},
+    create: {
+      code: "RAW_MATERIAL",
+      name_i18n: { th: "วัตถุดิบ", en: "Raw Material" },
+      icon: "package",
+      type: "raw_material",
+      sort_order: 1,
+      is_active: true,
+    },
+  });
+
+  const productTypeProduct = await prisma.productType.upsert({
+    where: { code: "PRODUCT" },
+    update: {},
+    create: {
+      code: "PRODUCT",
+      name_i18n: { th: "สินค้า", en: "Product" },
+      icon: "shopping-bag",
+      type: "product",
+      sort_order: 2,
+      is_active: true,
+    },
+  });
+
+  const productTypeSemiFinished = await prisma.productType.upsert({
+    where: { code: "SEMI_FINISHED" },
+    update: {},
+    create: {
+      code: "SEMI_FINISHED",
+      name_i18n: { th: "สินค้ากึ่งสำเร็จรูป", en: "Semi-Finished" },
+      icon: "box",
+      type: "semi_finished",
+      sort_order: 3,
+      is_active: true,
+    },
+  });
+
+  const productTypeFinishedGood = await prisma.productType.upsert({
+    where: { code: "FINISHED_GOOD" },
+    update: {},
+    create: {
+      code: "FINISHED_GOOD",
+      name_i18n: { th: "สินค้าสำเร็จรูป", en: "Finished Good" },
+      icon: "check-circle",
+      type: "finished_good",
+      sort_order: 4,
+      is_active: true,
+    },
+  });
+
+  console.log(" Creating warehouse...");
+  const warehouse = await prisma.warehouse.upsert({
+    where: { code: "WH001" },
+    update: {},
+    create: {
       code: "WH001",
       name_i18n: { th: "คลังหลัก", en: "Main Warehouse" },
       address: "L-Corner Store",
@@ -351,13 +330,15 @@ async function main() {
   });
 
   console.log("📦 Creating raw materials (ingredients)...");
-  const coffeeBean = await prisma.product.create({
-    data: {
+  const coffeeBean = await prisma.product.upsert({
+    where: { code: "ING001" },
+    update: {},
+    create: {
       code: "ING001",
       name_i18n: { th: "เมล็ดกาแฟ", en: "Coffee Beans" },
       description_i18n: { th: "เมล็ดกาแฟคั่วบด", en: "Roasted Coffee Beans" },
       category_id: catCoffee.id,
-      product_type: "finished_good",
+      product_type_id: productTypeRawMaterial.id,
       base_unit_id: unitGram.id,
       track_stock: true,
       min_stock_level: 500,
@@ -390,12 +371,14 @@ async function main() {
     },
   });
 
-  const milk = await prisma.product.create({
-    data: {
+  const milk = await prisma.product.upsert({
+    where: { code: "ING002" },
+    update: {},
+    create: {
       code: "ING002",
       name_i18n: { th: "นมสด", en: "Fresh Milk" },
       category_id: catBeverage.id,
-      product_type: "finished_good",
+      product_type_id: productTypeRawMaterial.id,
       base_unit_id: unitMl.id,
       track_stock: true,
       min_stock_level: 2000,
@@ -428,11 +411,13 @@ async function main() {
     },
   });
 
-  const sugar = await prisma.product.create({
-    data: {
+  const sugar = await prisma.product.upsert({
+    where: { code: "ING003" },
+    update: {},
+    create: {
       code: "ING003",
       name_i18n: { th: "น้ำตาล", en: "Sugar" },
-      product_type: "finished_good",
+      product_type_id: productTypeRawMaterial.id,
       base_unit_id: unitGram.id,
       track_stock: true,
       min_stock_level: 1000,
@@ -451,12 +436,14 @@ async function main() {
     },
   });
 
-  const greenTeaLeaf = await prisma.product.create({
-    data: {
+  const greenTeaLeaf = await prisma.product.upsert({
+    where: { code: "ING004" },
+    update: {},
+    create: {
       code: "ING004",
       name_i18n: { th: "ใบชาเขียว", en: "Green Tea Leaves" },
       category_id: catTea.id,
-      product_type: "finished_good",
+      product_type_id: productTypeRawMaterial.id,
       base_unit_id: unitGram.id,
       track_stock: true,
       min_stock_level: 500,
@@ -476,13 +463,15 @@ async function main() {
   });
 
   console.log("☕ Creating made-to-order products...");
-  const latte = await prisma.product.create({
-    data: {
+  const latte = await prisma.product.upsert({
+    where: { code: "PROD001" },
+    update: {},
+    create: {
       code: "PROD001",
       name_i18n: { th: "ลาเต้", en: "Latte" },
       description_i18n: { th: "กาแฟลาเต้", en: "Coffee Latte" },
       category_id: catCoffee.id,
-      product_type: "made_to_order",
+      product_type_id: productTypeProduct.id,
       base_unit_id: unitCup.id,
       track_stock: false,
       is_active: true,
@@ -538,12 +527,14 @@ async function main() {
     ],
   });
 
-  const greenTea = await prisma.product.create({
-    data: {
+  const greenTea = await prisma.product.upsert({
+    where: { code: "PROD002" },
+    update: {},
+    create: {
       code: "PROD002",
       name_i18n: { th: "ชาเขียว", en: "Green Tea" },
       category_id: catTea.id,
-      product_type: "made_to_order",
+      product_type_id: productTypeProduct.id,
       base_unit_id: unitCup.id,
       track_stock: false,
       is_active: true,
@@ -593,12 +584,14 @@ async function main() {
   });
 
   console.log("🍜 Creating finished goods...");
-  const instantNoodle = await prisma.product.create({
-    data: {
+  const instantNoodle = await prisma.product.upsert({
+    where: { code: "PROD003" },
+    update: {},
+    create: {
       code: "PROD003",
       name_i18n: { th: "มาม่าคัพ", en: "Cup Noodles" },
       category_id: catInstantFood.id,
-      product_type: "finished_good",
+      product_type_id: productTypeRawMaterial.id,
       base_unit_id: unitPiece.id,
       track_stock: true,
       min_stock_level: 20,
@@ -633,13 +626,15 @@ async function main() {
     },
   });
 
-  const chips = await prisma.product.create({
-    data: {
+  const chips = await prisma.product.upsert({
+    where: { code: "PROD004" },
+    update: {},
+    create: {
       code: "PROD004",
       name_i18n: { th: "มันฝรั่งทอด", en: "Potato Chips" },
-      category_id: catSnack.id,
-      product_type: "finished_good",
-      base_unit_id: unitPiece.id,
+      category: { connect: { id: catSnack.id } },
+      product_type: { connect: { id: productTypeRawMaterial.id } },
+      base_unit: { connect: { id: unitPiece.id } },
       track_stock: true,
       min_stock_level: 15,
       low_stock_threshold: 5,

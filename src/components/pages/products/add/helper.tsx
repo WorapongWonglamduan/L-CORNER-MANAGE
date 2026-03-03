@@ -157,7 +157,7 @@ export function useProductForm({ product, isEdit = false }: UseProductFormProps 
     const fetchData = async () => {
       try {
         const [categoriesRes, unitsRes, rawMaterialsRes] = await Promise.all([
-          fetch("/api/raw-material-categories?pageSize=100&isActive=true&type=product"),
+          fetch("/api/product-types?pageSize=100&isActive=true&type=product"),
           fetch("/api/units?pageSize=100&isActive=true"),
           fetch("/api/raw-materials?pageSize=100&isActive=true"),
         ]);

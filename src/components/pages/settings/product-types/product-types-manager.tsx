@@ -6,18 +6,18 @@ import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
-import { useRawMaterialCategoriesManager } from "./helper";
-import { getRawMaterialCategoryFormConfig } from "./config";
+import { useProductTypesManager } from "./helper";
+import { getProductTypeFormConfig } from "./config";
 
-export default function RawMaterialCategoriesManager() {
+export default function ProductTypesManager() {
   const {
     t,
-    categories,
+    types,
     loading,
     searchQuery,
     setSearchQuery,
     dialogOpen,
-    editingCategory,
+    editingType,
     filterOptions,
     totalItems,
     totalPages,
@@ -34,16 +34,26 @@ export default function RawMaterialCategoriesManager() {
     formLoading,
     formError,
     ConfirmDialog,
-  } = useRawMaterialCategoriesManager();
+  } = useProductTypesManager();
 
   const getTypeLabel = (type: string) => {
-    return type === "raw_material" ? t("typeRawMaterial") : t("typeProduct");
+    const labels: Record<string, string> = {
+      raw_material: t("typeRawMaterial"),
+      product: t("typeProduct"),
+      semi_finished: t("typeSemiFinished"),
+      finished_good: t("typeFinishedGood"),
+    };
+    return labels[type] || type;
   };
 
   const getTypeBadgeColor = (type: string) => {
-    return type === "raw_material" 
-      ? "bg-blue-100 text-blue-800" 
-      : "bg-green-100 text-green-800";
+    const colors: Record<string, string> = {
+      raw_material: "bg-blue-100 text-blue-800",
+      product: "bg-green-100 text-green-800",
+      semi_finished: "bg-yellow-100 text-yellow-800",
+      finished_good: "bg-purple-100 text-purple-800",
+    };
+    return colors[type] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -59,7 +69,7 @@ export default function RawMaterialCategoriesManager() {
           className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
         >
           <Plus className="h-4 w-4 mr-2" />
-          {t("addCategory")}
+          {t("addType")}
         </Button>
       </div>
 
@@ -70,7 +80,7 @@ export default function RawMaterialCategoriesManager() {
             <p className="text-gray-600">{t("loading")}</p>
           </div>
         </div>
-      ) : categories.length === 0 ? (
+      ) : types.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
           <FolderTree className="h-16 w-16 text-gray-400 mb-4" />
           <p className="text-gray-600 text-lg">{t("noData")}</p>
@@ -78,28 +88,28 @@ export default function RawMaterialCategoriesManager() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((category) => (
+            {types.map((productType) => (
               <div
-                key={category.id}
+                key={productType.id}
                 className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-[#213559] group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-[#213559]/10 p-3 rounded-xl group-hover:bg-[#213559]/20 transition-colors">
-                      <FolderTree className="h-6 w-6 text-[#213559]" />
-                    </div>
+                    {/* <div className="bg-[#213559]/10 p-3 rounded-xl group-hover:bg-[#213559]/20 transition-colors text-2xl">
+                      {productType.icon || <FolderTree className="h-6 w-6 text-[#213559]" />}
+                    </div> */}
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">
-                        {category.name_i18n.th}
+                        {productType.name_i18n.th}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {category.name_i18n.en}
+                        {productType.name_i18n.en}
                       </p>
                     </div>
                   </div>
                   <ActionButtons
-                    onEdit={() => handleEdit(category)}
-                    onDelete={() => handleDelete(category.id)}
+                    onEdit={() => handleEdit(productType)}
+                    onDelete={() => handleDelete(productType.id)}
                     editTitle={t("edit") || "แก้ไข"}
                     deleteTitle={t("delete") || "ลบ"}
                   />
@@ -111,15 +121,15 @@ export default function RawMaterialCategoriesManager() {
                       {t("code")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {category.code}
+                      {productType.code}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
                       {t("type")}:
                     </span>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getTypeBadgeColor(category.type)}`}>
-                      {getTypeLabel(category.type)}
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getTypeBadgeColor(productType.type)}`}>
+                      {getTypeLabel(productType.type)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
@@ -127,7 +137,7 @@ export default function RawMaterialCategoriesManager() {
                       {t("sortOrder")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {category.sort_order}
+                      {productType.sort_order}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
@@ -136,12 +146,12 @@ export default function RawMaterialCategoriesManager() {
                     </span>
                     <span
                       className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        category.is_active
+                        productType.is_active
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {category.is_active ? t("active") : t("inactive")}
+                      {productType.is_active ? t("active") : t("inactive")}
                     </span>
                   </div>
                 </div>
@@ -163,8 +173,8 @@ export default function RawMaterialCategoriesManager() {
       <EntityDialog
         open={dialogOpen}
         onClose={handleDialogClose}
-        title={editingCategory ? t("editCategory") : t("addCategory")}
-        fields={getRawMaterialCategoryFormConfig(t)}
+        title={editingType ? t("editType") : t("addType")}
+        fields={getProductTypeFormConfig(t)}
         control={formControl}
         handleSubmit={formHandleSubmit}
         onSubmit={handleFormSubmit}

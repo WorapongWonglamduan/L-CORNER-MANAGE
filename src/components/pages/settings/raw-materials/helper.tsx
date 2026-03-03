@@ -11,8 +11,8 @@ export interface RawMaterialFormData {
   name_en: string;
   description_th?: string;
   description_en?: string;
-  category_id?: string;
-  unit_id: string;
+  type_id?: string;
+  unit_id?: string;
   cost_price?: number;
   min_stock?: number;
   current_stock?: number;
@@ -30,8 +30,8 @@ interface RawMaterial {
     th: string;
     en: string;
   } | null;
-  category_id: string | null;
-  category?: {
+  type_id: string | null;
+  type?: {
     id: string;
     name_i18n: {
       th: string;
@@ -70,28 +70,30 @@ interface Unit {
   };
 }
 
-interface Category {
+interface ProductType {
   id: string;
   code: string;
   name_i18n: {
     th: string;
     en: string;
   };
+  type: string;
 }
 
 interface RawMaterialsFilterOptions extends FilterOptions {
   search?: string;
   isActive?: boolean;
-  category?: string;
+  type_id?: string;
 }
 
 export function useRawMaterialsManager() {
   const t = useTranslations("settings.rawMaterials");
   const { confirm, ConfirmDialog } = useConfirm();
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [unitsLoading, setUnitsLoading] = useState(true);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [optionsData, setOptionsData] = useState<{
+    units: Unit[];
+    productTypes: ProductType[];
+  }>({ units: [], productTypes: [] });
+  const [dataLoading, setDataLoading] = useState(true);
 
   const {
     items: rawMaterials,
@@ -111,38 +113,37 @@ export function useRawMaterialsManager() {
   });
 
   useEffect(() => {
-    const fetchUnits = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/units?pageSize=100&isActive=true");
-        const data = await response.json();
-        setUnits(data.items || []);
+        const [unitsRes, productTypesRes] = await Promise.all([
+          fetch("/api/units?pageSize=100&isActive=true"),
+          fetch(
+            "/api/product-types?pageSize=100&isActive=true",
+          ),
+        ]);
+
+        const unitsData = await unitsRes.json();
+        const productTypesData = await productTypesRes.json();
+
+        setOptionsData({
+          units: unitsData.items || [],
+          productTypes: productTypesData.items || [],
+        });
       } catch (error) {
-        console.error("Error fetching units:", error);
+        console.error("Error fetching data:", error);
       } finally {
-        setUnitsLoading(false);
+        setDataLoading(false);
       }
     };
 
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch("/api/raw-material-categories?pageSize=100&isActive=true");
-        const data = await response.json();
-        setCategories(data.items || []);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      } finally {
-        setCategoriesLoading(false);
-      }
-    };
-
-    fetchUnits();
-    fetchCategories();
+    fetchData();
   }, []);
 
   const {
     control,
     handleSubmit,
     errors,
+    watch,
     loading: formLoading,
     error: formError,
     editingEntity: editingRawMaterial,
@@ -160,7 +161,9 @@ export function useRawMaterialsManager() {
         name_en: "",
         description_th: "",
         description_en: "",
-        category_id: "",
+        type_id: optionsData.productTypes.find(
+          (type) => type.type === "raw_material",
+        )?.id,
         unit_id: "",
         cost_price: 0,
         min_stock: 0,
@@ -175,12 +178,15 @@ export function useRawMaterialsManager() {
         th: data.name_th,
         en: data.name_en,
       },
-      description_i18n: data.description_th || data.description_en ? {
-        th: data.description_th || "",
-        en: data.description_en || "",
-      } : null,
-      category_id: data.category_id || null,
-      unit_id: data.unit_id,
+      description_i18n:
+        data.description_th || data.description_en
+          ? {
+              th: data.description_th || "",
+              en: data.description_en || "",
+            }
+          : null,
+      type_id: data.type_id || null,
+      unit_id: data.unit_id || "",
       cost_price: data.cost_price || null,
       min_stock: data.min_stock || 0,
       current_stock: data.current_stock || 0,
@@ -192,7 +198,7 @@ export function useRawMaterialsManager() {
       name_en: rawMaterial.name_i18n.en,
       description_th: rawMaterial.description_i18n?.th || "",
       description_en: rawMaterial.description_i18n?.en || "",
-      category_id: rawMaterial.category_id || "",
+      type_id: rawMaterial.type_id || "",
       unit_id: rawMaterial.unit_id,
       cost_price: rawMaterial.cost_price || 0,
       min_stock: Number(rawMaterial.min_stock) || 0,
@@ -206,10 +212,9 @@ export function useRawMaterialsManager() {
   return {
     t,
     rawMaterials,
-    units,
-    unitsLoading,
-    categories,
-    categoriesLoading,
+    units: optionsData.units,
+    productTypes: optionsData.productTypes,
+    dataLoading,
     loading,
     searchQuery: filterOptions.search || "",
     setSearchQuery: handleSearchChange,
@@ -227,6 +232,7 @@ export function useRawMaterialsManager() {
     handlePageSizeChange,
     formControl: control,
     formHandleSubmit: handleSubmit,
+    formWatch: watch,
     formErrors: errors,
     formLoading,
     formError,

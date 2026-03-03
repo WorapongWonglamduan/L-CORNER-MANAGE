@@ -140,7 +140,7 @@ model Product {
   name_i18n           Json
   description_i18n    Json?
   category_id         String?
-  product_type        String
+  product_type_id     String
   base_unit_id        String
   image_url           String?
   is_active           Boolean   @default(true)
@@ -154,6 +154,7 @@ model Product {
   deleted_at          DateTime?
 
   category               Category?            @relation(fields: [category_id], references: [id])
+  product_type           ProductType          @relation(fields: [product_type_id], references: [id])
   base_unit              Unit                 @relation("BaseUnit", fields: [base_unit_id], references: [id])
   product_units          ProductUnit[]
   recipes                Recipe[]
@@ -466,19 +467,21 @@ model PurchaseOrderItem {
   @@map("purchase_order_items")
 }
 
-model RawMaterialCategory {
+model ProductType {
   id         String   @id @default(uuid())
   name_i18n  Json
   code       String   @unique
-  type       String   @default("raw_material") // "raw_material" or "product"
+  icon       String?
+  type       String   @default("product") // "raw_material", "product", "semi_finished", "finished_good"
   sort_order Int      @default(0)
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  products      Product[]
   raw_materials RawMaterial[]
 
-  @@map("raw_material_categories")
+  @@map("product_types")
 }
 
 model RawMaterial {
@@ -486,7 +489,7 @@ model RawMaterial {
   code         String   @unique
   name_i18n    Json
   description_i18n Json?
-  category_id  String?
+  type_id      String?
   unit_id      String
   cost_price   Decimal? @db.Decimal(15, 2)
   min_stock    Decimal  @default(0) @db.Decimal(15, 4)
@@ -495,8 +498,8 @@ model RawMaterial {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
-  category RawMaterialCategory? @relation(fields: [category_id], references: [id])
-  unit     Unit                 @relation("RawMaterialUnit", fields: [unit_id], references: [id])
+  type ProductType? @relation(fields: [type_id], references: [id])
+  unit Unit         @relation("RawMaterialUnit", fields: [unit_id], references: [id])
 
   @@map("raw_materials")
 }

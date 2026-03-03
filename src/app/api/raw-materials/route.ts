@@ -15,17 +15,17 @@ export async function GET(request: NextRequest) {
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
     const search = searchParams.get("search") || "";
     const isActive = searchParams.get("isActive");
-    const category = searchParams.get("category");
+    const typeId = searchParams.get("type_id");
 
     // Build where clause
     const where: Record<string, unknown> = {};
-    
+
     if (isActive !== null) {
       where.is_active = isActive === "true";
     }
 
-    if (category) {
-      where.category = category;
+    if (typeId) {
+      where.type_id = typeId;
     }
 
     if (search) {
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         unit: true,
-        category: true,
+        type: true,
       },
       orderBy: { created_at: "desc" },
       skip: (page - 1) * pageSize,
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching raw materials:", error);
     return NextResponse.json(
       { error: "Failed to fetch raw materials" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       code,
       name_i18n,
       description_i18n,
-      category_id,
+      type_id,
       unit_id,
       cost_price,
       min_stock,
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     if (!code || !name_i18n || !unit_id) {
       return NextResponse.json(
         { error: "code, name_i18n, and unit_id are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     if (existing) {
       return NextResponse.json(
         { error: "Raw material code already exists" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         code,
         name_i18n,
         description_i18n: description_i18n || null,
-        category_id: category_id || null,
+        type_id: type_id || null,
         unit_id,
         cost_price: cost_price || null,
         min_stock: min_stock || 0,
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         unit: true,
-        category: true,
+        type: true,
       },
     });
 
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     console.error("Error creating raw material:", error);
     return NextResponse.json(
       { error: "Failed to create raw material" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

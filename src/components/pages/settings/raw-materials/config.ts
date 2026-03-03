@@ -4,8 +4,13 @@ import { INPUT_TYPES } from "@/constants/input-types";
 
 export const getRawMaterialFormConfig = (
   t: (key: string) => string,
-  units: Array<{ id: string; name_i18n: { th: string; en: string } }>,
-  categories: Array<{ id: string; name_i18n: { th: string; en: string } }>
+  units: Array<{
+    id: string;
+    name_i18n: { th: string; en: string };
+    abbreviation_i18n: { th: string; en: string };
+  }>,
+  productTypes: Array<{ id: string; name_i18n: { th: string; en: string } }>,
+  locale: string = "th",
 ): FieldConfig<RawMaterialFormData>[] => [
   {
     name: "code",
@@ -41,13 +46,14 @@ export const getRawMaterialFormConfig = (
     placeholder: t("descriptionEnPlaceholder"),
   },
   {
-    name: "category_id",
+    name: "type_id",
     type: INPUT_TYPES.SELECT,
-    label: t("category"),
-    placeholder: t("categoryPlaceholder"),
-    options: categories.map((category) => ({
-      value: category.id,
-      label: `${category.name_i18n.th} (${category.name_i18n.en})`,
+    label: t("type"),
+    placeholder: t("typePlaceholder"),
+    rules: { required: t("typeRequired") },
+    options: productTypes.map((type) => ({
+      value: type.id,
+      label: type.name_i18n[locale],
     })),
   },
   {
@@ -58,7 +64,7 @@ export const getRawMaterialFormConfig = (
     rules: { required: t("unitRequired") },
     options: units.map((unit) => ({
       value: unit.id,
-      label: `${unit.name_i18n.th} (${unit.name_i18n.en})`,
+      label: `${unit.name_i18n[locale]} (${unit.abbreviation_i18n[locale]})`,
     })),
   },
   {

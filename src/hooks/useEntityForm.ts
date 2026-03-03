@@ -25,6 +25,7 @@ interface UseEntityFormResult<T extends FieldValues, E extends BaseEntity> {
   handleSubmit: ReturnType<typeof useForm<T>>["handleSubmit"];
   errors: ReturnType<typeof useForm<T>>["formState"]["errors"];
   reset: ReturnType<typeof useForm<T>>["reset"];
+  watch: ReturnType<typeof useForm<T>>["watch"];
   loading: boolean;
   error: string;
   editingEntity: E | null;
@@ -59,6 +60,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<T>(formConfig);
 
@@ -167,6 +169,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
     handleSubmit,
     errors,
     reset,
+    watch,
     loading,
     error,
     editingEntity,

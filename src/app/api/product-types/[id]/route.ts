@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
-// GET /api/raw-material-categories/[id] - ดึงข้อมูลหมวดหมู่วัตถุดิบตาม ID
+// GET /api/product-types/[id] - ดึงข้อมูลประเภทสินค้าตาม ID
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,33 +15,33 @@ export async function GET(
 
     const { id } = await params;
 
-    const category = await prisma.rawMaterialCategory.findUnique({
+    const productType = await prisma.productType.findUnique({
       where: { id },
       include: {
         _count: {
-          select: { raw_materials: true },
+          select: { raw_materials: true, products: true },
         },
       },
     });
 
-    if (!category) {
+    if (!productType) {
       return NextResponse.json(
-        { error: "Category not found" },
+        { error: "Product type not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(category);
+    return NextResponse.json(productType);
   } catch (error) {
-    console.error("Error fetching raw material category:", error);
+    console.error("Error fetching product type:", error);
     return NextResponse.json(
-      { error: "Failed to fetch raw material category" },
+      { error: "Failed to fetch product type" },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/raw-material-categories/[id] - อัพเดทข้อมูลหมวดหมู่วัตถุดิบ
+// PUT /api/product-types/[id] - อัพเดทข้อมูลประเภทสินค้า
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -54,64 +54,65 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { code, name_i18n, type, sort_order, is_active } = body;
+    const { code, name_i18n, icon, type, sort_order, is_active } = body;
 
-    // Check if category exists
-    const existing = await prisma.rawMaterialCategory.findUnique({
+    // Check if product type exists
+    const existing = await prisma.productType.findUnique({
       where: { id },
     });
 
     if (!existing) {
       return NextResponse.json(
-        { error: "Category not found" },
+        { error: "Product type not found" },
         { status: 404 }
       );
     }
 
     // Validate type if provided
-    if (type && !["raw_material", "product"].includes(type)) {
+    if (type && !["raw_material", "product", "semi_finished", "finished_good"].includes(type)) {
       return NextResponse.json(
-        { error: "Type must be 'raw_material' or 'product'" },
+        { error: "Type must be 'raw_material', 'product', 'semi_finished', or 'finished_good'" },
         { status: 400 }
       );
     }
 
     // Check if code is being changed and if new code already exists
     if (code && code !== existing.code) {
-      const codeExists = await prisma.rawMaterialCategory.findUnique({
+      const codeExists = await prisma.productType.findUnique({
         where: { code },
       });
 
       if (codeExists) {
         return NextResponse.json(
-          { error: "Category code already exists" },
+          { error: "Product type code already exists" },
           { status: 400 }
         );
       }
     }
 
-    const category = await prisma.rawMaterialCategory.update({
+    const productType = await prisma.productType.update({
       where: { id },
       data: {
         code: code || existing.code,
         name_i18n: name_i18n || existing.name_i18n,
+        icon: icon !== undefined ? icon : existing.icon,
         type: type || existing.type,
         sort_order: sort_order !== undefined ? parseInt(sort_order) : existing.sort_order,
         is_active: is_active !== undefined ? is_active : existing.is_active,
       },
     });
 
-    return NextResponse.json(category);
+    return NextResponse.json(productType);
   } catch (error) {
-    console.error("Error updating raw material category:", error);
+    console.error("Error updating product type:", error);
     return NextResponse.json(
-      { error: "Failed to update raw material category" },
+      { error: "Failed to update product type" },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/raw-material-categories/[id] - ลบหมวดหมู่วัตถุดิบ
+// DELETE /api/product-types/[id] - ลบประเภทสินค้า
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -124,40 +125,40 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Check if category exists
-    const category = await prisma.rawMaterialCategory.findUnique({
+    // Check if product type exists
+    const productType = await prisma.productType.findUnique({
       where: { id },
       include: {
         _count: {
-          select: { raw_materials: true },
+          select: { raw_materials: true, products: true },
         },
       },
     });
 
-    if (!category) {
+    if (!productType) {
       return NextResponse.json(
-        { error: "Category not found" },
+        { error: "Product type not found" },
         { status: 404 }
       );
     }
 
-    // Check if category has raw materials
-    if (category._count.raw_materials > 0) {
+    // Check if product type has raw materials or products
+    if (productType._count.raw_materials > 0 || productType._count.products > 0) {
       return NextResponse.json(
-        { error: "Cannot delete category with existing raw materials" },
+        { error: "Cannot delete product type with existing raw materials or products" },
         { status: 400 }
       );
     }
 
-    await prisma.rawMaterialCategory.delete({
+    await prisma.productType.delete({
       where: { id },
     });
 
-    return NextResponse.json({ message: "Category deleted successfully" });
+    return NextResponse.json({ message: "Product type deleted successfully" });
   } catch (error) {
-    console.error("Error deleting raw material category:", error);
+    console.error("Error deleting product type:", error);
     return NextResponse.json(
-      { error: "Failed to delete raw material category" },
+      { error: "Failed to delete product type" },
       { status: 500 }
     );
   }

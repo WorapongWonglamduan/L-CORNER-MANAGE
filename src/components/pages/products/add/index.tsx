@@ -46,6 +46,7 @@ export default function AddProductContent() {
     optionsData.categories,
     optionsData.units,
     t,
+    locale,
   );
   const priceStockConfig = getPriceStockConfig(t);
   const settingsConfig = getSettingsConfig(t);

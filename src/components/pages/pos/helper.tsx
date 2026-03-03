@@ -94,7 +94,7 @@ export function usePOSManager() {
     const fetchCategories = async () => {
       try {
         const response = await fetch(
-          "/api/raw-material-categories?pageSize=100&isActive=true&type=product"
+          "/api/product-types?pageSize=100&isActive=true&type=product"
         );
         const data = await response.json();
         setCategories(data.items || []);

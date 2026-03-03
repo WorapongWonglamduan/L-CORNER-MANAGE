@@ -27,11 +27,11 @@ export default function SettingsContent() {
       href: `/${locale}/settings/raw-materials`,
     },
     {
-      id: "raw-material-categories",
-      title: t("categories.title"),
-      description: t("categories.description"),
+      id: "product-types",
+      title: t("productTypes.title"),
+      description: t("productTypes.description"),
       icon: FolderTree,
-      href: `/${locale}/settings/raw-material-categories`,
+      href: `/${locale}/settings/product-types`,
     },
   ];
 

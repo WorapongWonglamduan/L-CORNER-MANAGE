@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { Prisma } from "@prisma/client";
 
-// GET /api/raw-material-categories - ดึงรายการหมวดหมู่วัตถุดิบทั้งหมด
+// GET /api/product-types - ดึงรายการประเภทสินค้าทั้งหมด
 export async function GET(request: NextRequest) {
   try {
-    console.log("[API] Fetching raw material categories...");
+    console.log("[API] Fetching product types...");
 
     const session = await auth();
     console.log(
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Build where clause
-    const where: Prisma.RawMaterialCategoryWhereInput = {};
+    const where: Prisma.ProductTypeWhereInput = {};
 
     if (type && type !== null) {
       where.type = type;
@@ -54,36 +54,36 @@ export async function GET(request: NextRequest) {
     console.log("[API] Executing Prisma count query...");
 
     // Get total count
-    const total = await prisma.rawMaterialCategory.count({ where });
+    const total = await prisma.productType.count({ where });
     console.log("[API] Total count:", total);
 
     console.log("[API] Executing Prisma findMany query...");
     // Get paginated data
-    const categories = await prisma.rawMaterialCategory.findMany({
+    const types = await prisma.productType.findMany({
       where,
       orderBy: { sort_order: "asc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
 
-    console.log("[API] Found categories:", categories.length);
+    console.log("[API] Found types:", types.length);
 
     return NextResponse.json({
-      items: categories,
+      items: types,
       total,
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     });
   } catch (error) {
-    console.error("Error fetching raw material categories:", error);
+    console.error("Error fetching product types:", error);
     console.error("Error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json(
       {
-        error: "Failed to fetch raw material categories",
+        error: "Failed to fetch product types",
         details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/raw-material-categories - สร้างหมวดหมู่วัตถุดิบใหม่
+// POST /api/product-types - สร้างประเภทสินค้าใหม่
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { code, name_i18n, type, sort_order, is_active } = body;
+    const { code, name_i18n, icon, type, sort_order, is_active } = body;
 
     // Validation
     if (!code || !name_i18n || !type) {
@@ -111,40 +111,41 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate type
-    if (!["raw_material", "product"].includes(type)) {
+    if (!["raw_material", "product", "semi_finished", "finished_good"].includes(type)) {
       return NextResponse.json(
-        { error: "Type must be 'raw_material' or 'product'" },
+        { error: "Type must be 'raw_material', 'product', 'semi_finished', or 'finished_good'" },
         { status: 400 },
       );
     }
 
     // Check if code already exists
-    const existing = await prisma.rawMaterialCategory.findUnique({
+    const existing = await prisma.productType.findUnique({
       where: { code },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: "Category code already exists" },
+        { error: "Product type code already exists" },
         { status: 400 },
       );
     }
 
-    const category = await prisma.rawMaterialCategory.create({
+    const productType = await prisma.productType.create({
       data: {
         code,
         name_i18n,
+        icon,
         type,
         sort_order: sort_order ? parseInt(sort_order) : 0,
         is_active: is_active ?? true,
       },
     });
 
-    return NextResponse.json(category, { status: 201 });
+    return NextResponse.json(productType, { status: 201 });
   } catch (error) {
-    console.error("Error creating raw material category:", error);
+    console.error("Error creating product type:", error);
     return NextResponse.json(
-      { error: "Failed to create raw material category" },
+      { error: "Failed to create product type" },
       { status: 500 },
     );
   }

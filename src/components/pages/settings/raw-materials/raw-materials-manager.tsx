@@ -8,15 +8,16 @@ import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useRawMaterialsManager } from "./helper";
 import { getRawMaterialFormConfig } from "./config";
+import { useLocale } from "next-intl";
 
 export default function RawMaterialsManager() {
+  const locale = useLocale();
   const {
     t,
     rawMaterials,
     units,
-    unitsLoading,
-    categories,
-    categoriesLoading,
+    productTypes,
+    dataLoading,
     loading,
     searchQuery,
     setSearchQuery,
@@ -40,9 +41,9 @@ export default function RawMaterialsManager() {
     ConfirmDialog,
   } = useRawMaterialsManager();
 
-  const getCategoryLabel = (category: { id: string; name_i18n: { th: string; en: string } } | null | undefined) => {
-    if (!category) return "-";
-    return category.name_i18n.th;
+  const getTypeLabel = (type: { id: string; name_i18n: { th: string; en: string } } | null | undefined) => {
+    if (!type) return "-";
+    return type.name_i18n.th;
   };
 
   return (
@@ -107,10 +108,10 @@ export default function RawMaterialsManager() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
                     <span className="text-sm text-gray-600">
-                      {t("category")}:
+                      {t("type")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {getCategoryLabel(rawMaterial.category)}
+                      {getTypeLabel(rawMaterial.type)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
@@ -192,12 +193,12 @@ export default function RawMaterialsManager() {
         open={dialogOpen}
         onClose={handleDialogClose}
         title={editingRawMaterial ? t("editRawMaterial") : t("addRawMaterial")}
-        fields={getRawMaterialFormConfig(t, units, categories)}
+        fields={getRawMaterialFormConfig(t, units, productTypes, locale)}
         control={formControl}
         handleSubmit={formHandleSubmit}
         onSubmit={handleFormSubmit}
         errors={formErrors}
-        loading={formLoading || unitsLoading || categoriesLoading}
+        loading={formLoading || dataLoading}
         error={formError}
         cancelText={t("cancel")}
         saveText={t("save")}

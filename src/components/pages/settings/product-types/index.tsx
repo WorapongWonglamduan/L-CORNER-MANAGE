@@ -4,10 +4,10 @@ import { Navbar } from "@/components/navbar";
 import { useTranslations } from "next-intl";
 import { FolderTree, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import RawMaterialCategoriesManager from "./raw-material-categories-manager";
+import ProductTypesManager from "./product-types-manager";
 
-export default function RawMaterialCategoriesContent() {
-  const t = useTranslations("settings.rawMaterialCategories");
+export default function ProductTypesContent() {
+  const t = useTranslations("settings.productTypes");
   const router = useRouter();
 
   return (
@@ -33,7 +33,7 @@ export default function RawMaterialCategoriesContent() {
           <p className="text-gray-600">{t("description")}</p>
         </div>
 
-        <RawMaterialCategoriesManager />
+        <ProductTypesManager />
       </div>
     </div>
   );

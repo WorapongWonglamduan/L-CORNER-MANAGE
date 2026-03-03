@@ -1,10 +1,10 @@
 import { FieldConfig } from "@/components/ui/FormBuilder";
-import { RawMaterialCategoryFormData } from "./helper";
+import { ProductTypeFormData } from "./helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 
-export const getRawMaterialCategoryFormConfig = (
+export const getProductTypeFormConfig = (
   t: (key: string) => string
-): FieldConfig<RawMaterialCategoryFormData>[] => [
+): FieldConfig<ProductTypeFormData>[] => [
   {
     name: "code",
     type: INPUT_TYPES.TEXT,
@@ -27,6 +27,12 @@ export const getRawMaterialCategoryFormConfig = (
     rules: { required: t("nameEnRequired") },
   },
   {
+    name: "icon",
+    type: INPUT_TYPES.TEXT,
+    label: `${t("icon")}`,
+    placeholder: "🥬",
+  },
+  {
     name: "type",
     type: INPUT_TYPES.SELECT,
     label: `${t("type")}`,
@@ -35,6 +41,8 @@ export const getRawMaterialCategoryFormConfig = (
     options: [
       { value: "raw_material", label: t("typeRawMaterial") },
       { value: "product", label: t("typeProduct") },
+      { value: "semi_finished", label: t("typeSemiFinished") },
+      { value: "finished_good", label: t("typeFinishedGood") },
     ],
   },
   {

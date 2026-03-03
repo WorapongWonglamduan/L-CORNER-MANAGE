@@ -4,22 +4,24 @@ import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 
-export interface RawMaterialCategoryFormData {
+export interface ProductTypeFormData {
   code: string;
   name_th: string;
   name_en: string;
+  icon?: string;
   type: string;
   sort_order?: number;
   is_active: boolean;
 }
 
-interface RawMaterialCategory {
+interface ProductType {
   id: string;
   code: string;
   name_i18n: {
     th: string;
     en: string;
   };
+  icon?: string;
   type: string;
   sort_order: number;
   is_active: boolean;
@@ -27,17 +29,17 @@ interface RawMaterialCategory {
   updated_at: string;
 }
 
-interface CategoriesFilterOptions extends FilterOptions {
+interface TypesFilterOptions extends FilterOptions {
   search?: string;
   isActive?: boolean;
 }
 
-export function useRawMaterialCategoriesManager() {
-  const t = useTranslations("settings.rawMaterialCategories");
+export function useProductTypesManager() {
+  const t = useTranslations("settings.productTypes");
   const { confirm, ConfirmDialog } = useConfirm();
 
   const {
-    items: categories,
+    items: types,
     loading,
     totalItems,
     totalPages,
@@ -46,12 +48,13 @@ export function useRawMaterialCategoriesManager() {
     handlePageSizeChange,
     handleSearchChange,
     refetch,
-  } = useEntityList<RawMaterialCategory, CategoriesFilterOptions>({
-    endpoint: "/api/raw-material-categories",
+  } = useEntityList<ProductType, TypesFilterOptions>({
+    endpoint: "/api/product-types",
     initialFilters: {
       search: "",
     },
   });
+  console.log("types ->", types);
 
   const {
     control,
@@ -59,42 +62,45 @@ export function useRawMaterialCategoriesManager() {
     errors,
     loading: formLoading,
     error: formError,
-    editingEntity: editingCategory,
+    editingEntity,
     dialogOpen,
     handleCreate,
     handleEdit,
     handleDelete,
     handleDialogClose,
     handleFormSubmit,
-  } = useEntityForm<RawMaterialCategoryFormData, RawMaterialCategory>({
+  } = useEntityForm<ProductTypeFormData, ProductType>({
     formConfig: {
       defaultValues: {
         code: "",
         name_th: "",
         name_en: "",
-        type: "raw_material",
+        icon: "",
+        type: "product",
         sort_order: 0,
         is_active: true,
       },
     },
-    endpoint: "/api/raw-material-categories",
+    endpoint: "/api/product-types",
     transformToPayload: (data) => ({
       code: data.code,
       name_i18n: {
         th: data.name_th,
         en: data.name_en,
       },
+      icon: data.icon,
       type: data.type,
       sort_order: data.sort_order,
       is_active: data.is_active,
     }),
-    transformToForm: (category) => ({
-      code: category.code,
-      name_th: category.name_i18n.th,
-      name_en: category.name_i18n.en,
-      type: category.type || "raw_material",
-      sort_order: category.sort_order,
-      is_active: category.is_active,
+    transformToForm: (productType) => ({
+      code: productType.code,
+      name_th: productType.name_i18n.th,
+      name_en: productType.name_i18n.en,
+      icon: productType.icon || "",
+      type: productType.type || "product",
+      sort_order: productType.sort_order,
+      is_active: productType.is_active,
     }),
     onSuccess: refetch,
     confirmDelete: confirm,
@@ -102,13 +108,13 @@ export function useRawMaterialCategoriesManager() {
 
   return {
     t,
-    categories,
-    allCategories: categories,
+    types,
+    allTypes: types,
     loading,
     searchQuery: filterOptions.search || "",
     setSearchQuery: handleSearchChange,
     dialogOpen,
-    editingCategory,
+    editingType: editingEntity,
     filterOptions,
     totalItems,
     totalPages,
