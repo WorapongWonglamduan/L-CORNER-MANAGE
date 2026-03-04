@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
+import { toast } from "@/lib/toast";
 interface Product {
   id: string;
   code: string;
@@ -84,36 +85,37 @@ export function usePOSManager() {
     warehouseId: null,
   });
 
-  // Fetch products
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams({
-          pageSize: "100",
-          isActive: "true",
-          type: `${PRODUCTS_TYPES.SEMI_FINISHED},${PRODUCTS_TYPES.FINISHED_GOOD}`,
-        });
+  // Fetch products function
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        pageSize: "100",
+        isActive: "true",
+        type: `${PRODUCTS_TYPES.SEMI_FINISHED},${PRODUCTS_TYPES.FINISHED_GOOD}`,
+      });
 
-        if (selectedCategory) {
-          params.append("productType", selectedCategory);
-        }
-
-        if (searchQuery) {
-          params.append("search", searchQuery);
-        }
-        const response = await fetch(`/api/products?${params}`);
-        const data = await response.json();
-        setProducts(data.items || []);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
+      if (selectedCategory) {
+        params.append("productType", selectedCategory);
       }
-    };
 
-    fetchProducts();
+      if (searchQuery) {
+        params.append("search", searchQuery);
+      }
+      const response = await fetch(`/api/products?${params}`);
+      const data = await response.json();
+      setProducts(data.items || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [selectedCategory, searchQuery]);
+
+  // Fetch products on mount and when filters change
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   // Fetch product types, categories, and warehouse
   useEffect(() => {
@@ -264,13 +266,24 @@ export function usePOSManager() {
         }
 
         const result = await response.json();
+        toast.success(
+          t("paymentSuccess", {
+            count: cartItemCount,
+            saleNumber: result.sale_number || "N/A",
+          }),
+        );
+        clearCart();
+        
+        // Refetch products to update stock
+        await fetchProducts();
+        
         return result;
       } catch (error) {
         console.error("Checkout error:", error);
         throw error;
       }
     },
-    [cart, optionsData.warehouseId],
+    [cart, optionsData.warehouseId, cartItemCount, t, clearCart, fetchProducts],
   );
 
   return {

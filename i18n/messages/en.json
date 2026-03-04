@@ -370,5 +370,37 @@
       "productNotFound": "Product not found: {productId}",
       "insufficientIngredient": "Insufficient stock for ingredient {ingredientName}. Available: {available}, Required: {required}"
     }
+  },
+  "pos": {
+    "categories": "Product Categories",
+    "allCategories": "All",
+    "searchPlaceholder": "Search products...",
+    "loading": "Loading products...",
+    "noProducts": "No products found",
+    "cart": "Shopping Cart",
+    "clearCart": "Clear Cart",
+    "items": "items",
+    "emptyCart": "Cart is empty",
+    "subtotal": "Subtotal",
+    "tax": "Tax (7%)",
+    "total": "Total",
+    "checkout": "Checkout",
+    "paymentSuccess": "Payment successful - {count} items saved (Sale No: {saleNumber})",
+    "paymentError": "Error: {message}",
+    "cannotSave": "Cannot save sale",
+    "outOfStock": "Out of Stock",
+    "remaining": "{stock} left",
+    "inStock": "In Stock",
+    "addToCart": "Add to Cart",
+    "checkoutTitle": "Checkout",
+    "itemCount": "Item Count",
+    "paymentMethod": "Payment Method",
+    "cash": "Cash",
+    "card": "Card",
+    "amountReceived": "Amount Received",
+    "change": "Change",
+    "insufficientAmount": "Insufficient amount",
+    "confirm": "Confirm Payment",
+    "processing": "Processing..."
   }
 }

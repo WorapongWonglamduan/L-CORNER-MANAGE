@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, CreditCard, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PAYMENT_METHODS, PaymentMethod } from "@/constants/payment";
+import { useTranslations } from "next-intl";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -20,25 +21,25 @@ export function CheckoutModal({
   cartItemCount,
   onConfirm,
 }: CheckoutModalProps) {
+  const t = useTranslations("pos");
+  const tCommon = useTranslations("common");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHODS.CASH);
   const [amountPaid, setAmountPaid] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const totalWithTax = cartTotal * 1.07;
-  const tax = cartTotal * 0.07;
-  const change = Number(amountPaid) - totalWithTax;
+  const change = Number(amountPaid) - cartTotal;
 
   // Auto-fill amount when modal opens or payment method changes to cash
   useEffect(() => {
     if (isOpen && paymentMethod === PAYMENT_METHODS.CASH) {
-      setAmountPaid(totalWithTax.toFixed(2));
+      setAmountPaid(cartTotal.toFixed(2));
     }
-  }, [isOpen, paymentMethod, totalWithTax]);
+  }, [isOpen, paymentMethod, cartTotal]);
 
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
-    if (paymentMethod === PAYMENT_METHODS.CASH && Number(amountPaid) < totalWithTax) {
+    if (paymentMethod === PAYMENT_METHODS.CASH && Number(amountPaid) < cartTotal) {
       return;
     }
 
@@ -55,7 +56,7 @@ export function CheckoutModal({
   };
 
   const quickAmounts = [
-    { label: "Exact", value: Number(totalWithTax.toFixed(2)) },
+    { label: "Exact", value: Number(cartTotal.toFixed(2)) },
     { label: "฿100", value: 100 },
     { label: "฿200", value: 200 },
     { label: "฿500", value: 500 },
@@ -67,7 +68,7 @@ export function CheckoutModal({
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-2xl font-bold text-gray-900">ชำระเงิน</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t("checkoutTitle")}</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -81,29 +82,19 @@ export function CheckoutModal({
           {/* Summary */}
           <div className="bg-gray-50 rounded-xl p-4 space-y-2">
             <div className="flex justify-between text-gray-600">
-              <span>จำนวนรายการ</span>
-              <span className="font-semibold">{cartItemCount} รายการ</span>
-            </div>
-            <div className="flex justify-between text-gray-600">
-              <span>ยอดรวม</span>
-              <span className="font-semibold">
-                ฿{cartTotal.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between text-gray-600">
-              <span>ภาษี (7%)</span>
-              <span className="font-semibold">฿{tax.toLocaleString()}</span>
+              <span>{t("itemCount")}</span>
+              <span className="font-semibold">{cartItemCount} {t("items")}</span>
             </div>
             <div className="border-t border-gray-300 pt-2 flex justify-between text-xl font-bold text-[#213559]">
-              <span>ยอดชำระ</span>
-              <span>฿{totalWithTax.toLocaleString()}</span>
+              <span>{t("total")}</span>
+              <span>฿{cartTotal.toLocaleString()}</span>
             </div>
           </div>
 
           {/* Payment Method */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
-              วิธีการชำระเงิน
+              {t("paymentMethod")}
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -124,7 +115,7 @@ export function CheckoutModal({
                     paymentMethod === PAYMENT_METHODS.CASH ? "text-[#213559]" : "text-gray-600"
                   }`}
                 >
-                  เงินสด
+                  {t("cash")}
                 </span>
               </button>
 
@@ -146,7 +137,7 @@ export function CheckoutModal({
                     paymentMethod === PAYMENT_METHODS.CARD ? "text-[#213559]" : "text-gray-600"
                   }`}
                 >
-                  บัตร
+                  {t("card")}
                 </span>
               </button>
             </div>
@@ -156,7 +147,7 @@ export function CheckoutModal({
           {paymentMethod === PAYMENT_METHODS.CASH && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
-                รับเงิน
+                {t("amountReceived")}
               </label>
               <input
                 type="number"
@@ -184,11 +175,11 @@ export function CheckoutModal({
               </div>
 
               {/* Change */}
-              {amountPaid && Number(amountPaid) >= totalWithTax && (
+              {amountPaid && Number(amountPaid) >= cartTotal && (
                 <div className="mt-4 p-4 bg-green-50 rounded-xl">
                   <div className="flex justify-between items-center">
                     <span className="text-green-700 font-semibold">
-                      เงินทอน
+                      {t("change")}
                     </span>
                     <span className="text-2xl font-bold text-green-700">
                       ฿{change.toLocaleString()}
@@ -200,10 +191,10 @@ export function CheckoutModal({
               {/* Insufficient Amount Warning */}
               {amountPaid &&
                 Number(amountPaid) > 0 &&
-                Number(amountPaid) < totalWithTax && (
+                Number(amountPaid) < cartTotal && (
                   <div className="mt-4 p-4 bg-red-50 rounded-xl">
                     <span className="text-red-700 font-semibold text-sm">
-                      จำนวนเงินไม่เพียงพอ
+                      {t("insufficientAmount")}
                     </span>
                   </div>
                 )}
@@ -220,18 +211,18 @@ export function CheckoutModal({
               className="flex-1 py-6 text-lg font-semibold"
               disabled={isProcessing}
             >
-              ยกเลิก
+              {tCommon("cancel")}
             </Button>
             <Button
               onClick={handleConfirm}
               disabled={
                 isProcessing ||
                 (paymentMethod === "cash" &&
-                  (!amountPaid || Number(amountPaid) < totalWithTax))
+                  (!amountPaid || Number(amountPaid) < cartTotal))
               }
               className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold shadow-lg"
             >
-              {isProcessing ? "กำลังดำเนินการ..." : "ยืนยันชำระเงิน"}
+              {isProcessing ? t("processing") : t("confirm")}
             </Button>
           </div>
         </div>

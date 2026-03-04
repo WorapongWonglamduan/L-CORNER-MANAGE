@@ -8,6 +8,7 @@ import { usePOSManager } from "./helper";
 import { Button } from "@/components/ui/button";
 import { CheckoutModal } from "./checkout-modal";
 import { toast } from "@/lib/toast";
+import { useTranslations } from "next-intl";
 
 export default function POSContent() {
   const {
@@ -30,17 +31,16 @@ export default function POSContent() {
     locale,
   } = usePOSManager();
 
+  const t = useTranslations("pos");
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
 
   const handleCheckout = async (paymentMethod: string) => {
     try {
-      const result = await checkout(paymentMethod);
-      toast.success(`ชำระเงินสำเร็จ - บันทึกการขาย ${cartItemCount} รายการ (เลขที่: ${result.sale_number || 'N/A'})`);
-      clearCart();
+      await checkout(paymentMethod);
       setIsCheckoutModalOpen(false);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถบันทึกการขายได้";
-      toast.error(`เกิดข้อผิดพลาด: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : t("cannotSave");
+      toast.error(t("paymentError", { message: errorMessage }));
     }
   };
 
@@ -54,7 +54,7 @@ export default function POSContent() {
           <div className="p-4 border-b border-gray-200">
             <h2 className="font-bold text-lg text-gray-900 flex items-center gap-2">
               <Grid3x3 className="w-5 h-5 text-[#213559]" />
-              หมวดหมู่สินค้า
+              {t("categories")}
             </h2>
           </div>
 
@@ -67,7 +67,7 @@ export default function POSContent() {
                   : "hover:bg-gray-100 text-gray-700"
               }`}
             >
-              <span className="font-medium">ทั้งหมด</span>
+              <span className="font-medium">{t("allCategories")}</span>
             </button>
 
             {categories.map((category) => (
@@ -97,7 +97,7 @@ export default function POSContent() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="ค้นหาสินค้า..."
+                  placeholder={t("searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#213559] focus:border-transparent shadow-sm"
@@ -110,7 +110,7 @@ export default function POSContent() {
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#213559] mx-auto mb-4"></div>
-                  <p className="text-gray-600 text-lg">กำลังโหลดสินค้า...</p>
+                  <p className="text-gray-600 text-lg">{t("loading")}</p>
                 </div>
               </div>
             ) : products.length === 0 ? (
@@ -118,7 +118,7 @@ export default function POSContent() {
                 <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                   <ShoppingCart className="h-12 w-12 text-gray-400" />
                 </div>
-                <p className="text-gray-600 text-lg">ไม่พบสินค้า</p>
+                <p className="text-gray-600 text-lg">{t("noProducts")}</p>
               </div>
             ) : (
               <div className="grid  xl:grid-cols-4 2xl:grid-cols-4 gap-4">
@@ -149,19 +149,19 @@ export default function POSContent() {
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-bold text-xl text-gray-900 flex items-center gap-2">
                 <ShoppingCart className="w-6 h-6 text-[#213559]" />
-                ตะกร้าสินค้า
+                {t("cart")}
               </h2>
               {cart.length > 0 && (
                 <button
                   onClick={clearCart}
                   className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                  title="ล้างตะกร้า"
+                  title={t("clearCart")}
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
               )}
             </div>
-            <p className="text-gray-500 text-sm">{cartItemCount} รายการ</p>
+            <p className="text-gray-500 text-sm">{cartItemCount} {t("items")}</p>
           </div>
 
           {/* Cart Items */}
@@ -169,7 +169,7 @@ export default function POSContent() {
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <ShoppingCart className="w-16 h-16 mb-4" />
-                <p className="text-center">ตะกร้าว่างเปล่า</p>
+                <p className="text-center">{t("emptyCart")}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -232,22 +232,10 @@ export default function POSContent() {
           {cart.length > 0 && (
             <div className="border-t border-gray-200 p-6 bg-gray-50">
               <div className="space-y-3 mb-4">
-                <div className="flex justify-between text-gray-600">
-                  <span>ยอดรวม</span>
-                  <span className="font-semibold">
-                    ฿{cartTotal.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>ภาษี (7%)</span>
-                  <span className="font-semibold">
-                    ฿{(cartTotal * 0.07).toLocaleString()}
-                  </span>
-                </div>
                 <div className="border-t border-gray-300 pt-3 flex justify-between text-xl font-bold text-gray-900">
-                  <span>ยอดชำระ</span>
+                  <span>{t("total")}</span>
                   <span className="text-[#213559]">
-                    ฿{(cartTotal * 1.07).toLocaleString()}
+                    ฿{cartTotal.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -256,7 +244,7 @@ export default function POSContent() {
                 onClick={() => setIsCheckoutModalOpen(true)}
                 className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all"
               >
-                ชำระเงิน
+                {t("checkout")}
               </Button>
             </div>
           )}
@@ -271,18 +259,18 @@ export default function POSContent() {
               <div className="flex items-center gap-2 mb-1">
                 <ShoppingCart className="w-5 h-5 text-[#213559]" />
                 <span className="font-bold text-gray-900">
-                  {cartItemCount} รายการ
+                  {cartItemCount} {t("items")}
                 </span>
               </div>
               <div className="text-xl font-bold text-[#213559]">
-                ฿{(cartTotal * 1.07).toLocaleString()}
+                ฿{cartTotal.toLocaleString()}
               </div>
             </div>
             <Button 
               onClick={() => setIsCheckoutModalOpen(true)}
               className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-bold rounded-xl shadow-lg"
             >
-              ชำระเงิน
+              {t("checkout")}
             </Button>
           </div>
         </div>

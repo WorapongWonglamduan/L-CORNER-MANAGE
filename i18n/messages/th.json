@@ -370,5 +370,37 @@
       "productNotFound": "ไม่พบสินค้า: {productId}",
       "insufficientIngredient": "สต็อกวัตถุดิบไม่เพียงพอสำหรับ {ingredientName} มีอยู่: {available} ต้องการ: {required}"
     }
+  },
+  "pos": {
+    "categories": "หมวดหมู่สินค้า",
+    "allCategories": "ทั้งหมด",
+    "searchPlaceholder": "ค้นหาสินค้า...",
+    "loading": "กำลังโหลดสินค้า...",
+    "noProducts": "ไม่พบสินค้า",
+    "cart": "ตะกร้าสินค้า",
+    "clearCart": "ล้างตะกร้า",
+    "items": "รายการ",
+    "emptyCart": "ตะกร้าว่างเปล่า",
+    "subtotal": "ยอดรวม",
+    "tax": "ภาษี (7%)",
+    "total": "ยอดชำระ",
+    "checkout": "ชำระเงิน",
+    "paymentSuccess": "ชำระเงินสำเร็จ - บันทึกการขาย {count} รายการ (เลขที่: {saleNumber})",
+    "paymentError": "เกิดข้อผิดพลาด: {message}",
+    "cannotSave": "ไม่สามารถบันทึกการขายได้",
+    "outOfStock": "หมด",
+    "remaining": "เหลือ {stock}",
+    "inStock": "มีสินค้า",
+    "addToCart": "เพิ่มลงตะกร้า",
+    "checkoutTitle": "ชำระเงิน",
+    "itemCount": "จำนวนรายการ",
+    "paymentMethod": "วิธีการชำระเงิน",
+    "cash": "เงินสด",
+    "card": "บัตร",
+    "amountReceived": "รับเงิน",
+    "change": "เงินทอน",
+    "insufficientAmount": "จำนวนเงินไม่เพียงพอ",
+    "confirm": "ยืนยันการชำระเงิน",
+    "processing": "กำลังดำเนินการ..."
   }
 }

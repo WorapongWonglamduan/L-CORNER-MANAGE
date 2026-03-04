@@ -2,6 +2,7 @@
 
 import { Plus, Minus } from "lucide-react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 interface ProductCardProps {
   id: string;
@@ -26,6 +27,8 @@ export function ProductCard({
   quantity = 0,
   onQuantityChange,
 }: ProductCardProps) {
+  const t = useTranslations("pos");
+  
   const handleIncrement = () => {
     if (quantity === 0) {
       onAdd(id);
@@ -71,14 +74,14 @@ export function ProductCard({
         {/* Stock Badge */}
         {isOutOfStock && (
           <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
-            หมด
+            {t("outOfStock")}
           </div>
         )}
         
         {/* Low Stock Badge */}
         {isLowStock && (
           <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
-            เหลือ {stock}
+            {t("remaining", { stock })}
           </div>
         )}
         
@@ -110,7 +113,7 @@ export function ProductCard({
           </div>
           {stock > 10 && (
             <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">
-              มีสินค้า
+              {t("inStock")}
             </span>
           )}
         </div>
@@ -142,7 +145,7 @@ export function ProductCard({
                 className="w-full bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white py-2.5 rounded-lg font-semibold hover:shadow-lg hover:shadow-[#213559]/30 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm"
               >
                 <Plus className="w-4 h-4" />
-                เพิ่มลงตะกร้า
+                {t("addToCart")}
               </button>
             )}
           </div>
