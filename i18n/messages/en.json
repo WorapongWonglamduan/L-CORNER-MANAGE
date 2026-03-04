@@ -54,7 +54,7 @@
     "quickActions": {
       "title": "Quick Actions",
       "newSale": "New Sale",
-      "addProduct": "Add Product",
+      "products": "Products",
       "viewReports": "View Reports",
       "manageInventory": "Manage Inventory"
     }

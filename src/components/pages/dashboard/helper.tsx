@@ -36,9 +36,9 @@ export const quickActions: QuickAction[] = [
     colorClass: "bg-blue-500 hover:bg-blue-600",
   },
   {
-    labelKey: "quickActions.addProduct",
+    labelKey: "quickActions.products",
     icon: Package,
-    href: "/products/add",
+    href: "/products/list",
     colorClass: "bg-green-500 hover:bg-green-600",
   },
   {

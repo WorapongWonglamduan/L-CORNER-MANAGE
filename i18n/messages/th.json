@@ -54,7 +54,7 @@
     "quickActions": {
       "title": "เมนูด่วน",
       "newSale": "ขายสินค้า",
-      "addProduct": "เพิ่มสินค้า",
+      "products": "สินค้า",
       "viewReports": "ดูรายงาน",
       "manageInventory": "จัดการสต็อก"
     }

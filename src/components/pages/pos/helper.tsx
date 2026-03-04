@@ -41,6 +41,14 @@ interface Product {
   image_url: string | null;
 }
 
+interface ProductType {
+  id: string;
+  name_i18n: {
+    th: string;
+    en: string;
+  };
+  type: string;
+}
 interface Category {
   id: string;
   name_i18n: {
@@ -67,7 +75,7 @@ export function usePOSManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [optionsData, setOptionsData] = useState<{
-    productTypes: Category[];
+    productTypes: ProductType[];
     categories: Category[];
     warehouseId: string | null;
   }>({
@@ -88,13 +96,12 @@ export function usePOSManager() {
         });
 
         if (selectedCategory) {
-          params.append("categoryId", selectedCategory);
+          params.append("productType", selectedCategory);
         }
 
         if (searchQuery) {
           params.append("search", searchQuery);
         }
-
         const response = await fetch(`/api/products?${params}`);
         const data = await response.json();
         setProducts(data.items || []);
@@ -112,13 +119,14 @@ export function usePOSManager() {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [productTypesRes, categoriesRes, warehouseRes] = await Promise.all([
-          fetch(
-            `/api/product-types?pageSize=100&isActive=true&type=${PRODUCTS_TYPES.FINISHED_GOOD},${PRODUCTS_TYPES.SEMI_FINISHED}`,
-          ),
-          fetch("/api/categories?pageSize=100&isActive=true"),
-          fetch("/api/warehouses?pageSize=1").catch(() => null),
-        ]);
+        const [productTypesRes, categoriesRes, warehouseRes] =
+          await Promise.all([
+            fetch(
+              `/api/product-types?pageSize=100&isActive=true&type=${PRODUCTS_TYPES.FINISHED_GOOD},${PRODUCTS_TYPES.SEMI_FINISHED}`,
+            ),
+            fetch("/api/categories?pageSize=100&isActive=true"),
+            fetch("/api/warehouses?pageSize=1").catch(() => null),
+          ]);
 
         const newOptionsData = { ...optionsData };
 
