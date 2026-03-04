@@ -13,12 +13,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       recipe_id,
-      raw_material_id,
+      ingredient_id,
       quantity,
       unit_id,
     } = body;
 
-    if (!recipe_id || !raw_material_id || !quantity || !unit_id) {
+    if (!recipe_id || !ingredient_id || !quantity || !unit_id) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const ingredient = await prisma.recipeIngredient.create({
       data: {
         recipe_id,
-        raw_material_id,
+        ingredient_id,
         quantity,
         unit_id,
       },

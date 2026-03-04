@@ -14,12 +14,12 @@ export async function POST(request: NextRequest) {
     const {
       product_id,
       name_i18n,
-      yield_quantity,
-      yield_unit_id,
+      serving_qty,
+      serving_unit_id,
       is_active,
     } = body;
 
-    if (!product_id || !name_i18n || !yield_quantity || !yield_unit_id) {
+    if (!product_id || !name_i18n || !serving_qty || !serving_unit_id) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
       data: {
         product_id,
         name_i18n,
-        yield_quantity,
-        yield_unit_id,
+        serving_qty,
+        serving_unit_id,
         is_active: is_active ?? true,
       },
     });

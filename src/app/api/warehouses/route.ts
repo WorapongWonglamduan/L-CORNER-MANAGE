@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { code, name_i18n, address, phone, is_active = true } = body;
+    const { code, name_i18n, address, is_active = true } = body;
 
     if (!code || !name_i18n) {
       return NextResponse.json(
@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
         code,
         name_i18n,
         address,
-        phone,
         is_active,
       },
     });

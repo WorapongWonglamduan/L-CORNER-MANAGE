@@ -19,7 +19,7 @@ export async function GET(
       where: { id },
       include: {
         _count: {
-          select: { raw_materials: true, products: true },
+          select: { products: true },
         },
       },
     });
@@ -130,7 +130,7 @@ export async function DELETE(
       where: { id },
       include: {
         _count: {
-          select: { raw_materials: true, products: true },
+          select: { products: true },
         },
       },
     });
@@ -142,10 +142,10 @@ export async function DELETE(
       );
     }
 
-    // Check if product type has raw materials or products
-    if (productType._count.raw_materials > 0 || productType._count.products > 0) {
+    // Check if product type has products
+    if (productType._count.products > 0) {
       return NextResponse.json(
-        { error: "Cannot delete product type with existing raw materials or products" },
+        { error: "Cannot delete product type with existing products" },
         { status: 400 }
       );
     }

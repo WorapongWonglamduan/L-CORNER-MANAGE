@@ -102,7 +102,6 @@ export async function DELETE(
           select: {
             products_as_base: true,
             product_units: true,
-            raw_materials: true,
             recipe_ingredients: true,
             toppings: true,
           },
@@ -119,7 +118,6 @@ export async function DELETE(
       const hasRelations = 
         existingUnit._count.products_as_base > 0 || 
         existingUnit._count.product_units > 0 ||
-        existingUnit._count.raw_materials > 0 ||
         existingUnit._count.recipe_ingredients > 0 ||
         existingUnit._count.toppings > 0;
 
@@ -130,9 +128,6 @@ export async function DELETE(
         }
         if (existingUnit._count.product_units > 0) {
           errors.push(`${existingUnit._count.product_units} product units`);
-        }
-        if (existingUnit._count.raw_materials > 0) {
-          errors.push(`${existingUnit._count.raw_materials} raw materials`);
         }
         if (existingUnit._count.recipe_ingredients > 0) {
           errors.push(`${existingUnit._count.recipe_ingredients} recipe ingredients`);
@@ -147,7 +142,6 @@ export async function DELETE(
             details: {
               products_as_base: existingUnit._count.products_as_base,
               product_units: existingUnit._count.product_units,
-              raw_materials: existingUnit._count.raw_materials,
               recipe_ingredients: existingUnit._count.recipe_ingredients,
               toppings: existingUnit._count.toppings,
             },
