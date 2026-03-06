@@ -255,7 +255,7 @@ export function usePOSManager() {
             items,
             payment_method: paymentMethod,
             discount_amount: 0,
-            tax_rate: 7,
+            tax_rate: 0,
             note: "",
           }),
         });

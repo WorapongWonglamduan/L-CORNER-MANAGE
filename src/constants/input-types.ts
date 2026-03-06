@@ -14,6 +14,7 @@ export enum INPUT_TYPES {
   TEXTAREA = "textarea",
   SELECT = "select",
   CHECKBOX = "checkbox",
+  DATE_RANGE = "date-range",
 }
 
 export enum PRODUCTS_TYPES {

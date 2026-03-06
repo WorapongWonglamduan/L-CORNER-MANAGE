@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useRouter, useParams } from "next/navigation";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
+import { toast } from "@/lib/toast";
 
 interface RecipeIngredient {
   ingredient_id: string;
@@ -298,11 +299,11 @@ export function useProductForm() {
         }
       }
 
-      alert(isEdit ? "แก้ไขสินค้าสำเร็จ!" : "เพิ่มสินค้าสำเร็จ!");
+      toast.success(isEdit ? "แก้ไขสินค้าสำเร็จ!" : "เพิ่มสินค้าสำเร็จ!");
       router.push(`/${locale}/products/list`);
     } catch (error) {
       console.error("Error saving product:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึกสินค้า");
+      toast.error("เกิดข้อผิดพลาดในการบันทึกสินค้า");
     } finally {
       setLoading(false);
     }

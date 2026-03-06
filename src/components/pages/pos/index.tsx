@@ -39,7 +39,8 @@ export default function POSContent() {
       await checkout(paymentMethod);
       setIsCheckoutModalOpen(false);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : t("cannotSave");
+      const errorMessage =
+        error instanceof Error ? error.message : t("cannotSave");
       toast.error(t("paymentError", { message: errorMessage }));
     }
   };
@@ -161,7 +162,9 @@ export default function POSContent() {
                 </button>
               )}
             </div>
-            <p className="text-gray-500 text-sm">{cartItemCount} {t("items")}</p>
+            <p className="text-gray-500 text-sm">
+              {cartItemCount} {t("items")}
+            </p>
           </div>
 
           {/* Cart Items */}
@@ -240,7 +243,7 @@ export default function POSContent() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 onClick={() => setIsCheckoutModalOpen(true)}
                 className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all"
               >
@@ -266,7 +269,7 @@ export default function POSContent() {
                 ฿{cartTotal.toLocaleString()}
               </div>
             </div>
-            <Button 
+            <Button
               onClick={() => setIsCheckoutModalOpen(true)}
               className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-bold rounded-xl shadow-lg"
             >

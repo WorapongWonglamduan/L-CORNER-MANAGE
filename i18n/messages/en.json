@@ -70,11 +70,17 @@
     "search": "Search",
     "filter": "Filter",
     "export": "Export",
-    "import": "Import"
+    "import": "Import",
+    "manageYourData": "Manage your data",
+    "page": "Page",
+    "of": "of",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "dashboard": "Dashboard",
     "pos": "Point of Sale",
+    "sales": "Sales Orders",
     "products": "Products",
     "inventory": "Inventory",
     "reports": "Reports",
@@ -363,13 +369,25 @@
     "previous": "Previous",
     "next": "Next"
   },
-  "sales": {
-    "errors": {
-      "insufficientStock": "Insufficient stock for {productName}. Available: {available}, Required: {required}",
-      "noRecipe": "No recipe found for semi-finished product: {productName}",
-      "productNotFound": "Product not found: {productId}",
-      "insufficientIngredient": "Insufficient stock for ingredient {ingredientName}. Available: {available}, Required: {required}"
-    }
+  "inventory": {
+    "title": "Inventory Management",
+    "code": "Code",
+    "name": "Product Name",
+    "currentStock": "Current Stock",
+    "minStock": "Minimum",
+    "status": "Status",
+    "actions": "Actions",
+    "adjustStock": "Adjust Stock",
+    "lowStock": "Low Stock",
+    "normal": "Normal",
+    "outOfStock": "Out of Stock",
+    "filterByType": "Filter by Type",
+    "filterByStatus": "Filter by Status",
+    "allTypes": "All Types",
+    "allStatus": "All Status",
+    "rawMaterial": "Raw Material",
+    "finishedGood": "Finished Good",
+    "semiFinished": "Semi-Finished"
   },
   "pos": {
     "categories": "Product Categories",
@@ -402,5 +420,47 @@
     "insufficientAmount": "Insufficient amount",
     "confirm": "Confirm Payment",
     "processing": "Processing..."
+  },
+  "sales": {
+    "title": "Sales Orders",
+    "orderNumber": "Order Number",
+    "date": "Date",
+    "customer": "Customer",
+    "warehouse": "Warehouse",
+    "total": "Total",
+    "paymentMethod": "Payment Method",
+    "paymentStatus": "Payment Status",
+    "status": "Status",
+    "actions": "Actions",
+    "viewDetails": "View Details",
+    "search": "Search order number or customer name...",
+    "noOrders": "No orders found",
+    "loading": "Loading...",
+    "orderDetails": "Order Details",
+    "product": "Product",
+    "quantity": "Quantity",
+    "unitPrice": "Unit Price",
+    "amount": "Amount",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "tax": "Tax",
+    "grandTotal": "Grand Total",
+    "note": "Note",
+    "createdBy": "Created By",
+    "cash": "Cash",
+    "card": "Card",
+    "transfer": "Transfer",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "walkIn": "Walk-in Customer",
+    "items": "items",
+    "errors": {
+      "insufficientStock": "Insufficient stock for {productName}. Available: {available}, Required: {required}",
+      "noRecipe": "No recipe found for semi-finished product: {productName}",
+      "productNotFound": "Product not found: {productId}",
+      "insufficientIngredient": "Insufficient stock for ingredient {ingredientName}. Available: {available}, Required: {required}"
+    }
   }
 }

@@ -28,7 +28,9 @@ export function ProductCard({
   onQuantityChange,
 }: ProductCardProps) {
   const t = useTranslations("pos");
-  
+
+  console.log(name, "===", "stock ->", stock);
+
   const handleIncrement = () => {
     if (quantity === 0) {
       onAdd(id);
@@ -44,12 +46,14 @@ export function ProductCard({
   };
 
   const isOutOfStock = stock <= 0;
-  const isLowStock = stock > 0 && stock <= 10;
+  // const isLowStock = stock > 0 && stock <= 10;
 
   return (
     <div
       className={`group relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 ${
-        isOutOfStock ? "opacity-60 cursor-not-allowed" : "hover:border-[#213559]/30 cursor-pointer"
+        isOutOfStock
+          ? "opacity-60 cursor-not-allowed"
+          : "hover:border-[#213559]/30 cursor-pointer"
       }`}
     >
       {/* Image */}
@@ -70,21 +74,21 @@ export function ProductCard({
             </div>
           </div>
         )}
-        
+
         {/* Stock Badge */}
         {isOutOfStock && (
           <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
             {t("outOfStock")}
           </div>
         )}
-        
+
         {/* Low Stock Badge */}
-        {isLowStock && (
+        {!isOutOfStock && (
           <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
             {t("remaining", { stock })}
           </div>
         )}
-        
+
         {/* Quantity Badge */}
         {quantity > 0 && (
           <div className="absolute top-3 left-3 bg-green-500 text-white w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shadow-lg ring-2 ring-white">
@@ -106,12 +110,12 @@ export function ProductCard({
         <h3 className="font-bold text-gray-900 text-base mb-3 line-clamp-2 min-h-10 leading-tight">
           {name}
         </h3>
-        
+
         <div className="flex items-baseline justify-between mb-4">
           <div className="text-xl font-bold text-[#213559]">
             ฿{price.toLocaleString()}
           </div>
-          {stock > 10 && (
+          {stock && (
             <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">
               {t("inStock")}
             </span>

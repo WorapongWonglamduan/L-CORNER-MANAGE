@@ -44,7 +44,8 @@
       "todaySales": "ยอดขายวันนี้",
       "totalProducts": "สินค้าทั้งหมด",
       "lowStock": "สต็อกต่ำ",
-      "customers": "ลูกค้า"
+      "customers": "ลูกค้า",
+      "todayOrders": "ออเดอร์วันนี้"
     },
     "salesChart": "กราฟยอดขาย",
     "chartPlaceholder": "กราฟจะแสดงที่นี่",
@@ -57,7 +58,20 @@
       "products": "สินค้า",
       "viewReports": "ดูรายงาน",
       "manageInventory": "จัดการสต็อก"
-    }
+    },
+    "topProducts": "สินค้าขายดี",
+    "recentSales": "ยอดขายล่าสุด",
+    "days": "วัน",
+    "units": "หน่วย",
+    "noData": "ไม่มีข้อมูล",
+    "noSales": "ยังไม่มียอดขาย"
+  },
+  "pagination": {
+    "show": "แสดง",
+    "itemsPerPage": "รายการต่อหน้า",
+    "of": "จาก",
+    "previous": "ก่อนหน้า",
+    "next": "ถัดไป"
   },
   "common": {
     "loading": "กำลังโหลด...",
@@ -70,15 +84,41 @@
     "search": "ค้นหา",
     "filter": "กรอง",
     "export": "ส่งออก",
-    "import": "นำเข้า"
+    "import": "นำเข้า",
+    "manageYourData": "จัดการข้อมูลของคุณ",
+    "page": "หน้า",
+    "of": "จาก",
+    "previous": "ก่อนหน้า",
+    "next": "ถัดไป"
   },
   "nav": {
     "dashboard": "แดชบอร์ด",
-    "pos": "จุดขาย",
+    "pos": "ขายสินค้า",
+    "sales": "รายการขาย",
     "products": "สินค้า",
-    "inventory": "คลังสินค้า",
+    "inventory": "จัดการสต็อก",
     "reports": "รายงาน",
     "settings": "ตั้งค่า"
+  },
+  "inventory": {
+    "title": "จัดการสต็อกสินค้า",
+    "code": "รหัส",
+    "name": "ชื่อสินค้า",
+    "currentStock": "สต็อกปัจจุบัน",
+    "minStock": "ขั้นต่ำ",
+    "status": "สถานะ",
+    "actions": "จัดการ",
+    "adjustStock": "ปรับสต็อก",
+    "lowStock": "สต็อกต่ำ",
+    "normal": "ปกติ",
+    "outOfStock": "หมด",
+    "filterByType": "กรองตามประเภท",
+    "filterByStatus": "กรองตามสถานะ",
+    "allTypes": "ทุกประเภท",
+    "allStatus": "ทุกสถานะ",
+    "rawMaterial": "วัตถุดิบ",
+    "finishedGood": "สินค้าสำเร็จรูป",
+    "semiFinished": "สินค้ากึ่งสำเร็จรูป"
   },
   "notFound": {
     "title": "ไม่พบหน้าที่คุณต้องการ",
@@ -402,5 +442,41 @@
     "insufficientAmount": "จำนวนเงินไม่เพียงพอ",
     "confirm": "ยืนยันการชำระเงิน",
     "processing": "กำลังดำเนินการ..."
+  },
+  "sales": {
+    "title": "รายการขาย",
+    "orderNumber": "เลขที่ออเดอร์",
+    "date": "วันที่",
+    "customer": "ลูกค้า",
+    "warehouse": "คลังสินค้า",
+    "total": "ยอดรวม",
+    "paymentMethod": "วิธีชำระเงิน",
+    "paymentStatus": "สถานะชำระเงิน",
+    "status": "สถานะ",
+    "actions": "จัดการ",
+    "viewDetails": "ดูรายละเอียด",
+    "search": "ค้นหาเลขที่ออเดอร์หรือชื่อลูกค้า...",
+    "noOrders": "ไม่พบรายการขาย",
+    "loading": "กำลังโหลด...",
+    "orderDetails": "รายละเอียดออเดอร์",
+    "product": "สินค้า",
+    "quantity": "จำนวน",
+    "unitPrice": "ราคาต่อหน่วย",
+    "amount": "จำนวนเงิน",
+    "subtotal": "ยอดรวม",
+    "discount": "ส่วนลด",
+    "tax": "ภาษี",
+    "grandTotal": "ยอดชำระทั้งหมด",
+    "note": "หมายเหตุ",
+    "createdBy": "สร้างโดย",
+    "cash": "เงินสด",
+    "card": "บัตร",
+    "transfer": "โอนเงิน",
+    "paid": "ชำระแล้ว",
+    "unpaid": "ยังไม่ชำระ",
+    "completed": "เสร็จสิ้น",
+    "cancelled": "ยกเลิก",
+    "walkIn": "ลูกค้าทั่วไป",
+    "items": "รายการ"
   }
 }

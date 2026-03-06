@@ -12,9 +12,15 @@ import { LucideIcon } from "lucide-react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { INPUT_TYPES, InputType } from "@/constants/input-types";
+import { DateRangePicker } from "./date-range-picker";
 
 export { INPUT_TYPES };
 export type { InputType };
+
+export interface DateRangeValue {
+  startDate: string;
+  endDate: string;
+}
 
 export interface BaseInputProps {
   label?: string;
@@ -24,6 +30,10 @@ export interface BaseInputProps {
   containerClassName?: string;
   inputType?: InputType;
   required?: boolean;
+  startPlaceholder?: string;
+  endPlaceholder?: string;
+  dateRangeValue?: DateRangeValue;
+  onDateRangeChange?: (value: DateRangeValue) => void;
 }
 
 export interface SelectOption {
@@ -71,6 +81,36 @@ export const Input = forwardRef<
 
     const renderInput = () => {
       switch (inputType) {
+        case INPUT_TYPES.DATE_RANGE:
+          const {
+            dateRangeValue = { startDate: "", endDate: "" },
+            onDateRangeChange,
+            startPlaceholder = "วันที่เริ่มต้น",
+            endPlaceholder = "วันที่สิ้นสุด",
+          } = props as BaseInputProps;
+
+          return (
+            <DateRangePicker
+              startDate={dateRangeValue.startDate}
+              endDate={dateRangeValue.endDate}
+              onStartDateChange={(date) =>
+                onDateRangeChange?.({
+                  ...dateRangeValue,
+                  startDate: date,
+                })
+              }
+              onEndDateChange={(date) =>
+                onDateRangeChange?.({
+                  ...dateRangeValue,
+                  endDate: date,
+                })
+              }
+              startPlaceholder={startPlaceholder}
+              endPlaceholder={endPlaceholder}
+              baseInputClass={baseInputClass}
+            />
+          );
+
         case INPUT_TYPES.CHECKBOX:
           const { checked, onCheckedChange, id } =
             props as InputHTMLAttributes<HTMLInputElement> & {
@@ -173,7 +213,7 @@ export const Input = forwardRef<
         )}
 
         <div className="relative">
-          {Icon && inputType !== "textarea" && (
+          {Icon && inputType !== "textarea" && inputType !== INPUT_TYPES.DATE_RANGE && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
               <Icon className="w-5 h-5" />
             </div>

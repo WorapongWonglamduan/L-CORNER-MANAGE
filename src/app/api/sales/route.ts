@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
+import { Prisma } from "@prisma/client";
 
 // Helper function to deduct stock based on product type
 async function deductStock(productId: string, quantity: number) {
@@ -124,17 +125,10 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * pageSize;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.SaleWhereInput = {};
 
     if (searchQuery) {
-      where.OR = [
-        { sale_number: { contains: searchQuery, mode: "insensitive" } },
-        {
-          customer: {
-            full_name: { contains: searchQuery, mode: "insensitive" },
-          },
-        },
-      ];
+      where.sale_number = { contains: searchQuery, mode: "insensitive" };
     }
 
     if (status) {
@@ -167,7 +161,6 @@ export async function GET(request: NextRequest) {
       prisma.sale.findMany({
         where,
         include: {
-          customer: true,
           warehouse: true,
           created_by_user: {
             select: {
@@ -180,11 +173,7 @@ export async function GET(request: NextRequest) {
               product: {
                 include: {
                   product_type: true,
-                },
-              },
-              product_unit: {
-                include: {
-                  unit: true,
+                  base_unit: true,
                 },
               },
               recipe: true,
@@ -205,12 +194,11 @@ export async function GET(request: NextRequest) {
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     });
-  } catch (error: any) {
-    console.error("Error fetching sales:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch sales" },
-      { status: 500 },
-    );
+  } catch (error) {
+    console.error("Error fetching sale:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to fetch sale";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -218,9 +206,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Allow POS sales without authentication
+    // if (!session) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
 
     const body = await request.json();
     const {
@@ -228,7 +217,7 @@ export async function POST(request: NextRequest) {
       warehouse_id,
       items,
       discount_amount = 0,
-      tax_rate = 7,
+      tax_rate = 0,
       payment_method,
       note,
     } = body;
@@ -281,8 +270,8 @@ export async function POST(request: NextRequest) {
     }
 
     const totalAmount = subtotal - discount_amount;
-    const taxAmount = (totalAmount * tax_rate) / 100;
-    const finalTotal = totalAmount + taxAmount;
+    const taxAmount = 0; // No tax calculation
+    const finalTotal = totalAmount;
 
     // Generate sale number
     const today = new Date();
@@ -302,7 +291,7 @@ export async function POST(request: NextRequest) {
       const newNumber = (lastNumber + 1).toString().padStart(4, "0");
       saleNumber = `SAL-${dateStr}-${newNumber}`;
     }
-
+    console.log("session ->", session);
     // Create sale in transaction
     const newSale = await prisma.$transaction(async (tx) => {
       const sale = await tx.sale.create({
@@ -319,7 +308,7 @@ export async function POST(request: NextRequest) {
           payment_method,
           payment_status: "paid",
           status: "completed",
-          created_by: session.user?.id,
+          created_by: session?.user?.id || null,
           note,
           items: {
             create: processedItems,
@@ -350,7 +339,6 @@ export async function POST(request: NextRequest) {
     const completeSale = await prisma.sale.findUnique({
       where: { id: newSale.id },
       include: {
-        customer: true,
         warehouse: true,
         created_by_user: {
           select: {
@@ -363,11 +351,7 @@ export async function POST(request: NextRequest) {
             product: {
               include: {
                 product_type: true,
-              },
-            },
-            product_unit: {
-              include: {
-                unit: true,
+                base_unit: true,
               },
             },
             recipe: true,
@@ -377,11 +361,10 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(completeSale, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating sale:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to create sale" },
-      { status: 500 },
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to create sale";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

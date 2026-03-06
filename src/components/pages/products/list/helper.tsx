@@ -4,6 +4,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 import { useRouter, useParams } from "next/navigation";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
+import { toast } from "@/lib/toast";
 
 interface Product {
   id: string;
@@ -140,7 +141,7 @@ export function useProductsManager() {
       refetch();
     } catch (error) {
       console.error("Error deleting product:", error);
-      alert("เกิดข้อผิดพลาดในการลบสินค้า");
+      toast.error("เกิดข้อผิดพลาดในการลบสินค้า");
     }
   };
 
