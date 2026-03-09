@@ -44,7 +44,8 @@
       "todaySales": "Today's Sales",
       "totalProducts": "Total Products",
       "lowStock": "Low Stock",
-      "customers": "Customers"
+      "customers": "Customers",
+      "todayOrders": "Today's Orders"
     },
     "salesChart": "Sales Chart",
     "chartPlaceholder": "Chart will be displayed here",
@@ -57,7 +58,13 @@
       "products": "Products",
       "viewReports": "View Reports",
       "manageInventory": "Manage Inventory"
-    }
+    },
+    "topProducts": "Top Products",
+    "recentSales": "Recent Sales",
+    "days": "days",
+    "units": "units",
+    "noData": "No data available",
+    "noSales": "No sales yet"
   },
   "common": {
     "loading": "Loading...",

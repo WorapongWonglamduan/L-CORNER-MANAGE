@@ -34,26 +34,18 @@ export default function ProductTypesManager() {
     formLoading,
     formError,
     ConfirmDialog,
+    locale,
   } = useProductTypesManager();
 
-  const getTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      raw_material: t("typeRawMaterial"),
-      product: t("typeProduct"),
-      semi_finished: t("typeSemiFinished"),
-      finished_good: t("typeFinishedGood"),
-    };
-    return labels[type] || type;
-  };
-
-  const getTypeBadgeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      raw_material: "bg-blue-100 text-blue-800",
-      product: "bg-green-100 text-green-800",
-      semi_finished: "bg-yellow-100 text-yellow-800",
-      finished_good: "bg-purple-100 text-purple-800",
-    };
-    return colors[type] || "bg-gray-100 text-gray-800";
+  const getTypeBadgeColor = (id: string) => {
+    const colors = [
+      "bg-blue-100 text-blue-800",
+      "bg-green-100 text-green-800",
+      "bg-yellow-100 text-yellow-800",
+      "bg-purple-100 text-purple-800",
+    ];
+    const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
   return (
@@ -117,19 +109,17 @@ export default function ProductTypesManager() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
-                    <span className="text-sm text-gray-600">
-                      {t("code")}:
-                    </span>
+                    <span className="text-sm text-gray-600">{t("code")}:</span>
                     <span className="font-semibold text-gray-900">
                       {productType.code}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
-                      {t("type")}:
-                    </span>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getTypeBadgeColor(productType.type)}`}>
-                      {getTypeLabel(productType.type)}
+                    <span className="text-sm text-gray-600">{t("type")}:</span>
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getTypeBadgeColor(productType.id)}`}
+                    >
+                      {productType.name_i18n[locale]}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
@@ -186,7 +176,7 @@ export default function ProductTypesManager() {
         savingText={t("saving")}
         maxWidth="2xl"
       />
-      
+
       <ConfirmDialog />
     </div>
   );

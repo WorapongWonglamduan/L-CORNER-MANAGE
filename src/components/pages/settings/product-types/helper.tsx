@@ -3,6 +3,7 @@ import { useEntityList } from "@/hooks/useEntityList";
 import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
+import { useLocale } from "next-intl";
 
 export interface ProductTypeFormData {
   code: string;
@@ -37,6 +38,7 @@ interface TypesFilterOptions extends FilterOptions {
 export function useProductTypesManager() {
   const t = useTranslations("settings.productTypes");
   const { confirm, ConfirmDialog } = useConfirm();
+  const locale = useLocale();
 
   const {
     items: types,
@@ -130,5 +132,6 @@ export function useProductTypesManager() {
     formLoading,
     formError,
     ConfirmDialog,
+    locale,
   };
 }

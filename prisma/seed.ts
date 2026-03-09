@@ -12,8 +12,29 @@ const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({ adapter });
 
+async function cleanup() {
+  console.log("🧹 Cleaning up old data...");
+  
+  // Delete in correct order to respect foreign key constraints
+  await prisma.recipeIngredient.deleteMany({});
+  await prisma.recipe.deleteMany({});
+  await prisma.product.deleteMany({});
+  await prisma.category.deleteMany({});
+  await prisma.productType.deleteMany({});
+  await prisma.warehouse.deleteMany({});
+  await prisma.unit.deleteMany({});
+  await prisma.userRole.deleteMany({});
+  await prisma.user.deleteMany({});
+  await prisma.role.deleteMany({});
+  
+  console.log("✅ Cleanup completed!");
+}
+
 async function main() {
   console.log("🌱 Starting seed...");
+  
+  // Cleanup old data first
+  await cleanup();
 
   // Define permissions
   console.log("🔑 Defining permissions...");
@@ -235,6 +256,19 @@ async function main() {
       icon: "check-circle",
       type: "finished_good",
       sort_order: 3,
+      is_active: true,
+    },
+  });
+
+  const productTypeContainer = await prisma.productType.upsert({
+    where: { code: "CONTAINER" },
+    update: {},
+    create: {
+      code: "CONTAINER",
+      name_i18n: { th: "ภาชนะ", en: "Container" },
+      icon: "cup-soda",
+      type: "ingredient",
+      sort_order: 4,
       is_active: true,
     },
   });

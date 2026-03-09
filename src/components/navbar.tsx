@@ -1,6 +1,14 @@
 "use client";
 
-import { LogOut, Settings, LayoutDashboard, ShoppingCart, Package, FileText, Warehouse } from "lucide-react";
+import {
+  LogOut,
+  Settings,
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  FileText,
+  Warehouse,
+} from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import { useRouter, useParams, usePathname } from "next/navigation";
@@ -23,27 +31,27 @@ export function Navbar({ userName }: NavbarProps) {
   const locale = params.locale as string;
   const [lowStockCount, setLowStockCount] = useState(0);
 
-  const fetchLowStockCount = useCallback(async () => {
-    try {
-      const response = await fetch("/api/inventory/low-stock");
-      if (!response.ok) return;
-      const data = await response.json();
-      setLowStockCount(data.items?.length || 0);
-    } catch (error) {
-      console.error("Error fetching low stock count:", error);
-    }
-  }, []);
+  // const fetchLowStockCount = useCallback(async () => {
+  //   try {
+  //     const response = await fetch("/api/inventory/low-stock");
+  //     if (!response.ok) return;
+  //     const data = await response.json();
+  //     setLowStockCount(data.items?.length || 0);
+  //   } catch (error) {
+  //     console.error("Error fetching low stock count:", error);
+  //   }
+  // }, []);
 
-  useEffect(() => {
-    const initialFetch = async () => {
-      await fetchLowStockCount();
-    };
-    initialFetch();
-    
-    const interval = setInterval(fetchLowStockCount, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // useEffect(() => {
+  //   const initialFetch = async () => {
+  //     await fetchLowStockCount();
+  //   };
+  //   initialFetch();
+
+  //   const interval = setInterval(fetchLowStockCount, 5 * 60 * 1000);
+  //   return () => clearInterval(interval);
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -52,11 +60,24 @@ export function Navbar({ userName }: NavbarProps) {
   };
 
   const navItems = [
-    { href: `/${locale}/dashboard`, label: tNav("dashboard"), icon: LayoutDashboard },
+    {
+      href: `/${locale}/dashboard`,
+      label: tNav("dashboard"),
+      icon: LayoutDashboard,
+    },
     { href: `/${locale}/pos`, label: tNav("pos"), icon: ShoppingCart },
     { href: `/${locale}/sales`, label: tNav("sales"), icon: FileText },
-    { href: `/${locale}/products/list`, label: tNav("products"), icon: Package },
-    { href: `/${locale}/inventory`, label: tNav("inventory"), icon: Warehouse, badge: lowStockCount },
+    {
+      href: `/${locale}/products/list`,
+      label: tNav("products"),
+      icon: Package,
+    },
+    {
+      href: `/${locale}/inventory`,
+      label: tNav("inventory"),
+      icon: Warehouse,
+      badge: lowStockCount,
+    },
   ];
 
   const isActive = (href: string) => pathname === href;
@@ -118,14 +139,18 @@ export function Navbar({ userName }: NavbarProps) {
               className="flex items-center gap-1.5 px-3 py-2 text-white hover:bg-white/10 rounded-lg transition-colors"
             >
               <Settings className="w-4 h-4" />
-              <span className="text-xs lg:text-sm font-medium hidden sm:inline">{tSettings("title")}</span>
+              <span className="text-xs lg:text-sm font-medium hidden sm:inline">
+                {tSettings("title")}
+              </span>
             </button>
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-2 text-white hover:bg-white/10 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span className="text-xs lg:text-sm font-medium hidden sm:inline">{tAuth("logout")}</span>
+              <span className="text-xs lg:text-sm font-medium hidden sm:inline">
+                {tAuth("logout")}
+              </span>
             </button>
           </div>
         </div>
