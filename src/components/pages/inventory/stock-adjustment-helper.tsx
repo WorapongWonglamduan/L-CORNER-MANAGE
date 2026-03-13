@@ -107,18 +107,18 @@ export const useStockAdjustment = ({
     const qty = parseFloat(quantity) || 0;
 
     if (!qty || qty <= 0) {
-      toast.error("กรุณาระบุจำนวน");
+      toast.error(t("errorRequireQuantity"));
       return;
     }
 
     if (!reason.trim()) {
-      toast.error("กรุณาระบุเหตุผล");
+      toast.error(t("errorRequireReason"));
       return;
     }
 
     const newStock = getNewStock();
     if (newStock < 0) {
-      toast.error("สต็อกไม่สามารถติดลบได้");
+      toast.error(t("errorNegativeStock"));
       return;
     }
 
@@ -149,14 +149,14 @@ export const useStockAdjustment = ({
                   `${ing.name.th || ing.name.en}: ต้องการ ${ing.required} มีอยู่ ${ing.available}`,
               )
               .join("\n");
-            toast.error(`วัตถุดิบไม่เพียงพอ:\n${insufficientList}`);
+            toast.error(`${t("errorInsufficientIngredients")}:\n${insufficientList}`);
           } else {
             throw new Error(data.error || "Failed to complete production");
           }
           return;
         }
 
-        toast.success("ผลิตสินค้าสำเร็จ");
+        toast.success(t("successProduce"));
       } else {
         const response = await fetch("/api/inventory/adjust", {
           method: "POST",
@@ -176,14 +176,14 @@ export const useStockAdjustment = ({
           throw new Error("Failed to adjust stock");
         }
 
-        toast.success("ปรับสต็อกสำเร็จ");
+        toast.success(t("successAdjust"));
       }
 
       onSuccess?.();
       onClose();
     } catch (error) {
       console.error("Error:", error);
-      toast.error("เกิดข้อผิดพลาด");
+      toast.error(t("errorGeneral"));
     } finally {
       setLoading(false);
     }
@@ -193,18 +193,18 @@ export const useStockAdjustment = ({
     const qty = parseFloat(data.quantity);
 
     if (!qty || qty <= 0) {
-      toast.error("กรุณาระบุจำนวน");
+      toast.error(t("errorRequireQuantity"));
       return;
     }
 
     if (!data.reason.trim()) {
-      toast.error("กรุณาระบุเหตุผล");
+      toast.error(t("errorRequireReason"));
       return;
     }
 
     const newStock = getNewStock();
     if (newStock < 0) {
-      toast.error("สต็อกไม่สามารถติดลบได้");
+      toast.error(t("errorNegativeStock"));
       return;
     }
 
@@ -227,12 +227,12 @@ export const useStockAdjustment = ({
         throw new Error("Failed to adjust stock");
       }
 
-      toast.success("ปรับสต็อกสำเร็จ");
+      toast.success(t("successAdjust"));
       onSuccess?.();
       onClose();
     } catch (error) {
       console.error("Error adjusting stock:", error);
-      toast.error("เกิดข้อผิดพลาดในการปรับสต็อก");
+      toast.error(t("errorAdjustStock"));
     } finally {
       setLoading(false);
     }

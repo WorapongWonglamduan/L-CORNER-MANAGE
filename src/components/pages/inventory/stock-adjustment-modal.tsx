@@ -83,7 +83,7 @@ export function StockAdjustmentModal({
                 <ChefHat className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">ผลิตสินค้า</h2>
+                <h2 className="text-xl font-bold">{t("produceProduct")}</h2>
                 <p className="text-sm text-blue-100/80">
                   {product.code} - {product.name}
                 </p>
@@ -114,10 +114,10 @@ export function StockAdjustmentModal({
                   <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
                   <div>
                     <p className="font-semibold text-orange-800">
-                      ไม่พบสูตรการผลิต
+                      {t("noRecipeFound")}
                     </p>
                     <p className="text-sm text-orange-700 mt-1">
-                      กรุณาสร้างสูตรการผลิตสำหรับสินค้านี้ก่อน
+                      {t("pleaseCreateRecipe")}
                     </p>
                   </div>
                 </div>
@@ -126,7 +126,7 @@ export function StockAdjustmentModal({
               <>
                 {/* Current Stock */}
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">สต็อกปัจจุบัน</p>
+                  <p className="text-sm text-gray-600 mb-1">{t("currentStock")}</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {product.current_stock.toLocaleString()}{" "}
                     <span className="text-lg text-gray-500">
@@ -232,8 +232,8 @@ export function StockAdjustmentModal({
                   name="quantity"
                   control={control}
                   rules={{
-                    required: "กรุณาระบุจำนวน",
-                    min: { value: 0, message: "จำนวนต้องมากกว่า 0" },
+                    required: t("pleaseEnterQuantity"),
+                    min: { value: 0, message: t("quantityMustBeGreaterThanZero") },
                   }}
                   render={({ field: { onChange, onBlur, value, ref } }) => (
                     <Input
@@ -248,7 +248,7 @@ export function StockAdjustmentModal({
                       inputType={INPUT_TYPES.NUMBER}
                       placeholder="0"
                       value={value}
-                      onChange={onChange}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e)}
                       onBlur={onBlur}
                       error={errors.quantity}
                       min="0"
@@ -262,7 +262,7 @@ export function StockAdjustmentModal({
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
                       <Package className="w-5 h-5" />
-                      วัตถุดิบที่ใช้ในสูตร
+                      {t("ingredientsInRecipe")}
                     </h3>
                     <div className="space-y-2">
                       {recipe.ingredients.map((ing) => (
@@ -288,10 +288,10 @@ export function StockAdjustmentModal({
                                 {ing.unit?.abbreviation_i18n?.th ||
                                   ing.unit?.abbreviation_i18n?.en}
                               </span>
-                              <span className="text-gray-500"> / หน่วย</span>
+                              <span className="text-gray-500"> / {t("perUnit")}</span>
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
-                              มีอยู่:{" "}
+                              {t("available")}:{" "}
                               {Number(
                                 ing.ingredient?.current_stock || 0,
                               ).toLocaleString()}
@@ -308,7 +308,7 @@ export function StockAdjustmentModal({
                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
                     <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
                       <Package className="w-5 h-5" />
-                      วัตถุดิบที่ต้องใช้ทั้งหมด
+                      {t("totalIngredientsNeeded")}
                     </h3>
                     <div className="space-y-2">
                       {calculatedIngredients.map((ing) => (
@@ -334,14 +334,14 @@ export function StockAdjustmentModal({
                               </span>
                             </p>
                             <p className="text-xs text-gray-500">
-                              มีอยู่:{" "}
+                              {t("available")}:{" "}
                               {Number(
                                 ing.ingredient?.current_stock || 0,
                               ).toLocaleString()}
                               {Number(ing.ingredient?.current_stock || 0) <
                                 ing.required && (
                                 <span className="text-red-600 font-semibold ml-1">
-                                  (ไม่พอ!)
+                                  ({t("insufficient")}!)
                                 </span>
                               )}
                             </p>
