@@ -73,6 +73,8 @@ export const getRawMaterialFormConfig = (
     label: t("costPrice"),
     placeholder: t("costPricePlaceholder"),
     rules: { min: { value: 0, message: t("costPriceMin") } },
+    min: "0",
+    step: "0.01",
   },
   {
     name: "min_stock",
@@ -80,6 +82,8 @@ export const getRawMaterialFormConfig = (
     label: t("minStock"),
     placeholder: t("minStockPlaceholder"),
     rules: { min: { value: 0, message: t("minStockMin") } },
+    min: "0",
+    step: "1",
   },
   {
     name: "current_stock",
@@ -87,6 +91,8 @@ export const getRawMaterialFormConfig = (
     label: t("currentStock"),
     placeholder: t("currentStockPlaceholder"),
     rules: { min: { value: 0, message: t("currentStockMin") } },
+    min: "0",
+    step: "1",
   },
   {
     name: "is_active",

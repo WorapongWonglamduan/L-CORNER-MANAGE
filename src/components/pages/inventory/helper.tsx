@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
 import { useLocale } from "next-intl";
+import { useEntityList } from "@/hooks/useEntityList";
+import { FilterOptions } from "@/hooks/usePagination";
 
 interface Product {
   id: string;
@@ -33,89 +34,90 @@ interface Product {
   };
 }
 
+interface InventoryFilterOptions extends FilterOptions {
+  search?: string;
+  type?: string;
+  stockStatus?: string;
+}
+
 export function useInventoryManager() {
   const locale = useLocale();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pageSize.toString(),
-      });
-
-      if (searchQuery) {
-        params.append("searchQuery", searchQuery);
-      }
-
-      if (typeFilter) {
-        params.append("type", typeFilter);
-      }
-
-      if (statusFilter) {
-        params.append("stockStatus", statusFilter);
-      }
-
-      const response = await fetch(`/api/products?${params}`);
-      const data = await response.json();
-
-      setProducts(data.items || []);
-      setTotalPages(data.totalPages || 1);
-      setTotalItems(data.total || 0);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, searchQuery, typeFilter, statusFilter]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, typeFilter, statusFilter]);
+  const {
+    items: products,
+    loading,
+    totalItems,
+    totalPages,
+    filterOptions,
+    handlePageChange,
+    handlePageSizeChange,
+    handleSearchChange,
+    updateFilter,
+    refetch,
+  } = useEntityList<Product, InventoryFilterOptions>({
+    endpoint: "/api/products",
+    initialFilters: {
+      search: "",
+      type: "",
+      stockStatus: "",
+    },
+  });
 
   const getStockStatus = (product: Product) => {
     const currentStock = Number(product.current_stock);
     const threshold = Number(product.low_stock_threshold);
 
     if (currentStock <= 0) {
-      return { label: "outOfStock", color: "red", bgColor: "bg-red-50", textColor: "text-red-700", borderColor: "border-red-500" };
+      return {
+        label: "outOfStock",
+        color: "red",
+        bgColor: "bg-red-50",
+        textColor: "text-red-700",
+        borderColor: "border-red-500",
+      };
     } else if (currentStock <= threshold) {
-      return { label: "lowStock", color: "orange", bgColor: "bg-orange-50", textColor: "text-orange-700", borderColor: "border-orange-500" };
+      return {
+        label: "lowStock",
+        color: "orange",
+        bgColor: "bg-orange-50",
+        textColor: "text-orange-700",
+        borderColor: "border-orange-500",
+      };
     }
-    return { label: "normal", color: "green", bgColor: "bg-green-50", textColor: "text-green-700", borderColor: "border-green-500" };
+    return {
+      label: "normal",
+      color: "green",
+      bgColor: "bg-green-50",
+      textColor: "text-green-700",
+      borderColor: "border-green-500",
+    };
+  };
+
+  const setTypeFilter = (type: string) => {
+    updateFilter({ type } as Partial<InventoryFilterOptions>);
+  };
+
+  const setStatusFilter = (stockStatus: string) => {
+    updateFilter({ stockStatus } as Partial<InventoryFilterOptions>);
   };
 
   return {
     products,
     loading,
-    searchQuery,
-    setSearchQuery,
-    typeFilter,
+    searchQuery: filterOptions.search || "",
+    setSearchQuery: handleSearchChange,
+    typeFilter: filterOptions.type || "",
     setTypeFilter,
-    statusFilter,
+    statusFilter: filterOptions.stockStatus || "",
     setStatusFilter,
-    page,
-    pageSize,
+    page: filterOptions.page,
+    pageSize: filterOptions.pageSize,
     totalPages,
     totalItems,
-    setPage,
-    setPageSize,
+    setPage: handlePageChange,
+    setPageSize: handlePageSizeChange,
     locale,
-    refetch: fetchProducts,
+    refetch,
     getStockStatus,
   };
 }

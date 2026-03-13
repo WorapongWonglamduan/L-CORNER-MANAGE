@@ -38,6 +38,8 @@ export const getCategoryFormConfig = (
     label: t("sortOrder"),
     placeholder: t("sortOrderPlaceholder"),
     rules: { min: { value: 0, message: t("sortOrderMin") } },
+    min: "0",
+    step: "1",
   },
   {
     name: "is_active",

@@ -250,3 +250,39 @@ model ProductType {
 
 // RawMaterial model removed - merged into Product model
 // Use product_type_id to distinguish between raw materials and finished products
+
+model StockMovement {
+  id                String   @id @default(uuid())
+  product_id        String
+  
+  // Movement type: "manual_adjustment", "sale", "purchase", "production", "transfer", "return", "damage", "expired", "count"
+  movement_type     String
+  
+  // Transaction direction: "in" (increase), "out" (decrease)
+  direction         String
+  
+  // Quantities
+  quantity_before   Decimal  @db.Decimal(15, 4)
+  quantity_change   Decimal  @db.Decimal(15, 4)  // Always positive, direction determines +/-
+  quantity_after    Decimal  @db.Decimal(15, 4)
+  
+  // Reference to source document (optional)
+  reference_type    String?  // "sale", "purchase_order", "production", "transfer", etc.
+  reference_id      String?  // ID of the source document
+  
+  // Reason and notes
+  reason_code       String?  // Standardized reason code for reporting
+  reason_text       String   // Human-readable reason
+  note              String?  @db.Text
+  
+  // Audit trail
+  created_by        String
+  created_at        DateTime @default(now())
+  transaction_date  DateTime @default(now())
+  
+  @@index([product_id])
+  @@index([movement_type])
+  @@index([transaction_date])
+  @@index([reference_type, reference_id])
+  @@map("stock_movements")
+}

@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get("categoryId");
     const productType = searchParams.get("productType");
     const type = searchParams.get("type");
+    const stockStatus = searchParams.get("stockStatus");
 
     // Build where clause
     const where: Prisma.ProductWhereInput = {
@@ -127,15 +128,13 @@ export async function GET(request: NextRequest) {
           const maxQuantities = defaultRecipe.ingredients.map((ingredient) => {
             const ingredientStock =
               Number(ingredient.ingredient.current_stock) || 0;
-            const requiredPerUnit = Number(ingredient.quantity);
-
-            if (requiredPerUnit <= 0) return 0;
-
-            return Math.floor(ingredientStock / requiredPerUnit);
+            const requiredQuantity = Number(ingredient.quantity) || 1;
+            return Math.floor(ingredientStock / requiredQuantity);
           });
 
-          // ใช้ค่าที่น้อยที่สุด (bottleneck)
-          available_quantity = Math.min(...maxQuantities, 999);
+          // ใช้ค่าต่ำสุดเป็น available_quantity
+          available_quantity =
+            maxQuantities.length > 0 ? Math.min(...maxQuantities) : 0;
         }
       }
 
@@ -145,12 +144,30 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Filter by stock status if specified
+    let filteredProducts = productsWithAvailability;
+    if (stockStatus) {
+      filteredProducts = productsWithAvailability.filter((product) => {
+        const currentStock = Number(product.current_stock) || 0;
+        const threshold = Number(product.low_stock_threshold) || 0;
+
+        if (stockStatus === "out") {
+          return currentStock <= 0;
+        } else if (stockStatus === "low") {
+          return currentStock > 0 && currentStock <= threshold;
+        } else if (stockStatus === "normal") {
+          return currentStock > threshold;
+        }
+        return true;
+      });
+    }
+
     return NextResponse.json({
-      items: productsWithAvailability,
-      total,
+      items: filteredProducts,
+      total: filteredProducts.length,
       page,
       pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      totalPages: Math.ceil(filteredProducts.length / pageSize),
     });
   } catch (error) {
     console.error("Error fetching products:", error);

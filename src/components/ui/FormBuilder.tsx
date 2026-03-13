@@ -41,6 +41,9 @@ export interface FieldConfig<T extends FieldValues = FieldValues> {
   autoComplete?: string;
   options?: SelectOption[];
   rows?: number;
+  min?: string | number;
+  max?: string | number;
+  step?: string | number;
   rules?: RegisterOptions<T>;
 }
 
@@ -101,6 +104,9 @@ export function FormBuilder<T extends FieldValues = FieldValues>({
               autoComplete={field.autoComplete}
               options={field.options}
               rows={field.rows}
+              min={field.min}
+              max={field.max}
+              step={field.step}
             />
           )}
         />

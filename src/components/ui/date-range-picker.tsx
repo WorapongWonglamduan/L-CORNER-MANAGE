@@ -27,9 +27,9 @@ export function DateRangePicker({
     <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${className}`}>
       {/* Start Date */}
       <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
+        {/* <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
           <Calendar className="w-5 h-5" />
-        </div>
+        </div> */}
         <input
           type="date"
           className={baseInputClass}
@@ -50,9 +50,9 @@ export function DateRangePicker({
 
       {/* End Date */}
       <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
+        {/* <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
           <Calendar className="w-5 h-5" />
-        </div>
+        </div> */}
         <input
           type="date"
           className={baseInputClass}

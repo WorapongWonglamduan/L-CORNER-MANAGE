@@ -123,6 +123,7 @@ export function useEntityList<
     debouncedSearch,
     setTotalItems,
     transform,
+    JSON.stringify(filterOptions),
   ]);
 
   useEffect(() => {

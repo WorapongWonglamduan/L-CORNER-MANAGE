@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { Navbar } from "@/components/navbar";
-import { Search, Package, AlertTriangle, TrendingDown } from "lucide-react";
+import { Package, AlertTriangle, TrendingDown, History } from "lucide-react";
 import { useInventoryManager } from "./helper";
 import { Button } from "@/components/ui/button";
-import { StockAdjustmentModal } from "@/components/ui/stock-adjustment-modal";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
+import { StockAdjustmentModal } from "./stock-adjustment-modal";
+import { StockHistoryModal } from "./stock-history-modal";
 import { Pagination } from "@/components/ui/pagination";
 import { useTranslations } from "next-intl";
 
@@ -35,16 +37,30 @@ export default function InventoryContent() {
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   const handleAdjustStock = (product) => {
     setSelectedProduct({
       id: product.id,
-      name: product.name_i18n[locale as "th" | "en"],
+      name: product.name_i18n[locale],
       code: product.code,
       current_stock: Number(product.current_stock),
-      unit: product.base_unit.abbreviation_i18n[locale as "th" | "en"],
+      unit: product.base_unit.abbreviation_i18n[locale],
+      product_type: product.product_type.type,
     });
     setIsStockModalOpen(true);
+  };
+
+  const handleViewHistory = (product) => {
+    setSelectedProduct({
+      id: product.id,
+      name: product.name_i18n[locale],
+      code: product.code,
+      current_stock: Number(product.current_stock),
+      unit: product.base_unit.abbreviation_i18n[locale],
+      product_type: product.product_type.type,
+    });
+    setIsHistoryModalOpen(true);
   };
 
   return (
@@ -64,40 +80,36 @@ export default function InventoryContent() {
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder={tCommon("search")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#213559] focus:border-transparent"
-              />
-            </div>
+            <Input
+              inputType={INPUT_TYPES.TEXT}
+              placeholder={tCommon("search")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
 
             {/* Type Filter */}
-            <select
+            <Input
+              inputType={INPUT_TYPES.SELECT}
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#213559] focus:border-transparent"
-            >
-              <option value="">{t("allTypes")}</option>
-              <option value="raw_material">{t("rawMaterial")}</option>
-              <option value="finished_good">{t("finishedGood")}</option>
-              <option value="semi_finished">{t("semiFinished")}</option>
-            </select>
+              options={[
+                { value: "ingredient", label: t("rawMaterial") },
+                { value: "finished_good", label: t("finishedGood") },
+                { value: "semi_finished", label: t("semiFinished") },
+              ]}
+            />
 
             {/* Status Filter */}
-            <select
+            <Input
+              inputType={INPUT_TYPES.SELECT}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#213559] focus:border-transparent"
-            >
-              <option value="">{t("allStatus")}</option>
-              <option value="low">{t("lowStock")}</option>
-              <option value="out">{t("outOfStock")}</option>
-              <option value="normal">{t("normal")}</option>
-            </select>
+              options={[
+                { value: "low", label: t("lowStock") },
+                { value: "out", label: t("outOfStock") },
+                { value: "normal", label: t("normal") },
+              ]}
+            />
           </div>
         </div>
 
@@ -230,14 +242,24 @@ export default function InventoryContent() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <Button
-                              onClick={() => handleAdjustStock(product)}
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2"
-                            >
-                              {t("adjustStock")}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                onClick={() => handleAdjustStock(product)}
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2"
+                              >
+                                {t("adjustStock")}
+                              </Button>
+                              <Button
+                                onClick={() => handleViewHistory(product)}
+                                variant="ghost"
+                                size="sm"
+                                className="flex items-center gap-2"
+                              >
+                                <History className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -264,15 +286,22 @@ export default function InventoryContent() {
 
       {/* Stock Adjustment Modal */}
       {selectedProduct && (
-        <StockAdjustmentModal
-          isOpen={isStockModalOpen}
-          onClose={() => setIsStockModalOpen(false)}
-          product={selectedProduct}
-          onSuccess={() => {
-            refetch();
-            setIsStockModalOpen(false);
-          }}
-        />
+        <>
+          <StockAdjustmentModal
+            isOpen={isStockModalOpen}
+            onClose={() => setIsStockModalOpen(false)}
+            product={selectedProduct}
+            onSuccess={() => {
+              refetch();
+              setIsStockModalOpen(false);
+            }}
+          />
+          <StockHistoryModal
+            isOpen={isHistoryModalOpen}
+            onClose={() => setIsHistoryModalOpen(false)}
+            product={selectedProduct}
+          />
+        </>
       )}
     </div>
   );

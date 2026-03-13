@@ -85,6 +85,8 @@ export const getProductFormConfig = (
       required: t("sellingPriceRequired"),
       min: { value: 0, message: "ราคาต้องมากกว่าหรือเท่ากับ 0" },
     },
+    min: "0",
+    step: "0.01",
   },
   {
     name: "cost_price",
@@ -92,6 +94,8 @@ export const getProductFormConfig = (
     label: t("costPrice"),
     placeholder: "0.00",
     rules: { min: { value: 0, message: "ราคาต้องมากกว่าหรือเท่ากับ 0" } },
+    min: "0",
+    step: "0.01",
   },
   {
     name: "min_stock_level",
@@ -99,6 +103,8 @@ export const getProductFormConfig = (
     label: t("minStockLevel"),
     placeholder: "0",
     rules: { min: { value: 0, message: "สต็อกต้องมากกว่าหรือเท่ากับ 0" } },
+    min: "0",
+    step: "1",
   },
   {
     name: "low_stock_threshold",
@@ -106,6 +112,8 @@ export const getProductFormConfig = (
     label: t("lowStockThreshold"),
     placeholder: "0",
     rules: { min: { value: 0, message: "เกณฑ์ต้องมากกว่าหรือเท่ากับ 0" } },
+    min: "0",
+    step: "1",
   },
   {
     name: "image_url",
