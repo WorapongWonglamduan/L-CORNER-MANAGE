@@ -5,6 +5,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 import { useEffect, useState } from "react";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
+import { ImageFile } from "@/components/ui/multi-image-upload";
 
 export interface RawMaterialFormData {
   code: string;
@@ -17,6 +18,7 @@ export interface RawMaterialFormData {
   cost_price?: number;
   min_stock?: number;
   current_stock?: number;
+  images?: ImageFile[];
   is_active: boolean;
 }
 
@@ -57,6 +59,13 @@ interface RawMaterial {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  primary_image_url?: string | null;
+  images?: Array<{
+    id: string;
+    url: string;
+    isPrimary: boolean;
+    sortOrder: number;
+  }>;
 }
 
 interface Unit {
@@ -162,9 +171,9 @@ export function useRawMaterialsManager() {
         name_en: "",
         description_th: "",
         description_en: "",
-        type_id: optionsData.productTypes.find(
-          (type) => type.type === "raw_material",
-        )?.id,
+        type_id:
+          optionsData.productTypes.find((type) => type.type === "raw_material")
+            ?.id || "",
         unit_id: "",
         cost_price: 0,
         min_stock: 0,
@@ -173,39 +182,100 @@ export function useRawMaterialsManager() {
       },
     },
     endpoint: "/api/raw-materials",
-    transformToPayload: (data) => ({
-      code: data.code,
-      name_i18n: {
-        th: data.name_th,
-        en: data.name_en,
-      },
-      description_i18n:
-        data.description_th || data.description_en
-          ? {
-              th: data.description_th || "",
-              en: data.description_en || "",
+    transformToPayload: async (data) => {
+      // Separate existing images from new uploads
+      const mediaData: Array<{
+        id: string;
+        isPrimary: boolean;
+        sortOrder: number;
+      }> = [];
+
+      if (data.images && data.images.length > 0) {
+        for (let i = 0; i < data.images.length; i++) {
+          const imageFile = data.images[i];
+
+          // Check if this is an existing image (has mediaId but no file)
+          if (imageFile.existingUrl && imageFile.mediaId && !imageFile.file) {
+            // Keep existing image - just add its metadata
+            mediaData.push({
+              id: imageFile.mediaId,
+              isPrimary: imageFile.isPrimary || false,
+              sortOrder: i,
+            });
+          } else if (imageFile.file) {
+            // New image - upload it
+            const formData = new FormData();
+            formData.append("file", imageFile.file);
+            formData.append("folder", "products");
+
+            const response = await fetch("/api/media/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              mediaData.push({
+                id: result.id,
+                isPrimary: imageFile.isPrimary || false,
+                sortOrder: i,
+              });
             }
-          : null,
-      type_id: data.type_id || null,
-      unit_id: data.unit_id || "",
-      cost_price: data.cost_price || null,
-      min_stock: data.min_stock || 0,
-      current_stock: data.current_stock || 0,
-      is_active: data.is_active,
-    }),
-    transformToForm: (rawMaterial) => ({
-      code: rawMaterial.code,
-      name_th: rawMaterial.name_i18n.th,
-      name_en: rawMaterial.name_i18n.en,
-      description_th: rawMaterial.description_i18n?.th || "",
-      description_en: rawMaterial.description_i18n?.en || "",
-      type_id: rawMaterial.type_id || "",
-      unit_id: rawMaterial.unit_id,
-      cost_price: rawMaterial.cost_price || 0,
-      min_stock: Number(rawMaterial.min_stock) || 0,
-      current_stock: Number(rawMaterial.current_stock) || 0,
-      is_active: rawMaterial.is_active,
-    }),
+          }
+        }
+      }
+
+      const payload = {
+        code: data.code,
+        name_i18n: {
+          th: data.name_th,
+          en: data.name_en,
+        },
+        description_i18n:
+          data.description_th || data.description_en
+            ? {
+                th: data.description_th || "",
+                en: data.description_en || "",
+              }
+            : null,
+        type_id: data.type_id,
+        unit_id: data.unit_id,
+        cost_price: data.cost_price || null,
+        min_stock: data.min_stock || 0,
+        current_stock: data.current_stock || 0,
+        is_active: data.is_active,
+        media_data: mediaData,
+      };
+
+      return payload;
+    },
+    transformToForm: (rawMaterial) => {
+      // Convert existing images from server to ImageFile format
+      const existingImages: ImageFile[] =
+        rawMaterial.images?.map((img: any) => ({
+          id: img.id,
+          preview: img.url, // Use server URL as preview
+          isPrimary: img.isPrimary,
+          existingUrl: img.url, // Mark as existing image
+          mediaId: img.id, // Store media ID
+          // file is undefined for existing images
+        })) || [];
+
+      return {
+        code: rawMaterial.code,
+        name_th: rawMaterial.name_i18n.th,
+        name_en: rawMaterial.name_i18n.en,
+        description_th: rawMaterial.description_i18n?.th || "",
+        description_en: rawMaterial.description_i18n?.en || "",
+        type_id: rawMaterial.type_id || "",
+        unit_id: rawMaterial.unit_id,
+        cost_price: rawMaterial.cost_price || 0,
+        min_stock: Number(rawMaterial.min_stock) || 0,
+        current_stock: Number(rawMaterial.current_stock) || 0,
+        is_active: rawMaterial.is_active,
+        images: existingImages,
+      };
+    },
     onSuccess: refetch,
     confirmDelete: confirm,
   });

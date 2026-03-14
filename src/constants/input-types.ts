@@ -15,6 +15,8 @@ export enum INPUT_TYPES {
   SELECT = "select",
   CHECKBOX = "checkbox",
   DATE_RANGE = "date-range",
+  IMAGE_UPLOAD = "image-upload",
+  MULTI_IMAGE_UPLOAD = "multi-image-upload",
 }
 
 export enum PRODUCTS_TYPES {

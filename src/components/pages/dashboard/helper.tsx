@@ -1,6 +1,6 @@
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ShoppingCart,
   Package,
@@ -10,6 +10,7 @@ import {
   BarChart3,
   LucideIcon,
 } from "lucide-react";
+import { ROUTES } from "@/constants/routes";
 
 export interface StatCard {
   titleKey: string;
@@ -29,29 +30,29 @@ export interface QuickAction {
   colorClass: string;
 }
 
-export const quickActions: QuickAction[] = [
+export const getQuickActions = (locale: string): QuickAction[] => [
   {
     labelKey: "quickActions.newSale",
     icon: ShoppingCart,
-    href: "/pos",
+    href: ROUTES.POS(locale),
     colorClass: "bg-blue-500 hover:bg-blue-600",
   },
   {
     labelKey: "quickActions.products",
     icon: Package,
-    href: "/products/list",
+    href: ROUTES.PRODUCTS.LIST(locale),
     colorClass: "bg-green-500 hover:bg-green-600",
   },
   {
     labelKey: "quickActions.viewReports",
     icon: BarChart3,
-    href: "/reports",
+    href: ROUTES.SALES(locale),
     colorClass: "bg-purple-500 hover:bg-purple-600",
   },
   {
     labelKey: "quickActions.manageInventory",
     icon: AlertCircle,
-    href: "/inventory",
+    href: ROUTES.INVENTORY(locale),
     colorClass: "bg-orange-500 hover:bg-orange-600",
   },
 ];
@@ -138,25 +139,33 @@ export const useDashboard = () => {
   const locale = params.locale as string;
   const t = useTranslations("dashboard");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const response = await fetch("/api/dashboard/stats");
-        if (response.ok) {
-          const data = await response.json();
-          setDashboardData(data);
-        }
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
+  const fetchDashboardData = useCallback(async (showRefreshing = false) => {
+    if (showRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
+    try {
+      const response = await fetch("/api/dashboard/stats");
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
       }
-    };
-
-    fetchDashboardData();
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const statsCards = getStatsCards({
     todaySales: dashboardData?.todaySales,
@@ -165,16 +174,24 @@ export const useDashboard = () => {
     salesCount: dashboardData?.todaySales?.count,
   });
 
+  const quickActions = getQuickActions(locale);
+
   const handleQuickAction = (href: string) => {
-    router.push(`/${locale}${href}`);
+    router.push(href);
+  };
+
+  const handleRefresh = () => {
+    fetchDashboardData(true);
   };
 
   return {
     t,
     loading,
+    refreshing,
     statsCards,
     quickActions,
     handleQuickAction,
+    handleRefresh,
     dashboardData,
   };
 };

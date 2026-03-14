@@ -23,7 +23,9 @@ export type FieldType =
   | "url"
   | "textarea"
   | "select"
-  | "checkbox";
+  | "checkbox"
+  | "image-upload"
+  | "multi-image-upload";
 
 export interface SelectOption {
   value: string | number;

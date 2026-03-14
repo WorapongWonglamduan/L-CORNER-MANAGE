@@ -287,6 +287,8 @@
       "currentStock": "สต็อกปัจจุบัน",
       "currentStockPlaceholder": "0",
       "currentStockMin": "สต็อกปัจจุบันต้องมากกว่าหรือเท่ากับ 0",
+      "image": "รูปภาพ",
+      "images": "รูปภาพ",
       "isActive": "ใช้งาน",
       "status": "สถานะ",
       "active": "ใช้งาน",

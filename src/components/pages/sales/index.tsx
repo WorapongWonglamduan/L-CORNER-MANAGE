@@ -32,10 +32,12 @@ export default function SalesContent() {
 
   const t = useTranslations("sales");
   const tCommon = useTranslations("common");
-  const [selectedSale, setSelectedSale] = useState<typeof sales[0] | null>(null);
+  const [selectedSale, setSelectedSale] = useState<(typeof sales)[0] | null>(
+    null,
+  );
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const handleViewDetails = (sale: typeof sales[0]) => {
+  const handleViewDetails = (sale: (typeof sales)[0]) => {
     setSelectedSale(sale);
     setIsDetailsModalOpen(true);
   };
@@ -50,9 +52,14 @@ export default function SalesContent() {
       paid: { label: t("paid"), className: "bg-green-100 text-green-800" },
       unpaid: { label: t("unpaid"), className: "bg-red-100 text-red-800" },
     };
-    const config = statusMap[status] || { label: status, className: "bg-gray-100 text-gray-800" };
+    const config = statusMap[status] || {
+      label: status,
+      className: "bg-gray-100 text-gray-800",
+    };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${config.className}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-semibold ${config.className}`}
+      >
         {config.label}
       </span>
     );
@@ -60,12 +67,23 @@ export default function SalesContent() {
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      completed: { label: t("completed"), className: "bg-blue-100 text-blue-800" },
-      cancelled: { label: t("cancelled"), className: "bg-gray-100 text-gray-800" },
+      completed: {
+        label: t("completed"),
+        className: "bg-blue-100 text-blue-800",
+      },
+      cancelled: {
+        label: t("cancelled"),
+        className: "bg-gray-100 text-gray-800",
+      },
     };
-    const config = statusMap[status] || { label: status, className: "bg-gray-100 text-gray-800" };
+    const config = statusMap[status] || {
+      label: status,
+      className: "bg-gray-100 text-gray-800",
+    };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${config.className}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-semibold ${config.className}`}
+      >
         {config.label}
       </span>
     );
@@ -78,7 +96,9 @@ export default function SalesContent() {
       <div className="flex-1 px-4 py-8 overflow-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t("title")}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {t("title")}
+          </h1>
           <p className="text-gray-600">{tCommon("manageYourData")}</p>
         </div>
 
@@ -117,7 +137,10 @@ export default function SalesContent() {
               {searchQuery && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                   ค้นหา: {searchQuery}
-                  <button onClick={() => setSearchQuery("")} className="hover:text-blue-900">
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="hover:text-blue-900"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -125,7 +148,10 @@ export default function SalesContent() {
               {startDate && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
                   ตั้งแต่: {format(new Date(startDate), "dd/MM/yyyy")}
-                  <button onClick={() => setStartDate("")} className="hover:text-green-900">
+                  <button
+                    onClick={() => setStartDate("")}
+                    className="hover:text-green-900"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -133,7 +159,10 @@ export default function SalesContent() {
               {endDate && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
                   ถึง: {format(new Date(endDate), "dd/MM/yyyy")}
-                  <button onClick={() => setEndDate("")} className="hover:text-green-900">
+                  <button
+                    onClick={() => setEndDate("")}
+                    className="hover:text-green-900"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -164,8 +193,18 @@ export default function SalesContent() {
           ) : sales.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="text-gray-400 mb-4">
-                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  className="w-16 h-16 mx-auto"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </div>
               <p className="text-gray-600 text-lg">{t("noOrders")}</p>
@@ -204,13 +243,21 @@ export default function SalesContent() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {sales.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+                      <tr
+                        key={sale.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{sale.sale_number}</div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {sale.sale_number}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-600">
-                            {format(new Date(sale.sale_date), "dd/MM/yyyy HH:mm")}
+                            {format(
+                              new Date(sale.sale_date),
+                              "dd/MM/yyyy HH:mm",
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -252,16 +299,14 @@ export default function SalesContent() {
               </div>
 
               {/* Pagination */}
-              {totalPages > 1 && (
-                <Pagination
-                  currentPage={page}
-                  totalPages={totalPages}
-                  onPageChange={setPage}
-                  itemsPerPage={pageSize}
-                  totalItems={totalItems}
-                  onItemsPerPageChange={setPageSize}
-                />
-              )}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                itemsPerPage={pageSize}
+                totalItems={totalItems}
+                onItemsPerPageChange={setPageSize}
+              />
             </>
           )}
         </div>

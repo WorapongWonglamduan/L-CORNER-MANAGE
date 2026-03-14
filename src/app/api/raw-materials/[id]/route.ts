@@ -20,6 +20,14 @@ export async function GET(
       include: {
         base_unit: true,
         product_type: true,
+        media: {
+          include: {
+            media: true,
+          },
+          orderBy: {
+            sort_order: "asc" as const,
+          },
+        },
       },
     });
 
@@ -29,6 +37,14 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Get all images with their metadata
+    const images = product.media?.map((pm) => ({
+      id: pm.media.id,
+      url: pm.media.file_path?.replace(/\\/g, '/') || '',
+      isPrimary: pm.is_primary,
+      sortOrder: pm.sort_order,
+    })) || [];
 
     // Transform to match old raw_materials format
     const rawMaterial = {
@@ -46,6 +62,7 @@ export async function GET(
       updated_at: product.updated_at,
       unit: product.base_unit,
       type: product.product_type,
+      images: images,
     };
 
     return NextResponse.json(rawMaterial);
@@ -81,6 +98,7 @@ export async function PUT(
       min_stock,
       current_stock,
       is_active,
+      media_data,
     } = body;
 
     // Check if product exists
@@ -127,6 +145,38 @@ export async function PUT(
         product_type: true,
       },
     });
+
+    // Update ProductMedia relations if media_data provided
+    if (media_data !== undefined) {
+      // Delete existing relations
+      await prisma.productMedia.deleteMany({
+        where: { product_id: id },
+      });
+
+      // Create new relations
+      if (Array.isArray(media_data) && media_data.length > 0) {
+        await prisma.productMedia.createMany({
+          data: media_data.map((media: { id: string; isPrimary: boolean; sortOrder: number }) => ({
+            product_id: id,
+            media_id: media.id,
+            is_primary: media.isPrimary,
+            sort_order: media.sortOrder,
+          })),
+        });
+
+        // Update Media records to set entity_type and entity_id
+        const mediaIds = media_data.map((m: { id: string }) => m.id);
+        await prisma.media.updateMany({
+          where: {
+            id: { in: mediaIds },
+          },
+          data: {
+            entity_type: "product",
+            entity_id: id,
+          },
+        });
+      }
+    }
 
     // Transform to match old raw_materials format
     const rawMaterial = {

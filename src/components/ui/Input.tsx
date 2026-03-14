@@ -13,6 +13,8 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { INPUT_TYPES, InputType } from "@/constants/input-types";
 import { DateRangePicker } from "./date-range-picker";
+import { ImageUpload } from "./image-upload";
+import { MultiImageUpload, ImageFile } from "./multi-image-upload";
 
 export { INPUT_TYPES };
 export type { InputType };
@@ -34,6 +36,12 @@ export interface BaseInputProps {
   endPlaceholder?: string;
   dateRangeValue?: DateRangeValue;
   onDateRangeChange?: (value: DateRangeValue) => void;
+  imageUploadFolder?: string;
+  imageUploadEntityType?: string;
+  imageUploadEntityId?: string;
+  multiImageValue?: ImageFile[];
+  onMultiImageChange?: (files: ImageFile[]) => void;
+  maxImages?: number;
 }
 
 export interface SelectOption {
@@ -111,6 +119,36 @@ export const Input = forwardRef<
             />
           );
 
+        case INPUT_TYPES.MULTI_IMAGE_UPLOAD:
+          const multiImageProps = props as unknown as BaseInputProps & {
+            value?: ImageFile[];
+            onChange?: (files: ImageFile[]) => void;
+          };
+
+          return (
+            <MultiImageUpload
+              value={multiImageProps.value || []}
+              onChange={multiImageProps.onChange!}
+              maxFiles={multiImageProps.maxImages || 5}
+            />
+          );
+
+        case INPUT_TYPES.IMAGE_UPLOAD:
+          const imageProps = props as unknown as BaseInputProps & {
+            value?: string | null;
+            onChange?: (url: string | null) => void;
+          };
+
+          return (
+            <ImageUpload
+              value={imageProps.value}
+              onChange={imageProps.onChange!}
+              folder={imageProps.imageUploadFolder || "products"}
+              entityType={imageProps.imageUploadEntityType}
+              entityId={imageProps.imageUploadEntityId}
+            />
+          );
+
         case INPUT_TYPES.CHECKBOX:
           const { checked, onCheckedChange, id } =
             props as InputHTMLAttributes<HTMLInputElement> & {
@@ -144,7 +182,7 @@ export const Input = forwardRef<
           return (
             <textarea
               ref={ref as React.Ref<HTMLTextAreaElement>}
-              className={`${baseInputClass} min-h-[100px] resize-y`}
+              className={`${baseInputClass} min-h-25 resize-y`}
               {...textareaProps}
             />
           );
@@ -213,7 +251,7 @@ export const Input = forwardRef<
         )}
 
         <div className="relative">
-          {Icon && inputType !== "textarea" && inputType !== INPUT_TYPES.DATE_RANGE && (
+          {Icon && inputType !== "textarea" && inputType !== INPUT_TYPES.DATE_RANGE && inputType !== INPUT_TYPES.IMAGE_UPLOAD && inputType !== INPUT_TYPES.MULTI_IMAGE_UPLOAD && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
               <Icon className="w-5 h-5" />
             </div>

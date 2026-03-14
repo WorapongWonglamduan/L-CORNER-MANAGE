@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Package } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
@@ -90,8 +91,20 @@ export default function RawMaterialsManager() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-[#213559]/10 p-3 rounded-xl group-hover:bg-[#213559]/20 transition-colors">
-                      <Package className="h-6 w-6 text-[#213559]" />
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-[#213559]/10 group-hover:bg-[#213559]/20 transition-colors shrink-0">
+                      {rawMaterial.primary_image_url && rawMaterial.primary_image_url.startsWith('/') ? (
+                        <Image
+                          src={rawMaterial.primary_image_url}
+                          alt={rawMaterial.name_i18n.th}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="h-8 w-8 text-[#213559]" />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">

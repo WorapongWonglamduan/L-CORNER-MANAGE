@@ -107,7 +107,7 @@ model Product {
   category_id         String?
   product_type_id     String
   base_unit_id        String
-  image_url           String?
+  image_url           String?   // Deprecated: Use media relation instead
   is_active           Boolean   @default(true)
   has_serial          Boolean   @default(false)
   has_expiry          Boolean   @default(false)
@@ -132,6 +132,7 @@ model Product {
   recipes                Recipe[]
   recipe_ingredients     RecipeIngredient[]   @relation("IngredientProduct")
   sale_items             SaleItem[]
+  media                  ProductMedia[]
   
   @@index([product_type_id])
   @@index([category_id])
@@ -285,4 +286,61 @@ model StockMovement {
   @@index([transaction_date])
   @@index([reference_type, reference_id])
   @@map("stock_movements")
+}
+
+// Media Management System
+model Media {
+  id              String   @id @default(uuid())
+  
+  // File information
+  filename        String   // Original filename
+  stored_filename String   @unique // UUID-based filename in storage
+  file_path       String   // Relative path: /uploads/2026/03/xxx.jpg
+  file_size       Int      // Size in bytes
+  mime_type       String   // image/jpeg, image/png, etc.
+  
+  // Image metadata
+  width           Int?
+  height          Int?
+  alt_text        String?  @db.Text
+  
+  // Thumbnails
+  thumbnail_path  String?  // Path to thumbnail
+  medium_path     String?  // Path to medium size
+  
+  // Usage tracking
+  entity_type     String?  // "product", "category", "user", etc.
+  entity_id       String?  // ID of the related entity
+  
+  // Organization
+  folder          String   @default("general") // Category folder
+  is_public       Boolean  @default(true)
+  
+  // Audit
+  uploaded_by     String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  
+  // Relations
+  product_images  ProductMedia[]
+  
+  @@index([entity_type, entity_id])
+  @@index([created_at])
+  @@map("media")
+}
+
+model ProductMedia {
+  id          String   @id @default(uuid())
+  product_id  String
+  media_id    String
+  is_primary  Boolean  @default(false) // รูปหลัก
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now())
+  
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  media   Media   @relation(fields: [media_id], references: [id], onDelete: Cascade)
+  
+  @@unique([product_id, media_id])
+  @@index([product_id, is_primary])
+  @@map("product_media")
 }

@@ -53,6 +53,14 @@ export async function GET(request: NextRequest) {
       include: {
         base_unit: true,
         product_type: true,
+        media: {
+          include: {
+            media: true,
+          },
+          orderBy: {
+            sort_order: "asc",
+          },
+        },
       },
       orderBy: { created_at: "desc" },
       skip: (page - 1) * pageSize,
@@ -60,22 +68,34 @@ export async function GET(request: NextRequest) {
     });
 
     // Transform to match old raw_materials format
-    const items = rawMaterials.map((product) => ({
-      id: product.id,
-      code: product.code,
-      name_i18n: product.name_i18n,
-      description_i18n: product.description_i18n,
-      type_id: product.product_type_id,
-      unit_id: product.base_unit_id,
-      cost_price: product.cost_price,
-      min_stock: product.min_stock_level,
-      current_stock: product.current_stock,
-      is_active: product.is_active,
-      created_at: product.created_at,
-      updated_at: product.updated_at,
-      unit: product.base_unit,
-      type: product.product_type,
-    }));
+    const items = rawMaterials.map((product) => {
+      // Find primary image from ProductMedia relations
+      const primaryProductMedia = product.media?.find((pm: any) => pm.is_primary);
+      let primaryImageUrl = primaryProductMedia?.media?.file_path || null;
+      
+      // Convert backslashes to forward slashes for Next.js Image component
+      if (primaryImageUrl) {
+        primaryImageUrl = primaryImageUrl.replace(/\\/g, '/');
+      }
+
+      return {
+        id: product.id,
+        code: product.code,
+        name_i18n: product.name_i18n,
+        description_i18n: product.description_i18n,
+        type_id: product.product_type_id,
+        unit_id: product.base_unit_id,
+        cost_price: product.cost_price,
+        min_stock: product.min_stock_level,
+        current_stock: product.current_stock,
+        is_active: product.is_active,
+        created_at: product.created_at,
+        updated_at: product.updated_at,
+        unit: product.base_unit,
+        type: product.product_type,
+        primary_image_url: primaryImageUrl,
+      };
+    });
 
     return NextResponse.json({
       items,
@@ -102,6 +122,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("[API] Received body:", JSON.stringify(body, null, 2));
+    
     const {
       code,
       name_i18n,
@@ -112,10 +134,14 @@ export async function POST(request: NextRequest) {
       min_stock,
       current_stock,
       is_active,
+      media_data,
     } = body;
+
+    console.log("[API] Validation check:", { code, name_i18n, unit_id, type_id });
 
     // Validation
     if (!code || !name_i18n || !unit_id || !type_id) {
+      console.log("[API] Validation failed!");
       return NextResponse.json(
         { error: "code, name_i18n, unit_id, and type_id are required" },
         { status: 400 },
@@ -155,6 +181,31 @@ export async function POST(request: NextRequest) {
         product_type: true,
       },
     });
+
+    // Create ProductMedia relations if media_data provided
+    if (media_data && Array.isArray(media_data) && media_data.length > 0) {
+      // Create ProductMedia relations
+      await prisma.productMedia.createMany({
+        data: media_data.map((media: { id: string; isPrimary: boolean; sortOrder: number }) => ({
+          product_id: product.id,
+          media_id: media.id,
+          is_primary: media.isPrimary,
+          sort_order: media.sortOrder,
+        })),
+      });
+
+      // Update Media records to set entity_type and entity_id
+      const mediaIds = media_data.map((m: { id: string }) => m.id);
+      await prisma.media.updateMany({
+        where: {
+          id: { in: mediaIds },
+        },
+        data: {
+          entity_type: "product",
+          entity_id: product.id,
+        },
+      });
+    }
 
     // Transform to match old raw_materials format
     const rawMaterial = {

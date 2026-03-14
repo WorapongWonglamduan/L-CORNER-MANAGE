@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowUpRight, ArrowDownRight, TrendingUp, Clock } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, TrendingUp, Clock, RefreshCw, Calendar, ChevronRight } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
 import { useDashboard } from './helper'
 import { theme } from '@/lib/theme'
@@ -16,7 +16,14 @@ export default function DashboardContent({
   userRoles, 
   userPermissions 
 }: DashboardContentProps) {
-  const { t, loading, statsCards, quickActions, handleQuickAction, dashboardData } = useDashboard()
+  const { t, loading, refreshing, statsCards, quickActions, handleQuickAction, handleRefresh, dashboardData } = useDashboard()
+  
+  const currentDate = new Date().toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
 
   return (
     <div className={`min-h-screen ${theme.gradients.background} flex`}>
@@ -24,17 +31,36 @@ export default function DashboardContent({
 
       {/* Main Content */}
       <div className="flex-1 p-6 lg:p-8 overflow-auto">
-
+        {/* Header */}
         <div className="mb-8">
-          <div></div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                {t('welcome')}, {userName}!
+              </h1>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Calendar className="w-4 h-4" />
+                <span>{currentDate}</span>
+              </div>
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="text-sm font-medium">รีเฟรช</span>
+            </button>
+          </div>
+          
           {userRoles && userRoles.length > 0 && (
-            <div className="mt-2 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">{t('role')}:</span>
               <div className="flex gap-2">
                 {userRoles.map((role, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm"
                   >
                     {role}
                   </span>
@@ -112,20 +138,35 @@ export default function DashboardContent({
                   </div>
                 ))
               ) : dashboardData?.topProducts && dashboardData.topProducts.length > 0 ? (
-                dashboardData.topProducts.map((product, index) => (
-                  <div key={product.id} className="flex items-center gap-4 p-3 bg-gradient-to-r from-blue-50 to-transparent rounded-lg hover:from-blue-100 transition-colors">
-                    <div className="bg-blue-600 text-white w-10 h-10 rounded-lg flex items-center justify-center font-bold">
-                      #{index + 1}
+                dashboardData.topProducts.map((product, index) => {
+                  const rankColors = [
+                    'bg-gradient-to-br from-yellow-400 to-yellow-600',
+                    'bg-gradient-to-br from-gray-300 to-gray-500',
+                    'bg-gradient-to-br from-orange-400 to-orange-600',
+                    'bg-gradient-to-br from-blue-500 to-blue-600',
+                    'bg-gradient-to-br from-purple-500 to-purple-600',
+                  ]
+                  return (
+                    <div key={product.id} className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-transparent rounded-xl hover:from-blue-100 transition-all hover:shadow-md group">
+                      <div className={`${rankColors[index] || 'bg-gradient-to-br from-blue-500 to-blue-600'} text-white w-12 h-12 rounded-xl flex items-center justify-center font-bold shadow-lg`}>
+                        #{index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 mb-1">{product.name_i18n.th}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span className="px-2 py-0.5 bg-gray-100 rounded">{product.code}</span>
+                          <span>•</span>
+                          <span className="font-medium">{product.totalQuantity.toLocaleString()} {t('units')}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-600 text-lg">฿{product.totalRevenue.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">รายได้</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{product.name_i18n.th}</p>
-                      <p className="text-xs text-gray-500">{product.code} • {product.totalQuantity.toLocaleString()} {t('units')}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-600">฿{product.totalRevenue.toLocaleString()}</p>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               ) : (
                 <div className="text-center py-8 text-gray-500">{t('noData')}</div>
               )}
@@ -176,8 +217,12 @@ export default function DashboardContent({
           </div>
         </div>
 
+        {/* Quick Actions */}
         <div className={`${theme.cards.flat} p-6`}>
-          <h2 className={`text-lg font-semibold text-[${theme.colors.text.primary}] mb-4`}>{t('quickActions.title')}</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">{t('quickActions.title')}</h2>
+            <span className="text-sm text-gray-500">เข้าถึงฟีเจอร์หลักได้อย่างรวดเร็ว</span>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action, index) => {
               const Icon = action.icon
@@ -185,10 +230,13 @@ export default function DashboardContent({
                 <button
                   key={index}
                   onClick={() => handleQuickAction(action.href)}
-                  className={`${action.colorClass} text-white ${theme.rounded.md} p-6 flex flex-col items-center gap-3 transition-all hover:scale-105 hover:shadow-xl ${theme.shadows.lg}`}
+                  className={`${action.colorClass} text-white rounded-xl p-6 flex flex-col items-center gap-3 transition-all hover:scale-105 hover:shadow-2xl shadow-lg group relative overflow-hidden`}
                 >
-                  <Icon className="w-10 h-10" />
-                  <span className="text-sm font-semibold text-center">{t(action.labelKey)}</span>
+                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
+                  <div className="bg-white/20 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                    <Icon className="w-8 h-8" />
+                  </div>
+                  <span className="text-sm font-bold text-center">{t(action.labelKey)}</span>
                 </button>
               )
             })}

@@ -95,6 +95,11 @@ export const getRawMaterialFormConfig = (
     step: "1",
   },
   {
+    name: "images",
+    type: INPUT_TYPES.MULTI_IMAGE_UPLOAD,
+    label: t("images"),
+  },
+  {
     name: "is_active",
     type: INPUT_TYPES.CHECKBOX,
     label: t("isActive"),

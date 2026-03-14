@@ -80,13 +80,33 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
   }, [reset, formConfig.defaultValues]);
 
   const handleEdit = useCallback(
-    (entity: E) => {
-      setEditingEntity(entity);
-      reset(transformToForm(entity));
-      setError("");
-      setDialogOpen(true);
+    async (entity: E) => {
+      try {
+        setLoading(true);
+        setEditingEntity(entity);
+        
+        // Fetch full entity data from API to get all details (including images)
+        const response = await fetch(`${endpoint}/${entity.id}`);
+        if (response.ok) {
+          const fullEntity = await response.json();
+          reset(transformToForm(fullEntity));
+        } else {
+          // Fallback to entity from list if API call fails
+          reset(transformToForm(entity));
+        }
+        
+        setError("");
+        setDialogOpen(true);
+      } catch (error) {
+        console.error("Error fetching entity details:", error);
+        // Fallback to entity from list
+        reset(transformToForm(entity));
+        setDialogOpen(true);
+      } finally {
+        setLoading(false);
+      }
     },
-    [reset, transformToForm],
+    [endpoint, reset, transformToForm],
   );
 
   const handleDelete = useCallback(
@@ -149,7 +169,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
         setLoading(true);
         setError("");
 
-        const payload = transformToPayload(data);
+        const payload = await transformToPayload(data);
         const url = editingEntity
           ? `${endpoint}/${editingEntity.id}`
           : endpoint;

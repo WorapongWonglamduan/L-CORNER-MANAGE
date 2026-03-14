@@ -186,6 +186,8 @@
       "currentStock": "Current Stock",
       "currentStockPlaceholder": "0",
       "currentStockMin": "Current stock must be greater than or equal to 0",
+      "image": "Image",
+      "images": "Images",
       "isActive": "Active",
       "status": "Status",
       "active": "Active",
