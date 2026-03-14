@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { Package, AlertTriangle, TrendingDown, History } from "lucide-react";
 import { useInventoryManager } from "./helper";
@@ -39,7 +39,7 @@ export default function InventoryContent() {
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-  const handleAdjustStock = (product) => {
+  const handleAdjustStock = useCallback((product) => {
     setSelectedProduct({
       id: product.id,
       name: product.name_i18n[locale],
@@ -49,9 +49,9 @@ export default function InventoryContent() {
       product_type: product.product_type.type,
     });
     setIsStockModalOpen(true);
-  };
+  }, [locale]);
 
-  const handleViewHistory = (product) => {
+  const handleViewHistory = useCallback((product) => {
     setSelectedProduct({
       id: product.id,
       name: product.name_i18n[locale],
@@ -61,7 +61,7 @@ export default function InventoryContent() {
       product_type: product.product_type.type,
     });
     setIsHistoryModalOpen(true);
-  };
+  }, [locale]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">

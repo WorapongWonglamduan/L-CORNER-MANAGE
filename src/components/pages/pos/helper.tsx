@@ -76,6 +76,9 @@ export function usePOSManager() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [optionsData, setOptionsData] = useState<{
     productTypes: ProductType[];
     categories: Category[];
@@ -91,7 +94,8 @@ export function usePOSManager() {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        pageSize: "100",
+        page: currentPage.toString(),
+        pageSize: pageSize.toString(),
         isActive: "true",
         type: `${PRODUCTS_TYPES.SEMI_FINISHED},${PRODUCTS_TYPES.FINISHED_GOOD}`,
       });
@@ -106,12 +110,13 @@ export function usePOSManager() {
       const response = await fetch(`/api/products?${params}`);
       const data = await response.json();
       setProducts(data.items || []);
+      setTotalItems(data.total || 0);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, currentPage, pageSize]);
 
   // Fetch products on mount and when filters change
   useEffect(() => {
@@ -306,5 +311,10 @@ export function usePOSManager() {
     cartItemCount,
     checkout,
     locale,
+    currentPage,
+    setCurrentPage,
+    totalItems,
+    pageSize,
+    setPageSize,
   };
 }

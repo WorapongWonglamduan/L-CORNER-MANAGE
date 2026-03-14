@@ -248,6 +248,7 @@ export function StockAdjustmentModal({
                         onChange(e)
                       }
                       onBlur={onBlur}
+                      required={!!formConfig[0].rules.required}
                       error={errors.quantity}
                       min="0"
                       step="1"
@@ -392,10 +393,8 @@ export function StockAdjustmentModal({
                       onChange={onChange}
                       onBlur={onBlur}
                       error={errors.reason}
-                      options={[
-                        { value: "", label: formConfig[1].placeholder },
-                        ...formConfig[1].options,
-                      ]}
+                      required={!!formConfig[1].rules.required}
+                      options={[...formConfig[1].options]}
                     />
                   )}
                 />
@@ -614,6 +613,7 @@ export function StockAdjustmentModal({
                   onChange={onChange}
                   onBlur={onBlur}
                   error={errors[field.name]}
+                  required={!!field.rules?.required}
                 />
               )}
             />

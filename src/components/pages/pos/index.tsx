@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { Search, ShoppingCart, X, Trash2, Grid3x3 } from "lucide-react";
 import { ProductCard } from "./product-card";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CheckoutModal } from "./checkout-modal";
 import { toast } from "@/lib/toast";
 import { useTranslations } from "next-intl";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function POSContent() {
   const {
@@ -29,10 +30,20 @@ export default function POSContent() {
     cartItemCount,
     checkout,
     locale,
+    currentPage,
+    setCurrentPage,
+    totalItems,
+    pageSize,
+    setPageSize,
   } = usePOSManager();
 
   const t = useTranslations("pos");
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+
+  // Reset to page 1 when category, search, or pageSize changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery, pageSize, setCurrentPage]);
 
   const handleCheckout = async (paymentMethod: string) => {
     try {
@@ -122,24 +133,38 @@ export default function POSContent() {
                 <p className="text-gray-600 text-lg">{t("noProducts")}</p>
               </div>
             ) : (
-              <div className="grid  xl:grid-cols-4 2xl:grid-cols-4 gap-4">
-                {products.map((product) => {
-                  return (
-                    <ProductCard
-                      key={product.id}
-                      id={product.id}
-                      name={product.name_i18n[locale]}
-                      price={Number(product.selling_price) || 0}
-                      image={product.primary_image_url || undefined}
-                      category={product.category?.name_i18n[locale]}
-                      stock={product.available_quantity || 0}
-                      onAdd={addToCart}
-                      quantity={getCartItemQuantity(product.id)}
-                      onQuantityChange={updateQuantity}
-                    />
-                  );
-                })}
-              </div>
+              <>
+                <div className="grid  xl:grid-cols-4 2xl:grid-cols-4 gap-4">
+                  {products.map((product) => {
+                    return (
+                      <ProductCard
+                        key={product.id}
+                        id={product.id}
+                        name={product.name_i18n[locale]}
+                        price={Number(product.selling_price) || 0}
+                        image={product.primary_image_url || undefined}
+                        category={product.category?.name_i18n[locale]}
+                        stock={product.available_quantity || 0}
+                        onAdd={addToCart}
+                        quantity={getCartItemQuantity(product.id)}
+                        onQuantityChange={updateQuantity}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                <div className="mt-6">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(totalItems / pageSize)}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={pageSize}
+                    totalItems={totalItems}
+                    onItemsPerPageChange={setPageSize}
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>

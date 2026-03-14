@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { toast } from "@/lib/toast";
@@ -56,7 +56,6 @@ export const useStockAdjustment = ({
 
   const quantity = watch("quantity");
   const reason = watch("reason");
-  const note = watch("note");
 
   // Fetch recipe for semi_finished products
   useEffect(() => {
@@ -103,7 +102,7 @@ export const useStockAdjustment = ({
     }
   }, [quantity, adjustmentType, product.current_stock]);
 
-  const handleProduction = async () => {
+  const handleProduction = useCallback(async () => {
     const qty = parseFloat(quantity) || 0;
 
     if (!qty || qty <= 0) {
@@ -125,6 +124,7 @@ export const useStockAdjustment = ({
     setLoading(true);
 
     try {
+      const formData = watch();
       if (adjustmentType === ADJUSTMENT_TYPES.IN) {
         const response = await fetch("/api/production", {
           method: "POST",
@@ -135,7 +135,7 @@ export const useStockAdjustment = ({
             product_id: product.id,
             quantity: qty,
             reason,
-            note,
+            note: formData.note,
           }),
         });
 
@@ -158,6 +158,7 @@ export const useStockAdjustment = ({
 
         toast.success(t("successProduce"));
       } else {
+        const formData = watch();
         const response = await fetch("/api/inventory/adjust", {
           method: "POST",
           headers: {
@@ -168,7 +169,7 @@ export const useStockAdjustment = ({
             adjustment_type: adjustmentType,
             quantity: qty,
             reason,
-            note,
+            note: formData.note,
           }),
         });
 
@@ -187,9 +188,9 @@ export const useStockAdjustment = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [quantity, reason, adjustmentType, getNewStock, product.id, watch, t, onSuccess, onClose]);
 
-  const handleSubmit = async (data: StockAdjustmentFormData) => {
+  const handleSubmit = useCallback(async (data: StockAdjustmentFormData) => {
     const qty = parseFloat(data.quantity);
 
     if (!qty || qty <= 0) {
@@ -236,15 +237,23 @@ export const useStockAdjustment = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [adjustmentType, getNewStock, product.id, t, onSuccess, onClose]);
 
-  const formConfig = getStockAdjustmentFormConfig(t, adjustmentType);
+  const formConfig = useMemo(
+    () => getStockAdjustmentFormConfig(t, adjustmentType),
+    [t, adjustmentType]
+  );
 
-  const calculatedIngredients =
-    recipe?.ingredients?.map((ing) => ({
-      ...ing,
-      required: Number(ing.quantity) * (parseFloat(quantity) || 0),
-    })) || [];
+  const calculatedIngredients = useMemo(
+    () =>
+      recipe?.ingredients?.map((ing) => ({
+        ...ing,
+        required: Number(ing.quantity) * (parseFloat(quantity) || 0),
+      })) || [],
+    [recipe?.ingredients, quantity]
+  );
+
+  const newStock = useMemo(() => getNewStock(), [getNewStock]);
 
   return {
     // State
@@ -254,7 +263,6 @@ export const useStockAdjustment = ({
     loadingRecipe,
     quantity,
     reason,
-    note,
     
     // Form
     control,
@@ -264,7 +272,7 @@ export const useStockAdjustment = ({
     Controller,
     
     // Computed
-    newStock: getNewStock(),
+    newStock,
     calculatedIngredients,
     
     // Handlers
