@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Navbar } from "@/components/navbar";
+import { Sidebar } from "@/components/sidebar";
 import { Search, Eye, X } from "lucide-react";
 import { useSalesManager } from "./helper";
 import { Button } from "@/components/ui/button";
@@ -72,10 +72,10 @@ export default function SalesContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+      <Sidebar />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="flex-1 px-4 py-8 overflow-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{t("title")}</h1>

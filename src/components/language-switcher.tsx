@@ -4,7 +4,11 @@ import { useParams, usePathname, useRouter } from 'next/navigation'
 import { Globe } from 'lucide-react'
 import { theme } from '@/lib/theme'
 
-export function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  isCollapsed?: boolean
+}
+
+export function LanguageSwitcher({ isCollapsed = false }: LanguageSwitcherProps) {
   const params = useParams()
   const pathname = usePathname()
   const router = useRouter()
@@ -14,6 +18,18 @@ export function LanguageSwitcher() {
     const newPathname = pathname.replace(`/${locale}`, `/${newLocale}`)
     router.push(newPathname)
     router.refresh()
+  }
+
+  if (isCollapsed) {
+    return (
+      <button
+        onClick={() => switchLanguage(locale === 'th' ? 'en' : 'th')}
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-colors"
+        title={locale === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
+      >
+        <Globe className="w-5 h-5 shrink-0" />
+      </button>
+    )
   }
 
   return (

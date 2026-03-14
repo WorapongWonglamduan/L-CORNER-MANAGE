@@ -1,6 +1,6 @@
 "use client";
 
-import { Navbar } from "@/components/navbar";
+import { Sidebar } from "@/components/sidebar";
 import { useTranslations } from "next-intl";
 import { useRouter, useParams } from "next/navigation";
 import { Settings, Package, ArrowRight, Beef, FolderTree, Folder } from "lucide-react";
@@ -43,10 +43,10 @@ export default function SettingsContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex">
+      <Sidebar />
 
-      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+      <div className="flex-1 p-6 lg:p-8 overflow-auto">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="bg-gradient-to-r from-[#213559] to-[#2c4a7a] p-2 rounded-lg shadow-lg shadow-[#213559]/30">

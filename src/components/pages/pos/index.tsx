@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Navbar } from "@/components/navbar";
+import { Sidebar } from "@/components/sidebar";
 import { Search, ShoppingCart, X, Trash2, Grid3x3 } from "lucide-react";
 import { ProductCard } from "./product-card";
 import { usePOSManager } from "./helper";
@@ -46,10 +46,10 @@ export default function POSContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+      <Sidebar />
 
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)]">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Sidebar - Categories */}
         <div className="lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto">
           <div className="p-4 border-b border-gray-200">

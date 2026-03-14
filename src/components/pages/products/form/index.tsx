@@ -1,6 +1,6 @@
 "use client";
 
-import { Navbar } from "@/components/navbar";
+import { Sidebar } from "@/components/sidebar";
 import {
   ArrowLeft,
   Package,
@@ -56,9 +56,9 @@ export default function AddProductContent() {
 
   if (dataLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="flex items-center justify-center py-20">
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#213559] mx-auto mb-4"></div>
             <p className="text-gray-600 text-lg">{t("loadingUnits")}</p>
@@ -69,10 +69,10 @@ export default function AddProductContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
 
-      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+      <div className="flex-1 p-6 lg:p-8 overflow-auto">
         <button
           onClick={() => router.push(`/${locale}/products/list`)}
           className="flex items-center gap-2 text-gray-600 hover:text-[#213559] mb-6 transition-colors group"

@@ -1,6 +1,6 @@
 "use client";
 
-import { Navbar } from "@/components/navbar";
+import { Sidebar } from "@/components/sidebar";
 import { useTranslations } from "next-intl";
 import { FolderTree, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -11,10 +11,10 @@ export default function ProductTypesContent() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
 
-      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+      <div className="flex-1 p-6 lg:p-8 overflow-auto">
         <div className="mb-8">
           <button
             onClick={() => router.back()}

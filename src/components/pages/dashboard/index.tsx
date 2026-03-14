@@ -1,7 +1,7 @@
 'use client'
 
 import { ArrowUpRight, ArrowDownRight, TrendingUp, Clock } from 'lucide-react'
-import { Navbar } from '@/components/navbar'
+import { Sidebar } from '@/components/sidebar'
 import { useDashboard } from './helper'
 import { theme } from '@/lib/theme'
 
@@ -19,11 +19,11 @@ export default function DashboardContent({
   const { t, loading, statsCards, quickActions, handleQuickAction, dashboardData } = useDashboard()
 
   return (
-    <div className={`min-h-screen ${theme.gradients.background}`}>
-      <Navbar userName={userName} />
+    <div className={`min-h-screen ${theme.gradients.background} flex`}>
+      <Sidebar userName={userName} />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+      <div className="flex-1 p-6 lg:p-8 overflow-auto">
 
         <div className="mb-8">
           <div></div>
