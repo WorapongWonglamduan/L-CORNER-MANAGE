@@ -41,7 +41,12 @@ export default function RawMaterialsManager() {
     ConfirmDialog,
   } = useRawMaterialsManager();
 
-  const getTypeLabel = (type: { id: string; name_i18n: { th: string; en: string } } | null | undefined) => {
+  const getTypeLabel = (
+    type:
+      | { id: string; name_i18n: { th: string; en: string } }
+      | null
+      | undefined,
+  ) => {
     if (!type) return "-";
     return type.name_i18n.th;
   };
@@ -107,9 +112,7 @@ export default function RawMaterialsManager() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
-                    <span className="text-sm text-gray-600">
-                      {t("type")}:
-                    </span>
+                    <span className="text-sm text-gray-600">{t("type")}:</span>
                     <span className="font-semibold text-gray-900">
                       {getTypeLabel(rawMaterial.type)}
                     </span>
@@ -205,7 +208,7 @@ export default function RawMaterialsManager() {
         savingText={t("saving")}
         maxWidth="3xl"
       />
-      
+
       <ConfirmDialog />
     </div>
   );

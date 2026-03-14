@@ -269,16 +269,14 @@ export default function InventoryContent() {
               </div>
 
               {/* Pagination */}
-              {totalPages > 1 && (
-                <Pagination
-                  currentPage={page}
-                  totalPages={totalPages}
-                  onPageChange={setPage}
-                  itemsPerPage={pageSize}
-                  totalItems={totalItems}
-                  onItemsPerPageChange={setPageSize}
-                />
-              )}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                itemsPerPage={pageSize}
+                totalItems={totalItems}
+                onItemsPerPageChange={setPageSize}
+              />
             </>
           )}
         </div>

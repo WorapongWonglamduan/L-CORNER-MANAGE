@@ -52,11 +52,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Get total count
-    const total = await prisma.product.count({ where });
-
-    // Get paginated data with relations
-    const products = await prisma.product.findMany({
+    // Get all products (without pagination first) to filter by stock status
+    const allProducts = await prisma.product.findMany({
       where,
       include: {
         category: {
@@ -107,12 +104,10 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { created_at: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
     });
 
     // คำนวณ available_quantity สำหรับแต่ละสินค้า
-    const productsWithAvailability = products.map((product) => {
+    const productsWithAvailability = allProducts.map((product) => {
       let available_quantity = 0;
 
       // FINISHED_GOOD: ใช้ current_stock ของตัวเอง
@@ -162,12 +157,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Calculate total and total pages from filtered products
+    const total = filteredProducts.length;
+    const totalPages = Math.ceil(total / pageSize);
+
+    // Apply pagination to filtered products
+    const paginatedProducts = filteredProducts.slice(
+      (page - 1) * pageSize,
+      page * pageSize
+    );
+
     return NextResponse.json({
-      items: filteredProducts,
-      total: filteredProducts.length,
+      items: paginatedProducts,
+      total,
       page,
       pageSize,
-      totalPages: Math.ceil(filteredProducts.length / pageSize),
+      totalPages,
     });
   } catch (error) {
     console.error("Error fetching products:", error);

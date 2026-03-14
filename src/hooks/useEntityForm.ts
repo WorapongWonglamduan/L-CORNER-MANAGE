@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useForm, UseFormProps } from "react-hook-form";
 import { FieldValues } from "react-hook-form";
+import { useTranslations } from "next-intl";
 import { toast } from "@/lib/toast";
 
 interface BaseEntity {
@@ -55,6 +56,8 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
     onSuccess,
     confirmDelete,
   } = options;
+
+  const t = useTranslations("common");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
@@ -115,18 +118,18 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
         }
 
         onSuccess?.();
-        toast.success("Item deleted successfully");
+        toast.success(t("deleted"));
       } catch (err) {
         console.error("Error deleting item:", err);
         const errorMessage =
-          err instanceof Error ? err.message : "Failed to delete item";
+          err instanceof Error ? err.message : t("deleteError");
         setError(errorMessage);
         toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
     },
-    [endpoint, onSuccess, confirmDelete],
+    [endpoint, onSuccess, confirmDelete, t],
   );
 
   const handleDialogClose = useCallback(
@@ -162,17 +165,20 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || "An error occurred");
+          throw new Error(errorData.error || t("error"));
         }
 
+        toast.success(editingEntity ? t("updated") : t("created"));
         handleDialogClose(true);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        const errorMessage = err instanceof Error ? err.message : (editingEntity ? t("updateError") : t("createError"));
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
     },
-    [editingEntity, endpoint, transformToPayload, handleDialogClose],
+    [editingEntity, endpoint, transformToPayload, handleDialogClose, t],
   );
 
   return {
