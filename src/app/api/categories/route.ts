@@ -6,13 +6,7 @@ import { Prisma } from "@prisma/client";
 // GET /api/categories - ดึงรายการหมวดหมู่ทั้งหมด
 export async function GET(request: NextRequest) {
   try {
-    console.log("[API] Fetching categories...");
-
     const session = await auth();
-    console.log(
-      "[API] Auth check:",
-      session ? "Authenticated" : "Not authenticated",
-    );
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,13 +18,6 @@ export async function GET(request: NextRequest) {
     const searchQuery = searchParams.get("search") || "";
     const isActive = searchParams.get("isActive");
 
-    console.log("[API] Query params:", {
-      page,
-      pageSize,
-      searchQuery,
-      isActive,
-    });
-
     // Build where clause
     const where: Prisma.CategoryWhereInput = {};
 
@@ -41,14 +28,9 @@ export async function GET(request: NextRequest) {
       where.is_active = isActive === "true";
     }
 
-    console.log("[API] Where clause:", JSON.stringify(where));
-    console.log("[API] Executing Prisma count query...");
-
     // Get total count
     const total = await prisma.category.count({ where });
-    console.log("[API] Total count:", total);
 
-    console.log("[API] Executing Prisma findMany query...");
     // Get paginated data
     const categories = await prisma.category.findMany({
       where,
@@ -56,8 +38,6 @@ export async function GET(request: NextRequest) {
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
-
-    console.log("[API] Found categories:", categories.length);
 
     return NextResponse.json({
       items: categories,
@@ -95,10 +75,7 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!name_i18n) {
-      return NextResponse.json(
-        { error: "Name is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
     const category = await prisma.category.create({

@@ -29,8 +29,6 @@ export function ProductCard({
 }: ProductCardProps) {
   const t = useTranslations("pos");
 
-  console.log(name, "===", "stock ->", stock);
-
   const handleIncrement = () => {
     if (quantity === 0) {
       onAdd(id);
@@ -63,7 +61,9 @@ export function ProductCard({
             src={image}
             alt={name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-contain group-hover:scale-105 transition-transform duration-300 p-2"
+            unoptimized
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">

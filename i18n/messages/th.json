@@ -398,6 +398,7 @@
       "minStockLevel": "สต็อกขั้นต่ำ",
       "lowStockThreshold": "เกณฑ์แจ้งเตือนสต็อกต่ำ",
       "imageUrl": "URL รูปภาพ",
+      "images": "รูปภาพ",
       "trackStock": "ติดตามสต็อก",
       "hasSerial": "มีหมายเลขซีเรียล",
       "hasExpiry": "มีวันหมดอายุ",
@@ -437,7 +438,11 @@
       "currentStock": "สต็อกปัจจุบัน",
       "lowStockAlert": "เกณฑ์แจ้งเตือน",
       "settings": "ตั้งค่า",
-      "saveProduct": "บันทึกสินค้า"
+      "saveProduct": "บันทึกสินค้า",
+      "recipeIngredientsRequired": "กรุณาเพิ่มส่วนผสมในสูตรอย่างน้อย 1 รายการ",
+      "createSuccess": "เพิ่มสินค้าสำเร็จ!",
+      "updateSuccess": "แก้ไขสินค้าสำเร็จ!",
+      "saveError": "เกิดข้อผิดพลาดในการบันทึกสินค้า"
     },
     "productTypes": {
       "title": "จัดการประเภทสินค้า",

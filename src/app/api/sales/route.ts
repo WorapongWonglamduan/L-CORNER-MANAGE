@@ -63,7 +63,6 @@ async function deductStock(productId: string, quantity: number) {
 
     // Step 2: จะได้ id ของ recipes (ใช้ recipe แรก)
     const recipeId = recipes.id;
-    console.log("recipes =>", recipes);
 
     // Step 3: เอา recipe_id where table recipe_ingredients
     const recipeIngredients = await prisma.recipeIngredient.findMany({
@@ -291,7 +290,7 @@ export async function POST(request: NextRequest) {
       const newNumber = (lastNumber + 1).toString().padStart(4, "0");
       saleNumber = `SAL-${dateStr}-${newNumber}`;
     }
-    console.log("session ->", session);
+
     // Create sale in transaction
     const newSale = await prisma.$transaction(async (tx) => {
       const sale = await tx.sale.create({

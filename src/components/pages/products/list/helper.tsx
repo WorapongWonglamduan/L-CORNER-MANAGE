@@ -50,6 +50,7 @@ interface Product {
   min_stock_level: number;
   low_stock_threshold: number;
   image_url: string | null;
+  primary_image_url: string | null;
   track_stock: boolean;
   has_serial: boolean;
   has_expiry: boolean;

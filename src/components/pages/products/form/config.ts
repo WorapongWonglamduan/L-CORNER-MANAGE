@@ -99,10 +99,9 @@ export const getProductFormConfig = (
     gridCols: "md:col-span-2",
   },
   {
-    name: "image_url",
-    label: t("imageUrl"),
-    type: INPUT_TYPES.TEXT,
-    placeholder: "https://example.com/image.jpg",
+    name: "images",
+    label: t("images"),
+    type: INPUT_TYPES.MULTI_IMAGE_UPLOAD,
     gridCols: "md:col-span-2",
   },
 ];

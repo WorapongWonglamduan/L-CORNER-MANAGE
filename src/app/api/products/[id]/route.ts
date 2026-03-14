@@ -31,6 +31,14 @@ export async function GET(
             },
           },
         },
+        media: {
+          include: {
+            media: true,
+          },
+          orderBy: {
+            sort_order: "asc" as const,
+          },
+        },
       },
     });
 
@@ -38,7 +46,18 @@ export async function GET(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json(product);
+    // Get all images with their metadata
+    const images = product.media?.map((pm) => ({
+      id: pm.media.id,
+      url: pm.media.file_path?.replace(/\\/g, '/') || '',
+      isPrimary: pm.is_primary,
+      sortOrder: pm.sort_order,
+    })) || [];
+
+    return NextResponse.json({
+      ...product,
+      images,
+    });
   } catch (error) {
     console.error("Error fetching product:", error);
     return NextResponse.json(
@@ -79,6 +98,7 @@ export async function PUT(
       selling_price,
       cost_price,
       recipes,
+      media_data,
     } = body;
 
     // Check if product exists
@@ -189,6 +209,38 @@ export async function PUT(
       });
     });
 
+    // Update ProductMedia relations if media_data provided
+    if (media_data !== undefined) {
+      // Delete existing relations
+      await prisma.productMedia.deleteMany({
+        where: { product_id: id },
+      });
+
+      // Create new relations
+      if (Array.isArray(media_data) && media_data.length > 0) {
+        await prisma.productMedia.createMany({
+          data: media_data.map((media: { id: string; isPrimary: boolean; sortOrder: number }) => ({
+            product_id: id,
+            media_id: media.id,
+            is_primary: media.isPrimary,
+            sort_order: media.sortOrder,
+          })),
+        });
+
+        // Update Media records to set entity_type and entity_id
+        const mediaIds = media_data.map((m: { id: string }) => m.id);
+        await prisma.media.updateMany({
+          where: {
+            id: { in: mediaIds },
+          },
+          data: {
+            entity_type: "product",
+            entity_id: id,
+          },
+        });
+      }
+    }
+
     return NextResponse.json(product);
   } catch (error) {
     console.error("Error updating product:", error);
@@ -236,11 +288,6 @@ export async function DELETE(
 
         // Delete recipes
         await tx.recipe.deleteMany({
-          where: { product_id: id },
-        });
-
-        // Delete product units
-        await tx.productUnit.deleteMany({
           where: { product_id: id },
         });
 

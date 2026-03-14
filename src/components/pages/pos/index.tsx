@@ -130,7 +130,7 @@ export default function POSContent() {
                       id={product.id}
                       name={product.name_i18n[locale]}
                       price={Number(product.selling_price) || 0}
-                      image={product.image_url || undefined}
+                      image={product.primary_image_url || undefined}
                       category={product.category?.name_i18n[locale]}
                       stock={product.available_quantity || 0}
                       onAdd={addToCart}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Plus,
   Package,
@@ -100,6 +101,24 @@ export default function ProductsManager() {
                   key={product.id}
                   className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-[#213559]/30 overflow-hidden"
                 >
+                  {/* Product Image */}
+                  <div className="relative h-48 bg-gray-100">
+                    {product.primary_image_url ? (
+                      <Image
+                        src={product.primary_image_url}
+                        alt={product.name_i18n.th}
+                        fill
+                        className="object-contain p-2"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Package className="h-16 w-16 text-gray-300" />
+                      </div>
+                    )}
+                  </div>
+
                   <div className="relative bg-gradient-to-r from-[#213559] to-[#2c4a7a] p-4">
                     <div className="absolute top-3 right-3">
                       <ProductActionButtons
@@ -150,7 +169,9 @@ export default function ProductsManager() {
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
                           <Tag className="w-3.5 h-3.5 text-[#213559]/60" />
-                          <span className="text-xs text-gray-500">หมวดหมู่</span>
+                          <span className="text-xs text-gray-500">
+                            หมวดหมู่
+                          </span>
                         </div>
                         <span className="text-sm font-semibold text-gray-900 truncate">
                           {getCategoryLabel(product.category)}
@@ -209,18 +230,16 @@ export default function ProductsManager() {
             })}
           </div>
 
-          {products.length > 0 && (
-            <div className="mt-6">
-              <Pagination
-                currentPage={filterOptions.page}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-                itemsPerPage={filterOptions.pageSize}
-                totalItems={totalItems}
-                onItemsPerPageChange={handlePageSizeChange}
-              />
-            </div>
-          )}
+          <div className="mt-6">
+            <Pagination
+              currentPage={filterOptions.page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              itemsPerPage={filterOptions.pageSize}
+              totalItems={totalItems}
+              onItemsPerPageChange={handlePageSizeChange}
+            />
+          </div>
         </>
       )}
 

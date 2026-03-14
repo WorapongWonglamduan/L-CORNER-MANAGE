@@ -71,8 +71,6 @@ export const useLoginForm = () => {
         redirect: false,
       });
 
-      console.log("result ->", result);
-
       if (result?.error) {
         setError(t("error"));
       } else {

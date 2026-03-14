@@ -35,8 +35,6 @@ export function StockAdjustmentModal({
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
-  console.log("product ->", product);
-
   const t = useTranslations("inventory.adjustment");
 
   const getNewStock = useCallback(() => {

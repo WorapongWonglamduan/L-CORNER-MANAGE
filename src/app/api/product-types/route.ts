@@ -6,13 +6,7 @@ import { Prisma } from "@prisma/client";
 // GET /api/product-types - ดึงรายการประเภทสินค้าทั้งหมด
 export async function GET(request: NextRequest) {
   try {
-    console.log("[API] Fetching product types...");
-
     const session = await auth();
-    console.log(
-      "[API] Auth check:",
-      session ? "Authenticated" : "Not authenticated",
-    );
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,14 +18,6 @@ export async function GET(request: NextRequest) {
     const searchQuery = searchParams.get("search") || "";
     const isActive = searchParams.get("isActive");
     const type = searchParams.get("type");
-
-    console.log("[API] Query params:", {
-      page,
-      pageSize,
-      searchQuery,
-      isActive,
-      type,
-    });
 
     // Build where clause
     const where: Prisma.ProductTypeWhereInput = {};
@@ -55,14 +41,9 @@ export async function GET(request: NextRequest) {
       where.is_active = isActive === "true";
     }
 
-    console.log("[API] Where clause:", JSON.stringify(where));
-    console.log("[API] Executing Prisma count query...");
-
     // Get total count
     const total = await prisma.productType.count({ where });
-    console.log("[API] Total count:", total);
 
-    console.log("[API] Executing Prisma findMany query...");
     // Get paginated data
     const types = await prisma.productType.findMany({
       where,
@@ -70,8 +51,6 @@ export async function GET(request: NextRequest) {
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
-
-    console.log("[API] Found types:", types.length);
 
     return NextResponse.json({
       items: types,

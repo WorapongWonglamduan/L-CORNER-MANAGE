@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useRouter, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { toast } from "@/lib/toast";
+import { ImageFile } from "@/components/ui/multi-image-upload";
 
 interface RecipeIngredient {
   ingredient_id: string;
@@ -27,6 +29,7 @@ export interface ProductFormData {
   low_stock_threshold?: number;
   current_stock?: number;
   image_url?: string;
+  images?: ImageFile[];
   track_stock: boolean;
   has_serial: boolean;
   has_expiry: boolean;
@@ -49,7 +52,7 @@ interface RawMaterial {
   id: string;
   code: string;
   name_i18n: { th: string; en: string };
-  base_unit_id: string;
+  unit_id: string;
 }
 
 interface ProductType {
@@ -77,6 +80,12 @@ interface ProductData {
   product_type_id: string;
   base_unit_id: string;
   image_url?: string;
+  images?: Array<{
+    id: string;
+    url: string;
+    isPrimary: boolean;
+    sortOrder: number;
+  }>;
   track_stock: boolean;
   has_serial: boolean;
   has_expiry: boolean;
@@ -99,6 +108,7 @@ export function useProductForm() {
   const locale = params.locale as string;
   const productId = params.id as string | undefined;
   const isEdit = !!productId;
+  const t = useTranslations("settings.products");
 
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -121,6 +131,7 @@ export function useProductForm() {
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ProductFormData>({
     defaultValues: {
@@ -140,7 +151,7 @@ export function useProductForm() {
 
   const productTypeId = watch("product_type_id");
 
-  const showRecipe =
+  const isSemiFinished =
     productTypeId ===
     optionsData.productTypes.find((pt) => pt.type === "semi_finished")?.id;
 
@@ -180,8 +191,29 @@ export function useProductForm() {
           rawMaterials: rawMaterialsData.items || [],
         });
 
+        // Set default product_type_id for new product (create mode)
+        if (!isEdit) {
+          const semiFinishedType = productTypeData.items?.find(
+            (pt: ProductType) => pt.type === PRODUCTS_TYPES.SEMI_FINISHED,
+          );
+          if (semiFinishedType) {
+            setValue("product_type_id", semiFinishedType.id);
+          }
+        }
+
         if (isEdit && productData && !productData.error) {
           setProduct(productData);
+
+          // Convert existing images from server to ImageFile format
+          const existingImages: ImageFile[] =
+            productData.images?.map((img) => ({
+              id: img.id,
+              preview: img.url,
+              isPrimary: img.isPrimary,
+              existingUrl: img.url,
+              mediaId: img.id,
+            })) || [];
+
           reset({
             code: productData.code || "",
             name_th: productData.name_i18n?.th || "",
@@ -197,6 +229,7 @@ export function useProductForm() {
             low_stock_threshold: productData.low_stock_threshold || 0,
             current_stock: productData.current_stock || 0,
             image_url: productData.image_url || "",
+            images: existingImages,
             track_stock: productData.track_stock ?? true,
             has_serial: productData.has_serial ?? false,
             has_expiry: productData.has_expiry ?? false,
@@ -219,11 +252,75 @@ export function useProductForm() {
     };
 
     fetchData();
-  }, [isEdit, productId, reset]);
+  }, [isEdit, productId, reset, setValue]);
+
+  const handleProductTypeChange = (newProductTypeId: string) => {
+    // Clear recipe ingredients when changing product type
+    reset({
+      ...watch(),
+      code: "",
+      name_en: "",
+      name_th: "",
+      product_type_id: newProductTypeId,
+      recipe_ingredients: [],
+    });
+  };
 
   const onSubmit = async (data: ProductFormData) => {
     try {
       setLoading(true);
+
+      // Validate recipe ingredients for semi-finished products
+      if (
+        isSemiFinished &&
+        (!data.recipe_ingredients || data.recipe_ingredients.length === 0)
+      ) {
+        toast.error(t("recipeIngredientsRequired"));
+        setLoading(false);
+        return;
+      }
+
+      // Handle image uploads
+      const mediaData: Array<{
+        id: string;
+        isPrimary: boolean;
+        sortOrder: number;
+      }> = [];
+
+      if (data.images && data.images.length > 0) {
+        for (let i = 0; i < data.images.length; i++) {
+          const imageFile = data.images[i];
+
+          // Check if this is an existing image (has mediaId but no file)
+          if (imageFile.existingUrl && imageFile.mediaId && !imageFile.file) {
+            // Keep existing image - just add its metadata
+            mediaData.push({
+              id: imageFile.mediaId,
+              isPrimary: imageFile.isPrimary || false,
+              sortOrder: i,
+            });
+          } else if (imageFile.file) {
+            // New image - upload it
+            const formData = new FormData();
+            formData.append("file", imageFile.file);
+            formData.append("folder", "products");
+
+            const response = await fetch("/api/media/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              mediaData.push({
+                id: result.id,
+                isPrimary: imageFile.isPrimary || false,
+                sortOrder: i,
+              });
+            }
+          }
+        }
+      }
 
       const payload = {
         code: data.code,
@@ -251,10 +348,11 @@ export function useProductForm() {
         track_stock: data.track_stock,
         selling_price: data.selling_price || null,
         cost_price: data.cost_price || null,
+        media_data: mediaData,
 
         // Include recipes if semi-finished product
         recipes:
-          showRecipe && data.recipe_ingredients.length > 0
+          isSemiFinished && data.recipe_ingredients.length > 0
             ? [
                 {
                   name_i18n: {
@@ -299,11 +397,11 @@ export function useProductForm() {
         }
       }
 
-      toast.success(isEdit ? "แก้ไขสินค้าสำเร็จ!" : "เพิ่มสินค้าสำเร็จ!");
+      toast.success(isEdit ? t("updateSuccess") : t("createSuccess"));
       router.push(`/${locale}/products/list`);
     } catch (error) {
       console.error("Error saving product:", error);
-      toast.error("เกิดข้อผิดพลาดในการบันทึกสินค้า");
+      toast.error(t("saveError"));
     } finally {
       setLoading(false);
     }
@@ -314,6 +412,7 @@ export function useProductForm() {
     handleSubmit,
     control,
     watch,
+    setValue,
     errors,
     loading,
     dataLoading,
@@ -321,9 +420,10 @@ export function useProductForm() {
     fields,
     append,
     remove,
-    showRecipe,
+    isSemiFinished,
     isFinishedGood,
     onSubmit,
     isEdit,
+    handleProductTypeChange,
   };
 }

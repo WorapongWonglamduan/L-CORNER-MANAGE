@@ -40,6 +40,7 @@ interface Product {
   available_quantity: number; // คำนวณจาก server-side
   is_active: boolean;
   image_url: string | null;
+  primary_image_url: string | null;
 }
 
 interface ProductType {
@@ -189,7 +190,7 @@ export function usePOSManager() {
             name: product.name_i18n.th,
             price: Number(price),
             quantity: 1,
-            image: product.image_url || undefined,
+            image: product.primary_image_url || undefined,
           },
         ];
       });

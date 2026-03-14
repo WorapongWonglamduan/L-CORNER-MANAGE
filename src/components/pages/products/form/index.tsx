@@ -15,12 +15,9 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
 import { useProductForm, type ProductFormData } from "./helper";
-import {
-  getProductFormConfig,
-  getPriceStockConfig,
-  getSettingsConfig,
-} from "./config";
-import { FieldError } from "react-hook-form";
+import { getProductFormConfig, getPriceStockConfig } from "./config";
+import { FieldError, Controller } from "react-hook-form";
+import { INPUT_TYPES } from "@/constants/input-types";
 
 export default function AddProductContent() {
   const router = useRouter();
@@ -29,8 +26,10 @@ export default function AddProductContent() {
   const t = useTranslations("settings.products");
 
   const {
-    register,
     handleSubmit,
+    control,
+    watch,
+    setValue,
     errors,
     loading,
     dataLoading,
@@ -38,10 +37,11 @@ export default function AddProductContent() {
     fields,
     append,
     remove,
-    showRecipe,
+    isSemiFinished,
     isFinishedGood,
     onSubmit,
     isEdit,
+    handleProductTypeChange,
   } = useProductForm();
 
   const formFields = getProductFormConfig(
@@ -112,32 +112,91 @@ export default function AddProductContent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {formFields.map((field) => (
-                  <Input
-                    key={field.name}
-                    {...register(
-                      field.name as keyof ProductFormData,
-                      field.rules,
-                    )}
-                    inputType={field.type}
-                    label={field.label}
-                    placeholder={field.placeholder}
-                    options={field.options}
-                    rows={field.rows}
-                    error={
-                      errors[field.name as keyof typeof errors] as
-                        | FieldError
-                        | undefined
-                    }
-                    containerClassName={field.gridCols || ""}
-                    required={!!field.rules?.required}
-                  />
-                ))}
+                {formFields.map((field) => {
+                  // Use Controller for MULTI_IMAGE_UPLOAD
+                  if (field.type === INPUT_TYPES.MULTI_IMAGE_UPLOAD) {
+                    return (
+                      <Controller
+                        key={field.name}
+                        name="images"
+                        control={control}
+                        render={({ field: controllerField }) => (
+                          <Input
+                            inputType={INPUT_TYPES.MULTI_IMAGE_UPLOAD}
+                            label={field.label}
+                            {...(controllerField as any)}
+                            error={errors.images as FieldError | undefined}
+                            containerClassName={field.gridCols || ""}
+                            required={!!field.rules?.required}
+                          />
+                        )}
+                      />
+                    );
+                  }
+
+                  // Use Controller for product_type_id to handle onChange
+                  if (field.name === "product_type_id") {
+                    return (
+                      <Controller
+                        key={field.name}
+                        name="product_type_id"
+                        control={control}
+                        rules={field.rules as any}
+                        render={({ field: controllerField }) => (
+                          <Input
+                            inputType={field.type}
+                            label={field.label}
+                            placeholder={field.placeholder}
+                            options={field.options}
+                            value={controllerField.value}
+                            onChange={(e) => {
+                              handleProductTypeChange(e.target.value);
+                            }}
+                            error={
+                              errors.product_type_id as FieldError | undefined
+                            }
+                            containerClassName={field.gridCols || ""}
+                            required={!!field.rules?.required}
+                          />
+                        )}
+                      />
+                    );
+                  }
+
+                  // Use Controller for all other field types
+                  return (
+                    <Controller
+                      key={field.name}
+                      name={field.name as keyof ProductFormData}
+                      control={control}
+                      rules={field.rules as any}
+                      render={({ field: controllerField }) => (
+                        <Input
+                          inputType={field.type}
+                          label={field.label}
+                          placeholder={field.placeholder}
+                          options={field.options}
+                          rows={field.rows}
+                          value={(controllerField.value ?? "") as string | number}
+                          onChange={controllerField.onChange}
+                          onBlur={controllerField.onBlur}
+                          error={
+                            errors[field.name as keyof typeof errors] as
+                              | FieldError
+                              | undefined
+                          }
+                          containerClassName={field.gridCols || ""}
+                          required={!!field.rules?.required}
+                        />
+                      )}
+                    />
+                  );
+                })}
               </div>
             </div>
 
             {/* Recipe Section */}
-            {showRecipe && (
+            {isSemiFinished && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
@@ -172,83 +231,136 @@ export default function AddProductContent() {
                       <p>{t("noIngredients")}</p>
                     </div>
                   ) : (
-                    fields.map((field, index) => (
-                      <div
-                        key={field.id}
-                        className="flex gap-3 items-start bg-gray-50 p-4 rounded-lg"
-                      >
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <Input
-                            {...register(
-                              `recipe_ingredients.${index}.ingredient_id` as const,
-                              {
-                                required: "กรุณาเลือกวัตถุดิบ",
-                              },
-                            )}
-                            inputType="select"
-                            label={t("ingredient")}
-                            options={[
-                              ...optionsData.rawMaterials.map((rm) => ({
-                                value: rm.id,
-                                label: `${rm.name_i18n.th} (${rm.code})`,
-                              })),
-                            ]}
-                            error={
-                              errors.recipe_ingredients?.[index]
-                                ?.ingredient_id
-                            }
-                            required
-                          />
+                    fields.map((field, index) => {
+                      const selectedIngredientId = watch(
+                        `recipe_ingredients.${index}.ingredient_id`,
+                      );
+                      const selectedIngredient = optionsData.rawMaterials.find(
+                        (rm) => rm.id === selectedIngredientId,
+                      );
 
-                          <Input
-                            {...register(
-                              `recipe_ingredients.${index}.quantity` as const,
-                              {
+                      return (
+                        <div
+                          key={field.id}
+                          className="flex gap-3 items-start bg-gray-50 p-4 rounded-lg"
+                        >
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <Controller
+                              name={
+                                `recipe_ingredients.${index}.ingredient_id` as const
+                              }
+                              control={control}
+                              rules={{ required: "กรุณาเลือกวัตถุดิบ" }}
+                              render={({ field: controllerField }) => (
+                                <Input
+                                  inputType="select"
+                                  label={t("ingredient")}
+                                  options={[
+                                    ...optionsData.rawMaterials.map((rm) => ({
+                                      value: rm.id,
+                                      label: `${rm.name_i18n[locale]} (${rm.code})`,
+                                    })),
+                                  ]}
+                                  value={controllerField.value ?? ""}
+                                  onChange={(e) => {
+                                    const newIngredientId = e.target.value;
+                                    controllerField.onChange(newIngredientId);
+
+                                    // Auto-set unit_id based on selected ingredient's unit_id
+                                    const ingredient =
+                                      optionsData.rawMaterials.find(
+                                        (rm) => rm.id === newIngredientId,
+                                      );
+                                    if (ingredient) {
+                                      setValue(
+                                        `recipe_ingredients.${index}.unit_id` as const,
+                                        ingredient.unit_id,
+                                      );
+                                    }
+                                  }}
+                                  error={
+                                    errors.recipe_ingredients?.[index]
+                                      ?.ingredient_id
+                                  }
+                                  required
+                                />
+                              )}
+                            />
+
+                            <Controller
+                              name={
+                                `recipe_ingredients.${index}.quantity` as const
+                              }
+                              control={control}
+                              rules={{
                                 required: "กรุณาระบุจำนวน",
-                                valueAsNumber: true,
                                 min: {
-                                  value: 0.01,
+                                  value: 0,
                                   message: "จำนวนต้องมากกว่า 0",
                                 },
-                              },
-                            )}
-                            inputType="number"
-                            label={t("quantity")}
-                            placeholder="0.00"
-                            step="0.01"
-                            error={errors.recipe_ingredients?.[index]?.quantity}
-                            required
-                          />
+                              }}
+                              render={({ field: controllerField }) => (
+                                <Input
+                                  inputType="number"
+                                  label={t("quantity")}
+                                  placeholder="0.00"
+                                  step="1"
+                                  value={controllerField.value ?? ""}
+                                  onChange={(e) => {
+                                    const value = parseFloat(e.target.value);
+                                    controllerField.onChange(
+                                      isNaN(value) ? "" : value,
+                                    );
+                                  }}
+                                  error={
+                                    errors.recipe_ingredients?.[index]?.quantity
+                                  }
+                                  required
+                                />
+                              )}
+                            />
 
-                          <Input
-                            {...register(
-                              `recipe_ingredients.${index}.unit_id` as const,
-                              {
-                                required: "กรุณาเลือกหน่วย",
-                              },
-                            )}
-                            inputType="select"
-                            label={t("unit")}
-                            options={[
-                              ...optionsData.units.map((unit) => ({
-                                value: unit.id,
-                                label: unit.abbreviation_i18n.th,
-                              })),
-                            ]}
-                            error={errors.recipe_ingredients?.[index]?.unit_id}
-                            required
-                          />
+                            <Controller
+                              name={
+                                `recipe_ingredients.${index}.unit_id` as const
+                              }
+                              control={control}
+                              rules={{ required: "กรุณาเลือกวัตถุดิบก่อน" }}
+                              render={({ field: controllerField }) => (
+                                <Input
+                                  inputType="select"
+                                  label={t("unit")}
+                                  options={[
+                                    ...optionsData.units.map((unit) => ({
+                                      value: unit.id,
+                                      label: unit.abbreviation_i18n[locale],
+                                    })),
+                                  ]}
+                                  value={
+                                    controllerField.value ??
+                                    selectedIngredient?.unit_id ??
+                                    ""
+                                  }
+                                  onChange={controllerField.onChange}
+                                  disabled={true}
+                                  error={
+                                    errors.recipe_ingredients?.[index]?.unit_id
+                                  }
+                                />
+                              )}
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => remove(index)}
+                            className="mt-6 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => remove(index)}
-                          className="mt-6 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -264,72 +376,88 @@ export default function AddProductContent() {
               </h3>
               <div className="space-y-4">
                 {priceStockConfig.slice(0, 2).map((field) => (
-                  <Input
+                  <Controller
                     key={field.name}
-                    {...register(
-                      field.name as keyof ProductFormData,
-                      field.rules,
+                    name={field.name as keyof ProductFormData}
+                    control={control}
+                    rules={field.rules as any}
+                    render={({ field: controllerField }) => (
+                      <Input
+                        inputType="number"
+                        label={field.label}
+                        placeholder={field.placeholder}
+                        step="1"
+                        value={(controllerField.value ?? "") as number | ""}
+                        onChange={controllerField.onChange}
+                        onBlur={controllerField.onBlur}
+                        error={
+                          errors[field.name as keyof typeof errors] as
+                            | FieldError
+                            | undefined
+                        }
+                        required={!!field.rules?.required}
+                      />
                     )}
-                    inputType="number"
-                    label={field.label}
-                    placeholder={field.placeholder}
-                    step="0.01"
-                    error={
-                      errors[field.name as keyof typeof errors] as
-                        | FieldError
-                        | undefined
-                    }
-                    required={!!field.rules?.required}
                   />
                 ))}
               </div>
             </div>
 
             {/* Stock */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
-                {t("stock")}
-                {isFinishedGood && (
-                  <span className="text-red-500 ml-1">*</span>
-                )}
-              </h3>
-              <div className="space-y-4">
-                {priceStockConfig.slice(2).map((field) => {
-                  const isRequired = isFinishedGood && 
-                    (field.name === "min_stock_level" || field.name === "current_stock");
-                  
-                  const validationRules = isRequired
-                    ? {
-                        required:
-                          field.name === "min_stock_level"
-                            ? "กรุณาระบุสต็อกขั้นต่ำ"
-                            : field.name === "current_stock"
-                            ? "กรุณาระบุสต็อกปัจจุบัน"
-                            : field.rules?.required,
-                      }
-                    : field.rules;
+            {!isSemiFinished && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">
+                  {t("stock")}
+                  {isFinishedGood && (
+                    <span className="text-red-500 ml-1">*</span>
+                  )}
+                </h3>
+                <div className="space-y-4">
+                  {priceStockConfig.slice(2).map((field) => {
+                    const isRequired =
+                      isFinishedGood &&
+                      (field.name === "min_stock_level" ||
+                        field.name === "current_stock");
 
-                  return (
-                    <Input
-                      key={field.name}
-                      {...register(
-                        field.name as keyof ProductFormData,
-                        validationRules,
-                      )}
-                      inputType="number"
-                      label={field.label}
-                      placeholder={field.placeholder}
-                      error={
-                        errors[field.name as keyof typeof errors] as
-                          | FieldError
-                          | undefined
-                      }
-                      required={isRequired || !!field.rules?.required}
-                    />
-                  );
-                })}
+                    const validationRules = isRequired
+                      ? {
+                          required:
+                            field.name === "min_stock_level"
+                              ? "กรุณาระบุสต็อกขั้นต่ำ"
+                              : field.name === "current_stock"
+                                ? "กรุณาระบุสต็อกปัจจุบัน"
+                                : field.rules?.required,
+                        }
+                      : field.rules;
+
+                    return (
+                      <Controller
+                        key={field.name}
+                        name={field.name as keyof ProductFormData}
+                        control={control}
+                        rules={validationRules as any}
+                        render={({ field: controllerField }) => (
+                          <Input
+                            inputType="number"
+                            label={field.label}
+                            placeholder={field.placeholder}
+                            value={(controllerField.value ?? "") as number | ""}
+                            onChange={controllerField.onChange}
+                            onBlur={controllerField.onBlur}
+                            error={
+                              errors[field.name as keyof typeof errors] as
+                                | FieldError
+                                | undefined
+                            }
+                            required={isRequired || !!field.rules?.required}
+                          />
+                        )}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Settings */}
             {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

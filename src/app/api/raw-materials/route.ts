@@ -70,12 +70,14 @@ export async function GET(request: NextRequest) {
     // Transform to match old raw_materials format
     const items = rawMaterials.map((product) => {
       // Find primary image from ProductMedia relations
-      const primaryProductMedia = product.media?.find((pm: any) => pm.is_primary);
+      const primaryProductMedia = product.media?.find(
+        (pm: any) => pm.is_primary,
+      );
       let primaryImageUrl = primaryProductMedia?.media?.file_path || null;
-      
+
       // Convert backslashes to forward slashes for Next.js Image component
       if (primaryImageUrl) {
-        primaryImageUrl = primaryImageUrl.replace(/\\/g, '/');
+        primaryImageUrl = primaryImageUrl.replace(/\\/g, "/");
       }
 
       return {
@@ -122,8 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    console.log("[API] Received body:", JSON.stringify(body, null, 2));
-    
+
     const {
       code,
       name_i18n,
@@ -137,11 +138,8 @@ export async function POST(request: NextRequest) {
       media_data,
     } = body;
 
-    console.log("[API] Validation check:", { code, name_i18n, unit_id, type_id });
-
     // Validation
     if (!code || !name_i18n || !unit_id || !type_id) {
-      console.log("[API] Validation failed!");
       return NextResponse.json(
         { error: "code, name_i18n, unit_id, and type_id are required" },
         { status: 400 },
@@ -186,12 +184,14 @@ export async function POST(request: NextRequest) {
     if (media_data && Array.isArray(media_data) && media_data.length > 0) {
       // Create ProductMedia relations
       await prisma.productMedia.createMany({
-        data: media_data.map((media: { id: string; isPrimary: boolean; sortOrder: number }) => ({
-          product_id: product.id,
-          media_id: media.id,
-          is_primary: media.isPrimary,
-          sort_order: media.sortOrder,
-        })),
+        data: media_data.map(
+          (media: { id: string; isPrimary: boolean; sortOrder: number }) => ({
+            product_id: product.id,
+            media_id: media.id,
+            is_primary: media.isPrimary,
+            sort_order: media.sortOrder,
+          }),
+        ),
       });
 
       // Update Media records to set entity_type and entity_id

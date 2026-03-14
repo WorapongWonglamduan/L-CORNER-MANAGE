@@ -64,15 +64,6 @@ export function StockAdjustmentModal({
 
   // Production modal for semi_finished products
   if (product.product_type === PRODUCTS_TYPES.SEMI_FINISHED) {
-
-    console.log("Semi-finished modal state:", {
-      quantity,
-      qty,
-      reason,
-      loading,
-      isDisabled: loading || !quantity || parseFloat(quantity) <= 0 || !reason,
-    });
-
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -126,7 +117,9 @@ export function StockAdjustmentModal({
               <>
                 {/* Current Stock */}
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">{t("currentStock")}</p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    {t("currentStock")}
+                  </p>
                   <p className="text-2xl font-bold text-gray-900">
                     {product.current_stock.toLocaleString()}{" "}
                     <span className="text-lg text-gray-500">
@@ -233,7 +226,10 @@ export function StockAdjustmentModal({
                   control={control}
                   rules={{
                     required: t("pleaseEnterQuantity"),
-                    min: { value: 0, message: t("quantityMustBeGreaterThanZero") },
+                    min: {
+                      value: 0,
+                      message: t("quantityMustBeGreaterThanZero"),
+                    },
                   }}
                   render={({ field: { onChange, onBlur, value, ref } }) => (
                     <Input
@@ -248,7 +244,9 @@ export function StockAdjustmentModal({
                       inputType={INPUT_TYPES.NUMBER}
                       placeholder="0"
                       value={value}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange(e)
+                      }
                       onBlur={onBlur}
                       error={errors.quantity}
                       min="0"
@@ -288,7 +286,10 @@ export function StockAdjustmentModal({
                                 {ing.unit?.abbreviation_i18n?.th ||
                                   ing.unit?.abbreviation_i18n?.en}
                               </span>
-                              <span className="text-gray-500"> / {t("perUnit")}</span>
+                              <span className="text-gray-500">
+                                {" "}
+                                / {t("perUnit")}
+                              </span>
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
                               {t("available")}:{" "}
@@ -472,7 +473,10 @@ export function StockAdjustmentModal({
           </button>
         </div>
 
-        <form onSubmit={handleFormSubmit(handleSubmit)} className="p-6 space-y-6">
+        <form
+          onSubmit={handleFormSubmit(handleSubmit)}
+          className="p-6 space-y-6"
+        >
           {/* Current Stock Display */}
           <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
             <div className="flex items-center justify-between">

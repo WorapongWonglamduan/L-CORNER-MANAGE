@@ -336,7 +336,11 @@
       "currentStock": "Current Stock",
       "lowStockAlert": "Low Stock Alert",
       "settings": "Settings",
-      "saveProduct": "Save Product"
+      "saveProduct": "Save Product",
+      "recipeIngredientsRequired": "Please add at least 1 ingredient to the recipe",
+      "createSuccess": "Product created successfully!",
+      "updateSuccess": "Product updated successfully!",
+      "saveError": "Failed to save product"
     },
     "productTypes": {
       "title": "Manage Product Types",

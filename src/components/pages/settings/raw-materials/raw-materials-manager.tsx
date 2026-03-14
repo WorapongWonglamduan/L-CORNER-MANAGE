@@ -97,8 +97,9 @@ export default function RawMaterialsManager() {
                           src={rawMaterial.primary_image_url}
                           alt={rawMaterial.name_i18n.th}
                           fill
-                          className="object-cover"
+                          className="object-contain p-1"
                           sizes="64px"
+                          unoptimized
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">

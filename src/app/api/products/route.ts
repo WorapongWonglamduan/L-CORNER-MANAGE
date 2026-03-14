@@ -102,6 +102,23 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        media: {
+          include: {
+            media: {
+              select: {
+                id: true,
+                file_path: true,
+              },
+            },
+          },
+          where: {
+            is_primary: true,
+          },
+          orderBy: {
+            sort_order: "asc",
+          },
+          take: 1,
+        },
       },
       orderBy: { created_at: "desc" },
     });
@@ -133,9 +150,20 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Get primary image URL and normalize path for Next.js Image
+      let primary_image_url = product.media?.[0]?.media?.file_path || null;
+      if (primary_image_url) {
+        // Convert backslashes to forward slashes and ensure leading slash
+        primary_image_url = primary_image_url.replace(/\\/g, '/');
+        if (!primary_image_url.startsWith('/')) {
+          primary_image_url = '/' + primary_image_url;
+        }
+      }
+
       return {
         ...product,
         available_quantity,
+        primary_image_url,
       };
     });
 
@@ -209,8 +237,8 @@ export async function POST(request: NextRequest) {
       track_stock,
       selling_price,
       cost_price,
-      product_units,
       recipes,
+      media_data,
     } = body;
 
     // Validation
@@ -254,23 +282,6 @@ export async function POST(request: NextRequest) {
           selling_price: selling_price || null,
           cost_price: cost_price || null,
 
-          // Nested create for product_units (if provided)
-          product_units:
-            product_units?.length > 0
-              ? {
-                  create: product_units.map((unit) => ({
-                    unit_id: unit.unit_id,
-                    is_base_unit: unit.is_base_unit ?? false,
-                    is_selling_unit: unit.is_selling_unit ?? true,
-                    is_purchase_unit: unit.is_purchase_unit ?? false,
-                    selling_price: unit.selling_price || null,
-                    cost_price: unit.cost_price || null,
-                    conversion_to_base: unit.conversion_to_base || 1,
-                    barcode: unit.barcode || null,
-                  })),
-                }
-              : undefined,
-
           // Nested create for recipes (if provided)
           recipes:
             recipes?.length > 0
@@ -302,11 +313,6 @@ export async function POST(request: NextRequest) {
           category: true,
           base_unit: true,
           product_type: true,
-          product_units: {
-            include: {
-              unit: true,
-            },
-          },
           recipes: {
             include: {
               ingredients: {
@@ -320,6 +326,30 @@ export async function POST(request: NextRequest) {
         },
       });
     });
+
+    // Create ProductMedia relations if media_data provided
+    if (media_data !== undefined && Array.isArray(media_data) && media_data.length > 0) {
+      await prisma.productMedia.createMany({
+        data: media_data.map((media: { id: string; isPrimary: boolean; sortOrder: number }) => ({
+          product_id: product.id,
+          media_id: media.id,
+          is_primary: media.isPrimary,
+          sort_order: media.sortOrder,
+        })),
+      });
+
+      // Update Media records to set entity_type and entity_id
+      const mediaIds = media_data.map((m: { id: string }) => m.id);
+      await prisma.media.updateMany({
+        where: {
+          id: { in: mediaIds },
+        },
+        data: {
+          entity_type: "product",
+          entity_id: product.id,
+        },
+      });
+    }
 
     return NextResponse.json(product, { status: 201 });
   } catch (error) {

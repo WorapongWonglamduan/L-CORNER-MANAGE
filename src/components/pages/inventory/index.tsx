@@ -226,9 +226,7 @@ export default function InventoryContent() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-600">
-                              {Number(
-                                product.low_stock_threshold,
-                              ).toLocaleString()}
+                              {Number(product.min_stock_level).toLocaleString()}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
