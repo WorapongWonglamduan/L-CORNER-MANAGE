@@ -1,25 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 
 // GET /api/warehouses - ดึงรายการคลังสินค้า
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.view");
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
     const isActive = searchParams.get("isActive");
+    const search = searchParams.get("search") || "";
 
     const where: Prisma.WarehouseWhereInput = {};
 
     if (isActive !== null && isActive !== undefined) {
       where.is_active = isActive === "true";
+    }
+
+    if (search) {
+      where.OR = [
+        { code: { contains: search, mode: "insensitive" } },
+        { name_i18n: { path: ["th"], string_contains: search } },
+        { name_i18n: { path: ["en"], string_contains: search } },
+      ];
     }
 
     const [warehouses, total] = await Promise.all([
@@ -52,9 +61,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.update");
+    if (denied) return denied;
 
     const body = await request.json();
     const { code, name_i18n, address, is_active = true } = body;
@@ -62,6 +70,14 @@ export async function POST(request: NextRequest) {
     if (!code || !name_i18n) {
       return NextResponse.json(
         { error: "Code and name are required" },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.warehouse.findUnique({ where: { code } });
+    if (existing) {
+      return NextResponse.json(
+        { error: "Warehouse code already exists" },
         { status: 400 }
       );
     }

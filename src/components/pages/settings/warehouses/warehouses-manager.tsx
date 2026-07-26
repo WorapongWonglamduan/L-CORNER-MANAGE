@@ -1,0 +1,160 @@
+"use client";
+
+import { Plus, Warehouse as WarehouseIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { SearchInput } from "@/components/ui/search-input";
+import { ActionButtons } from "@/components/ui/action-buttons";
+import { EntityDialog } from "@/components/ui/entity-dialog";
+import { useWarehousesManager } from "./helper";
+import { getWarehouseFormConfig } from "./form/config";
+import { useLocale } from "next-intl";
+import type { Locale } from "@/types/i18n";
+
+export default function WarehousesManager() {
+  const locale = useLocale() as Locale;
+  const {
+    t,
+    table: { items: warehouses, loading },
+    filters: { searchQuery, setSearchQuery },
+    pagination: {
+      filterOptions,
+      totalItems,
+      totalPages,
+      handlePageChange,
+      handlePageSizeChange,
+    },
+    actions: { handleCreate, handleEdit, handleDelete },
+    dialog: {
+      open: dialogOpen,
+      editingItem: editingWarehouse,
+      onClose: handleDialogClose,
+      ConfirmDialog,
+    },
+    form: {
+      control: formControl,
+      handleSubmit: formHandleSubmit,
+      errors: formErrors,
+      loading: formLoading,
+      error: formError,
+      onSubmit: handleFormSubmit,
+    },
+  } = useWarehousesManager();
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t("searchPlaceholder")}
+        />
+        <Button
+          onClick={handleCreate}
+          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {t("addWarehouse")}
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">{t("loading")}</p>
+          </div>
+        </div>
+      ) : warehouses.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+          <WarehouseIcon className="h-16 w-16 text-gray-400 mb-4" />
+          <p className="text-gray-600 text-lg">{t("noData")}</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {warehouses.map((warehouse) => (
+              <div
+                key={warehouse.id}
+                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <span className="inline-block font-mono font-bold text-sm px-2 py-1 rounded-md bg-primary/10 text-primary tracking-wide">
+                      {warehouse.code}
+                    </span>
+                    <h3 className="font-bold text-gray-900 text-base mt-2">
+                      {warehouse.name_i18n[locale]}
+                    </h3>
+                  </div>
+                  <ActionButtons
+                    onEdit={() => handleEdit(warehouse)}
+                    onDelete={() => handleDelete(warehouse.id)}
+                    editTitle={t("edit")}
+                    deleteTitle={t("delete")}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  {warehouse.address && (
+                    <div className="py-2.5">
+                      <span className="text-sm text-gray-600">
+                        {warehouse.address}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">
+                      {t("status")}:
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        warehouse.is_active
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {warehouse.is_active ? t("active") : t("inactive")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {warehouses.length > 0 && (
+            <div className="mt-6">
+              <Pagination
+                currentPage={filterOptions.page}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                itemsPerPage={filterOptions.pageSize}
+                totalItems={totalItems}
+                onItemsPerPageChange={handlePageSizeChange}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      <EntityDialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        title={editingWarehouse ? t("editWarehouse") : t("addWarehouse")}
+        fields={getWarehouseFormConfig(t)}
+        control={formControl}
+        handleSubmit={formHandleSubmit}
+        onSubmit={handleFormSubmit}
+        errors={formErrors}
+        loading={formLoading}
+        error={formError}
+        cancelText={t("cancel")}
+        saveText={t("save")}
+        savingText={t("saving")}
+        maxWidth="2xl"
+      />
+
+      <ConfirmDialog />
+    </div>
+  );
+}
