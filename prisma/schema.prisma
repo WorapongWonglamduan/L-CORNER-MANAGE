@@ -7,17 +7,17 @@ datasource db {
 }
 
 model User {
-  id         String    @id @default(uuid())
-  username   String    @unique
-  email      String    @unique
+  id         String   @id @default(uuid())
+  username   String   @unique
+  email      String   @unique
   password   String
   full_name  String
-  is_active  Boolean   @default(true)
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  user_roles UserRole[]
-  created_sales Sale[] @relation("SaleCreatedBy")
+  user_roles    UserRole[]
+  created_sales Sale[]     @relation("SaleCreatedBy")
 
   @@map("users")
 }
@@ -48,6 +48,7 @@ model UserRole {
   role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, role_id])
+  @@index([role_id])
   @@map("user_roles")
 }
 
@@ -62,9 +63,9 @@ model Unit {
   is_active         Boolean  @default(true)
   created_at        DateTime @default(now())
 
-  products_as_base     Product[]          @relation("BaseUnit")
-  recipe_ingredients   RecipeIngredient[]
-  recipes              Recipe[]           @relation("ServingUnit")
+  products_as_base   Product[]          @relation("BaseUnit")
+  recipe_ingredients RecipeIngredient[]
+  recipes            Recipe[]           @relation("ServingUnit")
 
   @@map("units")
 }
@@ -94,50 +95,50 @@ model Warehouse {
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
 
-  sales              Sale[]
+  sales Sale[]
 
   @@map("warehouses")
 }
 
 model Product {
-  id                  String    @id @default(uuid())
-  code                String    @unique
-  name_i18n           Json
-  description_i18n    Json?
-  category_id         String?
-  product_type_id     String
-  base_unit_id        String
-  image_url           String?   // Deprecated: Use media relation instead
-  is_active           Boolean   @default(true)
-  has_serial          Boolean   @default(false)
-  has_expiry          Boolean   @default(false)
-  
-  // Stock management
-  min_stock_level     Decimal   @default(0) @db.Decimal(15, 4)
-  low_stock_threshold Decimal   @default(0) @db.Decimal(15, 4)
-  current_stock       Decimal   @default(0) @db.Decimal(15, 4)
-  track_stock         Boolean   @default(true)
-  
-  // Pricing (merged from ProductUnit for base unit)
-  selling_price       Decimal?  @db.Decimal(15, 2)
-  cost_price          Decimal?  @db.Decimal(15, 2)
-  
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
-  deleted_at          DateTime?
+  id               String  @id @default(uuid())
+  code             String  @unique
+  name_i18n        Json
+  description_i18n Json?
+  category_id      String?
+  product_type_id  String
+  base_unit_id     String
+  is_active        Boolean @default(true)
+  has_serial       Boolean @default(false)
+  has_expiry       Boolean @default(false)
 
-  category               Category?            @relation(fields: [category_id], references: [id])
-  product_type           ProductType          @relation(fields: [product_type_id], references: [id])
-  base_unit              Unit                 @relation("BaseUnit", fields: [base_unit_id], references: [id])
+  // Stock management
+  min_stock_level     Decimal @default(0) @db.Decimal(15, 4)
+  low_stock_threshold Decimal @default(0) @db.Decimal(15, 4)
+  current_stock       Decimal @default(0) @db.Decimal(15, 4)
+  track_stock         Boolean @default(true)
+
+  // Pricing (merged from ProductUnit for base unit)
+  selling_price Decimal? @db.Decimal(15, 2)
+  cost_price    Decimal? @db.Decimal(15, 2)
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  category               Category?          @relation(fields: [category_id], references: [id])
+  product_type           ProductType        @relation(fields: [product_type_id], references: [id])
+  base_unit              Unit               @relation("BaseUnit", fields: [base_unit_id], references: [id])
   recipes                Recipe[]
-  recipe_ingredients     RecipeIngredient[]   @relation("IngredientProduct")
+  recipe_ingredients     RecipeIngredient[] @relation("IngredientProduct")
   sale_items             SaleItem[]
   media                  ProductMedia[]
-  
+  toppings_as_ingredient Topping[]          @relation("ToppingIngredientProduct")
+  available_toppings     ProductTopping[]
+
   @@index([product_type_id])
   @@index([category_id])
   @@index([is_active])
-
   @@map("products")
 }
 
@@ -158,6 +159,7 @@ model Recipe {
   ingredients  RecipeIngredient[]
   sale_items   SaleItem[]
 
+  @@index([product_id])
   @@map("recipes")
 }
 
@@ -176,10 +178,49 @@ model RecipeIngredient {
   ingredient Product @relation("IngredientProduct", fields: [ingredient_id], references: [id])
   unit       Unit    @relation(fields: [unit_id], references: [id])
 
+  @@index([recipe_id])
+  @@index([ingredient_id])
+  @@index([unit_id])
   @@map("recipe_ingredients")
 }
 
-// Topping, ProductTopping models removed - not used in the system
+// Topping / add-on: only ever attached to SEMI_FINISHED products (drinks). Its
+// stock is deducted from a real ingredient Product at sale time, same as a
+// recipe ingredient, but the ingredient/quantity is fixed per topping rather
+// than per recipe.
+model Topping {
+  id                   String   @id @default(uuid())
+  name_i18n            Json
+  price                Decimal  @db.Decimal(15, 2)
+  ingredient_id        String
+  quantity_per_serving Decimal  @db.Decimal(15, 4)
+  is_active            Boolean  @default(true)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  ingredient         Product           @relation("ToppingIngredientProduct", fields: [ingredient_id], references: [id])
+  available_on       ProductTopping[]
+  sale_item_toppings SaleItemTopping[]
+
+  @@index([ingredient_id])
+  @@map("toppings")
+}
+
+// Which SEMI_FINISHED products may offer which toppings at the POS.
+model ProductTopping {
+  id         String   @id @default(uuid())
+  product_id String
+  topping_id String
+  created_at DateTime @default(now())
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  topping Topping @relation(fields: [topping_id], references: [id], onDelete: Cascade)
+
+  @@unique([product_id, topping_id])
+  @@index([topping_id])
+  @@map("product_toppings")
+}
+
 // Stock, StockTransaction, StockAlert models removed - using Product.current_stock instead
 // Customer model removed - using walk-in sales only
 
@@ -187,7 +228,6 @@ model Sale {
   id              String   @id @default(uuid())
   sale_number     String   @unique
   sale_date       DateTime @default(now())
-  customer_id     String?
   warehouse_id    String
   subtotal        Decimal  @db.Decimal(15, 2)
   discount_amount Decimal  @default(0) @db.Decimal(15, 2)
@@ -201,10 +241,19 @@ model Sale {
   note            String?  @db.Text
   created_at      DateTime @default(now())
 
-  warehouse  Warehouse  @relation(fields: [warehouse_id], references: [id])
-  created_by_user User? @relation("SaleCreatedBy", fields: [created_by], references: [id])
-  items      SaleItem[]
+  // Promotion applied at checkout. `promotion_code` is a snapshot of the code
+  // actually used, kept even if the Promotion is later edited/deactivated.
+  promotion_id   String?
+  promotion_code String?
 
+  warehouse       Warehouse  @relation(fields: [warehouse_id], references: [id])
+  created_by_user User?      @relation("SaleCreatedBy", fields: [created_by], references: [id])
+  promotion       Promotion? @relation(fields: [promotion_id], references: [id])
+  items           SaleItem[]
+
+  @@index([warehouse_id])
+  @@index([created_by])
+  @@index([promotion_id])
   @@map("sales")
 }
 
@@ -223,15 +272,56 @@ model SaleItem {
   note             String?  @db.Text
   created_at       DateTime @default(now())
 
-  sale         Sale              @relation(fields: [sale_id], references: [id])
-  product      Product           @relation(fields: [product_id], references: [id])
-  recipe       Recipe?           @relation(fields: [recipe_id], references: [id])
+  sale     Sale              @relation(fields: [sale_id], references: [id])
+  product  Product           @relation(fields: [product_id], references: [id])
+  recipe   Recipe?           @relation(fields: [recipe_id], references: [id])
+  toppings SaleItemTopping[]
 
+  @@index([sale_id])
+  @@index([product_id])
+  @@index([recipe_id])
   @@map("sale_items")
 }
 
-// SaleItemTopping model removed - not used in the system
+// Toppings actually selected for a given sale item. `unit_price` snapshots the
+// Topping's price at the time of sale so later price edits don't rewrite history.
+model SaleItemTopping {
+  id           String   @id @default(uuid())
+  sale_item_id String
+  topping_id   String
+  quantity     Decimal  @default(1) @db.Decimal(15, 4)
+  unit_price   Decimal  @db.Decimal(15, 2)
+  created_at   DateTime @default(now())
+
+  sale_item SaleItem @relation(fields: [sale_item_id], references: [id], onDelete: Cascade)
+  topping   Topping  @relation(fields: [topping_id], references: [id])
+
+  @@index([sale_item_id])
+  @@index([topping_id])
+  @@map("sale_item_toppings")
+}
+
 // Supplier, PurchaseOrder, PurchaseOrderItem models removed - not using purchase order system
+
+// Promotion code applied at POS checkout. Supports percentage or fixed-amount
+// discounts, an optional usage cap, and an optional expiry date.
+model Promotion {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  name_i18n      Json
+  discount_type  String // "percentage" | "fixed"
+  discount_value Decimal   @db.Decimal(15, 2)
+  max_uses       Int?
+  used_count     Int       @default(0)
+  expires_at     DateTime?
+  is_active      Boolean   @default(true)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  sales Sale[]
+
+  @@map("promotions")
+}
 
 model ProductType {
   id         String   @id @default(uuid())
@@ -244,7 +334,7 @@ model ProductType {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  products      Product[]
+  products Product[]
 
   @@map("product_types")
 }
@@ -253,34 +343,34 @@ model ProductType {
 // Use product_type_id to distinguish between raw materials and finished products
 
 model StockMovement {
-  id                String   @id @default(uuid())
-  product_id        String
-  
+  id         String @id @default(uuid())
+  product_id String
+
   // Movement type: "manual_adjustment", "sale", "purchase", "production", "transfer", "return", "damage", "expired", "count"
-  movement_type     String
-  
+  movement_type String
+
   // Transaction direction: "in" (increase), "out" (decrease)
-  direction         String
-  
+  direction String
+
   // Quantities
-  quantity_before   Decimal  @db.Decimal(15, 4)
-  quantity_change   Decimal  @db.Decimal(15, 4)  // Always positive, direction determines +/-
-  quantity_after    Decimal  @db.Decimal(15, 4)
-  
+  quantity_before Decimal @db.Decimal(15, 4)
+  quantity_change Decimal @db.Decimal(15, 4) // Always positive, direction determines +/-
+  quantity_after  Decimal @db.Decimal(15, 4)
+
   // Reference to source document (optional)
-  reference_type    String?  // "sale", "purchase_order", "production", "transfer", etc.
-  reference_id      String?  // ID of the source document
-  
+  reference_type String? // "sale", "purchase_order", "production", "transfer", etc.
+  reference_id   String? // ID of the source document
+
   // Reason and notes
-  reason_code       String?  // Standardized reason code for reporting
-  reason_text       String   // Human-readable reason
-  note              String?  @db.Text
-  
+  reason_code String? // Standardized reason code for reporting
+  reason_text String // Human-readable reason
+  note        String? @db.Text
+
   // Audit trail
-  created_by        String
-  created_at        DateTime @default(now())
-  transaction_date  DateTime @default(now())
-  
+  created_by       String
+  created_at       DateTime @default(now())
+  transaction_date DateTime @default(now())
+
   @@index([product_id])
   @@index([movement_type])
   @@index([transaction_date])
@@ -290,57 +380,69 @@ model StockMovement {
 
 // Media Management System
 model Media {
-  id              String   @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   // File information
-  filename        String   // Original filename
-  stored_filename String   @unique // UUID-based filename in storage
-  file_path       String   // Relative path: /uploads/2026/03/xxx.jpg
-  file_size       Int      // Size in bytes
-  mime_type       String   // image/jpeg, image/png, etc.
-  
+  filename        String // Original filename
+  stored_filename String @unique // UUID-based filename in storage
+  file_path       String // Relative path: /uploads/2026/03/xxx.jpg
+  file_size       Int // Size in bytes
+  mime_type       String // image/jpeg, image/png, etc.
+
   // Image metadata
-  width           Int?
-  height          Int?
-  alt_text        String?  @db.Text
-  
+  width    Int?
+  height   Int?
+  alt_text String? @db.Text
+
   // Thumbnails
-  thumbnail_path  String?  // Path to thumbnail
-  medium_path     String?  // Path to medium size
-  
+  thumbnail_path String? // Path to thumbnail
+  medium_path    String? // Path to medium size
+
   // Usage tracking
-  entity_type     String?  // "product", "category", "user", etc.
-  entity_id       String?  // ID of the related entity
-  
+  entity_type String? // "product", "category", "user", etc.
+  entity_id   String? // ID of the related entity
+
   // Organization
-  folder          String   @default("general") // Category folder
-  is_public       Boolean  @default(true)
-  
+  folder String @default("general") // Category folder
+
   // Audit
-  uploaded_by     String?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  
+  uploaded_by String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
   // Relations
-  product_images  ProductMedia[]
-  
+  product_images ProductMedia[]
+
   @@index([entity_type, entity_id])
   @@index([created_at])
   @@map("media")
 }
 
 model ProductMedia {
-  id          String   @id @default(uuid())
-  product_id  String
-  media_id    String
-  is_primary  Boolean  @default(false) // รูปหลัก
-  sort_order  Int      @default(0)
-  created_at  DateTime @default(now())
-  
+  id         String   @id @default(uuid())
+  product_id String
+  media_id   String
+  is_primary Boolean  @default(false) // รูปหลัก
+  sort_order Int      @default(0)
+  created_at DateTime @default(now())
+
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
   media   Media   @relation(fields: [media_id], references: [id], onDelete: Cascade)
-  
+
   @@unique([product_id, media_id])
   @@index([product_id, is_primary])
   @@map("product_media")
+}
+
+// Singleton row (always id "singleton") holding shared, org-wide app
+// preferences. Starts with just the selectable theme color; a real
+// key-value settings table would be premature until a second setting exists.
+model AppSettings {
+  id                String   @id @default("singleton")
+  theme_color       String   @default("#213559")
+  theme_color_light String   @default("#2c4a7a")
+  theme_color_dark  String   @default("#1a2844")
+  updated_at        DateTime @updatedAt
+
+  @@map("app_settings")
 }

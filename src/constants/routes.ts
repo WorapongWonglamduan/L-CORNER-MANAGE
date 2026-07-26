@@ -6,6 +6,7 @@ export const ROUTES = {
     LIST: (locale: string) => `/${locale}/products/list`,
     ADD: (locale: string) => `/${locale}/products/add`,
     EDIT: (locale: string, id: string) => `/${locale}/products/edit/${id}`,
+    DETAIL: (locale: string, id: string) => `/${locale}/products/${id}`,
   },
   INVENTORY: (locale: string) => `/${locale}/inventory`,
   SETTINGS: {
@@ -14,6 +15,12 @@ export const ROUTES = {
     CATEGORIES: (locale: string) => `/${locale}/settings/categories`,
     RAW_MATERIALS: (locale: string) => `/${locale}/settings/raw-materials`,
     PRODUCT_TYPES: (locale: string) => `/${locale}/settings/product-types`,
+    TOPPINGS: (locale: string) => `/${locale}/settings/toppings`,
+    PROMOTIONS: (locale: string) => `/${locale}/settings/promotions`,
+    USERS: (locale: string) => `/${locale}/settings/users`,
+    ROLES: (locale: string) => `/${locale}/settings/roles`,
+    WAREHOUSES: (locale: string) => `/${locale}/settings/warehouses`,
+    THEME: (locale: string) => `/${locale}/settings/theme`,
   },
   LOGIN: (locale: string) => `/${locale}/login`,
 } as const;

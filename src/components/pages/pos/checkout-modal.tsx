@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, CreditCard, Banknote } from "lucide-react";
+import { X, CreditCard, Banknote, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PAYMENT_METHODS, PaymentMethod } from "@/constants/payment";
 import { useTranslations } from "next-intl";
@@ -11,7 +11,12 @@ interface CheckoutModalProps {
   onClose: () => void;
   cartTotal: number;
   cartItemCount: number;
-  onConfirm: (paymentMethod: string) => Promise<void>;
+  onConfirm: (paymentMethod: string, promotionCode?: string) => Promise<void>;
+}
+
+interface PromoValidation {
+  code: string;
+  discount_amount: number;
 }
 
 export function CheckoutModal({
@@ -26,26 +31,73 @@ export function CheckoutModal({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHODS.CASH);
   const [amountPaid, setAmountPaid] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [promoValidation, setPromoValidation] = useState<PromoValidation | null>(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
 
-  const change = Number(amountPaid) - cartTotal;
+  const discountedTotal = cartTotal - (promoValidation?.discount_amount || 0);
+  const change = Number(amountPaid) - discountedTotal;
 
-  // Auto-fill amount when modal opens or payment method changes to cash
+  // Auto-fill amount when modal opens, payment method changes to cash, or the
+  // applied discount changes the amount due.
   useEffect(() => {
     if (isOpen && paymentMethod === PAYMENT_METHODS.CASH) {
-      setAmountPaid(cartTotal.toFixed(2));
+      setAmountPaid(discountedTotal.toFixed(2));
     }
-  }, [isOpen, paymentMethod, cartTotal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, paymentMethod, discountedTotal]);
+
+  // Reset promo state whenever the modal is closed.
+  useEffect(() => {
+    if (!isOpen) {
+      setPromoCodeInput("");
+      setPromoValidation(null);
+      setPromoError("");
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
+  const handleApplyPromo = async () => {
+    if (!promoCodeInput.trim()) return;
+    setPromoLoading(true);
+    setPromoError("");
+    try {
+      const response = await fetch("/api/promotions/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoCodeInput.trim(), subtotal: cartTotal }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setPromoError(data.error || t("cannotSave"));
+        setPromoValidation(null);
+        return;
+      }
+      setPromoValidation({ code: data.code, discount_amount: data.discount_amount });
+    } catch (error) {
+      console.error("Promo validation error:", error);
+      setPromoError(t("cannotSave"));
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoValidation(null);
+    setPromoCodeInput("");
+    setPromoError("");
+  };
+
   const handleConfirm = async () => {
-    if (paymentMethod === PAYMENT_METHODS.CASH && Number(amountPaid) < cartTotal) {
+    if (paymentMethod === PAYMENT_METHODS.CASH && Number(amountPaid) < discountedTotal) {
       return;
     }
 
     setIsProcessing(true);
     try {
-      await onConfirm(paymentMethod);
+      await onConfirm(paymentMethod, promoValidation?.code);
       onClose();
       setAmountPaid("");
     } catch (error) {
@@ -56,7 +108,7 @@ export function CheckoutModal({
   };
 
   const quickAmounts = [
-    { label: "Exact", value: Number(cartTotal.toFixed(2)) },
+    { label: "Exact", value: Number(discountedTotal.toFixed(2)) },
     { label: "฿100", value: 100 },
     { label: "฿200", value: 200 },
     { label: "฿500", value: 500 },
@@ -85,10 +137,66 @@ export function CheckoutModal({
               <span>{t("itemCount")}</span>
               <span className="font-semibold">{cartItemCount} {t("items")}</span>
             </div>
-            <div className="border-t border-gray-300 pt-2 flex justify-between text-xl font-bold text-[#213559]">
+            {promoValidation && (
+              <>
+                <div className="flex justify-between text-gray-600">
+                  <span>{t("subtotalBeforeDiscount")}</span>
+                  <span>฿{cartTotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-green-700">
+                  <span>
+                    {t("promoDiscount")} ({promoValidation.code})
+                  </span>
+                  <span>-฿{promoValidation.discount_amount.toLocaleString()}</span>
+                </div>
+              </>
+            )}
+            <div className="border-t border-gray-300 pt-2 flex justify-between text-xl font-bold text-primary">
               <span>{t("total")}</span>
-              <span>฿{cartTotal.toLocaleString()}</span>
+              <span>฿{discountedTotal.toLocaleString()}</span>
             </div>
+          </div>
+
+          {/* Promo Code */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
+              {t("promoCode")}
+            </label>
+            {promoValidation ? (
+              <div className="flex items-center justify-between p-3 rounded-xl bg-green-50 border-2 border-green-200">
+                <div className="flex items-center gap-2 text-green-700 font-semibold">
+                  <Tag className="w-4 h-4" />
+                  {t("promoApplied", { code: promoValidation.code })}
+                </div>
+                <button
+                  onClick={handleRemovePromo}
+                  className="text-sm text-red-600 hover:text-red-700 font-medium"
+                >
+                  {t("removePromo")}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoCodeInput}
+                  onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                  placeholder={t("promoCodePlaceholder")}
+                  className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+                <Button
+                  onClick={handleApplyPromo}
+                  disabled={promoLoading || !promoCodeInput.trim()}
+                  variant="outline"
+                  className="shrink-0"
+                >
+                  {promoLoading ? t("promoApplying") : t("applyPromo")}
+                </Button>
+              </div>
+            )}
+            {promoError && (
+              <p className="mt-2 text-sm text-red-600">{promoError}</p>
+            )}
           </div>
 
           {/* Payment Method */}
@@ -101,18 +209,18 @@ export function CheckoutModal({
                 onClick={() => setPaymentMethod(PAYMENT_METHODS.CASH)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   paymentMethod === PAYMENT_METHODS.CASH
-                    ? "border-[#213559] bg-[#213559]/5"
+                    ? "border-primary bg-primary/5"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
               >
                 <Banknote
                   className={`w-8 h-8 ${
-                    paymentMethod === PAYMENT_METHODS.CASH ? "text-[#213559]" : "text-gray-400"
+                    paymentMethod === PAYMENT_METHODS.CASH ? "text-primary" : "text-gray-400"
                   }`}
                 />
                 <span
                   className={`font-semibold ${
-                    paymentMethod === PAYMENT_METHODS.CASH ? "text-[#213559]" : "text-gray-600"
+                    paymentMethod === PAYMENT_METHODS.CASH ? "text-primary" : "text-gray-600"
                   }`}
                 >
                   {t("cash")}
@@ -123,18 +231,18 @@ export function CheckoutModal({
                 onClick={() => setPaymentMethod(PAYMENT_METHODS.CARD)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   paymentMethod === PAYMENT_METHODS.CARD
-                    ? "border-[#213559] bg-[#213559]/5"
+                    ? "border-primary bg-primary/5"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
               >
                 <CreditCard
                   className={`w-8 h-8 ${
-                    paymentMethod === PAYMENT_METHODS.CARD ? "text-[#213559]" : "text-gray-400"
+                    paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-400"
                   }`}
                 />
                 <span
                   className={`font-semibold ${
-                    paymentMethod === PAYMENT_METHODS.CARD ? "text-[#213559]" : "text-gray-600"
+                    paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-600"
                   }`}
                 >
                   {t("card")}
@@ -154,7 +262,7 @@ export function CheckoutModal({
                 value={amountPaid}
                 onChange={(e) => setAmountPaid(e.target.value)}
                 placeholder="0.00"
-                className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#213559] focus:border-transparent"
+                className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
 
               {/* Quick Amount Buttons */}
@@ -165,7 +273,7 @@ export function CheckoutModal({
                     onClick={() => setAmountPaid(item.value.toString())}
                     className={`px-3 py-2 rounded-lg font-semibold text-sm transition-colors ${
                       index === 0
-                        ? "bg-[#213559] text-white hover:bg-[#2c4a7a]"
+                        ? "bg-primary text-white hover:bg-primary-light"
                         : "bg-gray-100 hover:bg-gray-200 text-gray-900"
                     }`}
                   >
@@ -175,7 +283,7 @@ export function CheckoutModal({
               </div>
 
               {/* Change */}
-              {amountPaid && Number(amountPaid) >= cartTotal && (
+              {amountPaid && Number(amountPaid) >= discountedTotal && (
                 <div className="mt-4 p-4 bg-green-50 rounded-xl">
                   <div className="flex justify-between items-center">
                     <span className="text-green-700 font-semibold">
@@ -191,7 +299,7 @@ export function CheckoutModal({
               {/* Insufficient Amount Warning */}
               {amountPaid &&
                 Number(amountPaid) > 0 &&
-                Number(amountPaid) < cartTotal && (
+                Number(amountPaid) < discountedTotal && (
                   <div className="mt-4 p-4 bg-red-50 rounded-xl">
                     <span className="text-red-700 font-semibold text-sm">
                       {t("insufficientAmount")}
@@ -218,7 +326,7 @@ export function CheckoutModal({
               disabled={
                 isProcessing ||
                 (paymentMethod === "cash" &&
-                  (!amountPaid || Number(amountPaid) < cartTotal))
+                  (!amountPaid || Number(amountPaid) < discountedTotal))
               }
               className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold shadow-lg"
             >

@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { toast } from "@/lib/toast";
+import type { Locale } from "@/types/i18n";
 interface Product {
   id: string;
   code: string;
@@ -39,7 +40,6 @@ interface Product {
   cost_price: number | null;
   available_quantity: number; // คำนวณจาก server-side
   is_active: boolean;
-  image_url: string | null;
   primary_image_url: string | null;
 }
 
@@ -60,17 +60,29 @@ interface Category {
   code: string;
 }
 
-interface CartItem {
+export interface SelectedTopping {
   id: string;
+  name: string;
+  price: number;
+}
+
+export interface CartItem {
+  lineId: string;
+  productId: string;
   name: string;
   price: number;
   quantity: number;
   image?: string;
+  toppings: SelectedTopping[];
+}
+
+function makeLineId(productId: string, toppingIds: string[]) {
+  return `${productId}::${[...toppingIds].sort().join(",")}`;
 }
 
 export function usePOSManager() {
   const t = useTranslations("pos");
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -172,18 +184,21 @@ export function usePOSManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Adds one unit of a product with no toppings selected (the "base" cart
+  // line). Used by the plain +/- controls on the product grid.
   const addToCart = useCallback(
     (productId: string) => {
       const product = products.find((p) => p.id === productId);
       if (!product) return;
 
       const price = product.selling_price || 0;
+      const lineId = makeLineId(productId, []);
 
       setCart((prev) => {
-        const existing = prev.find((item) => item.id === productId);
+        const existing = prev.find((item) => item.lineId === lineId);
         if (existing) {
           return prev.map((item) =>
-            item.id === productId
+            item.lineId === lineId
               ? { ...item, quantity: item.quantity + 1 }
               : item,
           );
@@ -191,11 +206,13 @@ export function usePOSManager() {
         return [
           ...prev,
           {
-            id: productId,
+            lineId,
+            productId,
             name: product.name_i18n.th,
             price: Number(price),
             quantity: 1,
             image: product.primary_image_url || undefined,
+            toppings: [],
           },
         ];
       });
@@ -203,52 +220,141 @@ export function usePOSManager() {
     [products],
   );
 
+  // Adds one unit of a product with a specific topping selection as its own
+  // cart line (merged into a matching line if the same toppings were already
+  // picked for this product). Used by the topping customization modal.
+  const addToppedItemToCart = useCallback(
+    (productId: string, toppings: SelectedTopping[]) => {
+      const product = products.find((p) => p.id === productId);
+      if (!product) return;
+
+      const price = product.selling_price || 0;
+      const lineId = makeLineId(
+        productId,
+        toppings.map((t) => t.id),
+      );
+
+      setCart((prev) => {
+        const existing = prev.find((item) => item.lineId === lineId);
+        if (existing) {
+          return prev.map((item) =>
+            item.lineId === lineId
+              ? { ...item, quantity: item.quantity + 1 }
+              : item,
+          );
+        }
+        return [
+          ...prev,
+          {
+            lineId,
+            productId,
+            name: product.name_i18n.th,
+            price: Number(price),
+            quantity: 1,
+            image: product.primary_image_url || undefined,
+            toppings,
+          },
+        ];
+      });
+    },
+    [products],
+  );
+
+  // Adjusts the quantity of a product's base (no-topping) line. This is what
+  // the product grid's +/- buttons call; customized variants are managed
+  // from the cart panel via updateLineQuantity/removeLineFromCart instead.
   const updateQuantity = useCallback((productId: string, quantity: number) => {
+    const lineId = makeLineId(productId, []);
     if (quantity <= 0) {
-      setCart((prev) => prev.filter((item) => item.id !== productId));
+      setCart((prev) => prev.filter((item) => item.lineId !== lineId));
+    } else {
+      setCart((prev) => {
+        const existing = prev.find((item) => item.lineId === lineId);
+        if (existing) {
+          return prev.map((item) =>
+            item.lineId === lineId ? { ...item, quantity } : item,
+          );
+        }
+        // No base line yet (e.g. the product was only added with toppings
+        // so far) — create one so the grid's + control has something to act on.
+        const product = products.find((p) => p.id === productId);
+        if (!product) return prev;
+        return [
+          ...prev,
+          {
+            lineId,
+            productId,
+            name: product.name_i18n.th,
+            price: Number(product.selling_price) || 0,
+            quantity,
+            image: product.primary_image_url || undefined,
+            toppings: [],
+          },
+        ];
+      });
+    }
+  }, [products]);
+
+  // Adjusts (or removes, at 0) any specific cart line by its lineId —
+  // used by the cart panel, which can target customized variants directly.
+  const updateLineQuantity = useCallback((lineId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setCart((prev) => prev.filter((item) => item.lineId !== lineId));
     } else {
       setCart((prev) =>
         prev.map((item) =>
-          item.id === productId ? { ...item, quantity } : item,
+          item.lineId === lineId ? { ...item, quantity } : item,
         ),
       );
     }
   }, []);
 
-  const removeFromCart = useCallback((productId: string) => {
-    setCart((prev) => prev.filter((item) => item.id !== productId));
+  const removeFromCart = useCallback((lineId: string) => {
+    setCart((prev) => prev.filter((item) => item.lineId !== lineId));
   }, []);
 
   const clearCart = useCallback(() => {
     setCart([]);
   }, []);
 
+  // Quantity of a product's base (no-topping) line — feeds the product
+  // grid's +/- display, matching what those controls actually adjust.
   const getCartItemQuantity = useCallback(
     (productId: string) => {
-      const item = cart.find((item) => item.id === productId);
+      const lineId = makeLineId(productId, []);
+      const item = cart.find((item) => item.lineId === lineId);
       return item?.quantity || 0;
     },
     [cart],
   );
 
-  const cartTotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  const lineTotal = useCallback((item: CartItem) => {
+    const toppingsPricePerUnit = item.toppings.reduce(
+      (sum, t) => sum + t.price,
+      0,
+    );
+    return (item.price + toppingsPricePerUnit) * item.quantity;
+  }, []);
+
+  const cartTotal = cart.reduce((sum, item) => sum + lineTotal(item), 0);
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const checkout = useCallback(
-    async (paymentMethod: string) => {
+    async (paymentMethod: string, promotionCode?: string) => {
       try {
         if (!optionsData.warehouseId) {
           throw new Error("ไม่พบข้อมูลคลังสินค้า กรุณาติดต่อผู้ดูแลระบบ");
         }
 
         const items = cart.map((item) => ({
-          product_id: item.id,
+          product_id: item.productId,
           quantity: item.quantity,
           unit_price: item.price,
+          toppings: item.toppings.map((topping) => ({
+            topping_id: topping.id,
+            quantity: 1,
+          })),
         }));
 
         const response = await fetch("/api/sales", {
@@ -262,6 +368,7 @@ export function usePOSManager() {
             payment_method: paymentMethod,
             discount_amount: 0,
             tax_rate: 0,
+            promotion_code: promotionCode || undefined,
             note: "",
           }),
         });
@@ -294,27 +401,36 @@ export function usePOSManager() {
 
   return {
     t,
-    products,
-    categories: optionsData.productTypes,
-    loading,
-    selectedCategory,
-    setSelectedCategory,
-    searchQuery,
-    setSearchQuery,
-    cart,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-    getCartItemQuantity,
-    cartTotal,
-    cartItemCount,
-    checkout,
     locale,
-    currentPage,
-    setCurrentPage,
-    totalItems,
-    pageSize,
-    setPageSize,
+    catalog: {
+      products,
+      categories: optionsData.productTypes,
+      loading,
+      selectedCategory,
+      setSelectedCategory,
+      searchQuery,
+      setSearchQuery,
+    },
+    cart: {
+      items: cart,
+      addToCart,
+      addToppedItemToCart,
+      updateQuantity,
+      updateLineQuantity,
+      removeFromCart,
+      clearCart,
+      getCartItemQuantity,
+      lineTotal,
+      total: cartTotal,
+      itemCount: cartItemCount,
+    },
+    checkout,
+    pagination: {
+      currentPage,
+      setCurrentPage,
+      totalItems,
+      pageSize,
+      setPageSize,
+    },
   };
 }

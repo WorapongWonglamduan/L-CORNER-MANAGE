@@ -1,16 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { Prisma } from "@prisma/client";
+import type { I18nText, Locale } from "@/types/i18n";
 
-// Helper function to deduct stock based on product type
-async function deductStock(productId: string, quantity: number) {
-  const locale = await getLocale();
-  const t = await getTranslations({ locale, namespace: "sales.errors" });
-  // Get product with its type and recipes
-  const product = await prisma.product.findUnique({
+type TransactionClient = Prisma.TransactionClient;
+
+interface DeductStockContext {
+  saleId: string;
+  createdBy: string | null;
+  locale: Locale;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+}
+
+// Deducts stock for one sale item, based on product type, inside the caller's
+// transaction. Throws (aborting the whole sale transaction) if stock isn't
+// sufficient, and logs a StockMovement row for every quantity changed so the
+// sale is reflected in the audit trail.
+async function deductStock(
+  tx: TransactionClient,
+  productId: string,
+  quantity: number,
+  ctx: DeductStockContext,
+) {
+  const { saleId, createdBy, locale, t } = ctx;
+
+  const product = await tx.product.findUnique({
     where: { id: productId },
     include: {
       product_type: true,
@@ -34,81 +52,174 @@ async function deductStock(productId: string, quantity: number) {
 
   const productType = product.product_type.type;
 
-  // FINISHED_GOOD: Deduct stock from the product itself
-  if (productType === PRODUCTS_TYPES.FINISHED_GOOD) {
-    const currentQty = product?.current_stock || 0;
-    const newQty = Number(currentQty) - quantity;
+  // FINISHED_GOOD / INGREDIENT: Deduct stock from the product itself
+  if (productType !== PRODUCTS_TYPES.SEMI_FINISHED) {
+    const currentQty = Number(product.current_stock) || 0;
+    const newQty = currentQty - quantity;
 
-    // Update stock
-    await prisma.product.update({
+    if (product.track_stock && newQty < 0) {
+      const productName = (product.name_i18n as unknown as I18nText)[locale];
+      throw new Error(
+        t("insufficientStock", {
+          productName,
+          available: currentQty,
+          required: quantity,
+        }),
+      );
+    }
+
+    await tx.product.update({
       where: { id: productId },
       data: { current_stock: newQty },
     });
-  }
-  // SEMI_FINISHED: Deduct stock from ingredients based on recipe
-  else if (productType === PRODUCTS_TYPES.SEMI_FINISHED) {
-    // Step 1: เอา product_id ไป where table recipes หา product_id
-    const recipes = await prisma.recipe.findFirst({
-      where: {
+
+    await tx.stockMovement.create({
+      data: {
         product_id: productId,
-        is_default: true,
-        is_active: true,
+        movement_type: "sale",
+        direction: "out",
+        quantity_before: currentQty,
+        quantity_change: quantity,
+        quantity_after: newQty,
+        reference_type: "sale",
+        reference_id: saleId,
+        reason_code: "sale",
+        reason_text: "ขายสินค้า",
+        created_by: createdBy || "",
       },
     });
+  }
+  // SEMI_FINISHED: Deduct stock from ingredients based on recipe
+  else {
+    const recipe = product.recipes[0];
 
-    if (!recipes) {
-      const productName = product.name_i18n[locale];
+    if (!recipe) {
+      const productName = (product.name_i18n as unknown as I18nText)[locale];
       throw new Error(t("noRecipe", { productName }));
     }
 
-    // Step 2: จะได้ id ของ recipes (ใช้ recipe แรก)
-    const recipeId = recipes.id;
-
-    // Step 3: เอา recipe_id where table recipe_ingredients
-    const recipeIngredients = await prisma.recipeIngredient.findMany({
-      where: {
-        recipe_id: recipeId,
-      },
+    const recipeIngredients = await tx.recipeIngredient.findMany({
+      where: { recipe_id: recipe.id },
+      include: { ingredient: true },
     });
 
     if (recipeIngredients.length === 0) {
-      const productName = product.name_i18n[locale];
+      const productName = (product.name_i18n as unknown as I18nText)[locale];
       throw new Error(t("noRecipe", { productName }));
     }
 
-    // Step 4: จะได้ list มา จากนั้นเอา ingredient_id ไปหา table products.id
+    // Validate every ingredient has enough stock BEFORE deducting any of
+    // them, so a shortage partway through never leaves a partial deduction.
+    for (const ri of recipeIngredients) {
+      if (!ri.ingredient.track_stock) continue;
+      const required = Number(ri.quantity) * quantity;
+      const available = Number(ri.ingredient.current_stock) || 0;
+      if (available - required < 0) {
+        const ingredientName = (ri.ingredient.name_i18n as unknown as I18nText)[
+          locale
+        ];
+        throw new Error(
+          t("insufficientIngredient", { ingredientName, available, required }),
+        );
+      }
+    }
+
     for (const recipeIngredient of recipeIngredients) {
       const ingredientQty = Number(recipeIngredient.quantity) * quantity;
-      const ingredientProductId = recipeIngredient.ingredient_id;
-
-      // Step 5: หา product ของวัตถุดิบเพื่อรู้ current_stock
-      const ingredientProduct = await prisma.product.findUnique({
-        where: { id: ingredientProductId },
-      });
-
-      if (!ingredientProduct) {
-        continue;
-      }
-
-      const currentQty = Number(ingredientProduct.current_stock) || 0;
+      const currentQty = Number(recipeIngredient.ingredient.current_stock) || 0;
       const newQty = currentQty - ingredientQty;
 
-      // Step 6: อัพเดท current_stock ใน table products เลย
-      await prisma.product.update({
-        where: { id: ingredientProductId },
+      await tx.product.update({
+        where: { id: recipeIngredient.ingredient_id },
         data: { current_stock: newQty },
+      });
+
+      await tx.stockMovement.create({
+        data: {
+          product_id: recipeIngredient.ingredient_id,
+          movement_type: "sale",
+          direction: "out",
+          quantity_before: currentQty,
+          quantity_change: ingredientQty,
+          quantity_after: newQty,
+          reference_type: "sale",
+          reference_id: saleId,
+          reason_code: "sale",
+          reason_text: `ใช้เป็นวัตถุดิบสำหรับสูตร: ${(product.name_i18n as unknown as I18nText)[locale]}`,
+          created_by: createdBy || "",
+        },
       });
     }
   }
+}
+
+// Deducts stock for one topping selection (fixed ingredient + quantity_per_serving,
+// scaled by how many servings of the parent item were sold). Same
+// validate-then-deduct-all pattern as deductStock's recipe branch.
+async function deductToppingStock(
+  tx: TransactionClient,
+  toppingId: string,
+  servings: number,
+  ctx: DeductStockContext,
+) {
+  const { saleId, createdBy, locale, t } = ctx;
+
+  const topping = await tx.topping.findUnique({
+    where: { id: toppingId },
+    include: { ingredient: true },
+  });
+
+  if (!topping) {
+    throw new Error(t("productNotFound", { productId: toppingId }));
+  }
+
+  if (!topping.ingredient.track_stock) return;
+
+  const required = Number(topping.quantity_per_serving) * servings;
+  const currentQty = Number(topping.ingredient.current_stock) || 0;
+  const newQty = currentQty - required;
+
+  if (newQty < 0) {
+    const ingredientName = (topping.ingredient.name_i18n as unknown as I18nText)[
+      locale
+    ];
+    throw new Error(
+      t("insufficientIngredient", {
+        ingredientName,
+        available: currentQty,
+        required,
+      }),
+    );
+  }
+
+  await tx.product.update({
+    where: { id: topping.ingredient_id },
+    data: { current_stock: newQty },
+  });
+
+  await tx.stockMovement.create({
+    data: {
+      product_id: topping.ingredient_id,
+      movement_type: "sale",
+      direction: "out",
+      quantity_before: currentQty,
+      quantity_change: required,
+      quantity_after: newQty,
+      reference_type: "sale",
+      reference_id: saleId,
+      reason_code: "sale",
+      reason_text: `ใช้เป็นวัตถุดิบสำหรับ topping: ${(topping.name_i18n as unknown as I18nText)[locale]}`,
+      created_by: createdBy || "",
+    },
+  });
 }
 
 // GET /api/sales - Get all sales with pagination and filters
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "sales.view");
+    if (denied) return denied;
 
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get("page") || "1");
@@ -116,7 +227,6 @@ export async function GET(request: NextRequest) {
     const searchQuery = searchParams.get("searchQuery") || "";
     const status = searchParams.get("status");
     const paymentStatus = searchParams.get("paymentStatus");
-    const customerId = searchParams.get("customerId");
     const warehouseId = searchParams.get("warehouseId");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
@@ -136,10 +246,6 @@ export async function GET(request: NextRequest) {
 
     if (paymentStatus) {
       where.payment_status = paymentStatus;
-    }
-
-    if (customerId) {
-      where.customer_id = customerId;
     }
 
     if (warehouseId) {
@@ -167,6 +273,7 @@ export async function GET(request: NextRequest) {
               full_name: true,
             },
           },
+          promotion: { select: { id: true, code: true, name_i18n: true } },
           items: {
             include: {
               product: {
@@ -176,6 +283,11 @@ export async function GET(request: NextRequest) {
                 },
               },
               recipe: true,
+              toppings: {
+                include: {
+                  topping: { select: { id: true, name_i18n: true } },
+                },
+              },
             },
           },
         },
@@ -201,23 +313,33 @@ export async function GET(request: NextRequest) {
   }
 }
 
+interface ToppingSelection {
+  topping_id: string;
+  quantity?: number;
+}
+
 // POST /api/sales - Create a new sale
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    // Allow POS sales without authentication
-    // if (!session) {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
+    const denied = requirePermission(session, "sales.create");
+    if (denied) return denied;
+
+    const locale = (await getLocale()) as Locale;
+    const t = await getTranslations({ locale, namespace: "sales.errors" });
+    const tPromo = await getTranslations({
+      locale,
+      namespace: "promotions.errors",
+    });
 
     const body = await request.json();
     const {
-      customer_id,
       warehouse_id,
       items,
       discount_amount = 0,
       tax_rate = 0,
       payment_method,
+      promotion_code,
       note,
     } = body;
 
@@ -228,9 +350,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate totals
+    // Calculate totals, resolving each item's product + any selected toppings
     let subtotal = 0;
-    const processedItems = [];
+    const processedItems: {
+      product_id: string;
+      quantity: number;
+      unit_price: number;
+      discount_percent: number;
+      discount_amount: number;
+      total_amount: number;
+      cost_price: number;
+      base_quantity: number;
+      note: string;
+      toppings: { topping_id: string; quantity: number; unit_price: number }[];
+    }[] = [];
 
     for (const item of items) {
       const product = await prisma.product.findUnique({
@@ -251,9 +384,64 @@ export async function POST(request: NextRequest) {
       const quantity = item.quantity || 1;
       const itemSubtotal = unitPrice * quantity;
       const itemDiscountAmount = item.discount_amount || 0;
-      const totalAmount = itemSubtotal - itemDiscountAmount;
 
-      subtotal += itemSubtotal;
+      // Toppings — only ever valid on SEMI_FINISHED products, and only if
+      // actually offered on this specific product via ProductTopping.
+      const toppingSelections: ToppingSelection[] = Array.isArray(item.toppings)
+        ? item.toppings
+        : [];
+      let toppingsTotal = 0;
+      const resolvedToppings: {
+        topping_id: string;
+        quantity: number;
+        unit_price: number;
+      }[] = [];
+
+      if (toppingSelections.length > 0) {
+        if (product.product_type.type !== PRODUCTS_TYPES.SEMI_FINISHED) {
+          return NextResponse.json(
+            { error: "Toppings can only be added to semi-finished products" },
+            { status: 400 },
+          );
+        }
+
+        for (const sel of toppingSelections) {
+          const topping = await prisma.topping.findUnique({
+            where: { id: sel.topping_id },
+            include: { available_on: true },
+          });
+
+          if (!topping || !topping.is_active) {
+            return NextResponse.json(
+              { error: `Topping not found: ${sel.topping_id}` },
+              { status: 404 },
+            );
+          }
+
+          const isOffered = topping.available_on.some(
+            (pt) => pt.product_id === item.product_id,
+          );
+          if (!isOffered) {
+            return NextResponse.json(
+              { error: "This topping is not available for the selected product" },
+              { status: 400 },
+            );
+          }
+
+          const toppingQty = sel.quantity || 1;
+          const toppingPrice = Number(topping.price);
+          toppingsTotal += toppingPrice * toppingQty * quantity;
+          resolvedToppings.push({
+            topping_id: topping.id,
+            quantity: toppingQty * quantity,
+            unit_price: toppingPrice,
+          });
+        }
+      }
+
+      const totalAmount = itemSubtotal + toppingsTotal - itemDiscountAmount;
+
+      subtotal += itemSubtotal + toppingsTotal;
 
       processedItems.push({
         product_id: item.product_id,
@@ -262,13 +450,47 @@ export async function POST(request: NextRequest) {
         discount_percent: item.discount_percent || 0,
         discount_amount: itemDiscountAmount,
         total_amount: totalAmount,
-        cost_price: product.cost_price || 0,
+        cost_price: Number(product.cost_price) || 0,
         base_quantity: quantity,
         note: item.note || "",
+        toppings: resolvedToppings,
       });
     }
 
-    const totalAmount = subtotal - discount_amount;
+    // Resolve promotion code (if any) — re-validated again inside the
+    // transaction right before incrementing used_count.
+    let promotionDiscount = 0;
+    let promotionId: string | null = null;
+    let promotionCodeNormalized: string | null = null;
+
+    if (promotion_code) {
+      promotionCodeNormalized = String(promotion_code).toUpperCase();
+      const promotion = await prisma.promotion.findUnique({
+        where: { code: promotionCodeNormalized },
+      });
+
+      if (!promotion || !promotion.is_active) {
+        return NextResponse.json({ error: tPromo("notFound") }, { status: 400 });
+      }
+      if (promotion.expires_at && promotion.expires_at < new Date()) {
+        return NextResponse.json({ error: tPromo("expired") }, { status: 400 });
+      }
+      if (promotion.max_uses !== null && promotion.used_count >= promotion.max_uses) {
+        return NextResponse.json(
+          { error: tPromo("usageLimitReached") },
+          { status: 400 },
+        );
+      }
+
+      promotionId = promotion.id;
+      promotionDiscount =
+        promotion.discount_type === "percentage"
+          ? (subtotal * Number(promotion.discount_value)) / 100
+          : Math.min(Number(promotion.discount_value), subtotal);
+    }
+
+    const totalDiscount = Number(discount_amount) + promotionDiscount;
+    const totalAmount = subtotal - totalDiscount;
     const taxAmount = 0; // No tax calculation
     const finalTotal = totalAmount;
 
@@ -293,14 +515,33 @@ export async function POST(request: NextRequest) {
 
     // Create sale in transaction
     const newSale = await prisma.$transaction(async (tx) => {
+      // Re-validate the promotion's usage limit inside the transaction and
+      // claim it atomically, so it can't be over-redeemed by a race.
+      if (promotionId) {
+        const promotion = await tx.promotion.findUnique({
+          where: { id: promotionId },
+        });
+        if (
+          !promotion ||
+          !promotion.is_active ||
+          (promotion.expires_at && promotion.expires_at < new Date()) ||
+          (promotion.max_uses !== null && promotion.used_count >= promotion.max_uses)
+        ) {
+          throw new Error(tPromo("usageLimitReached"));
+        }
+        await tx.promotion.update({
+          where: { id: promotionId },
+          data: { used_count: { increment: 1 } },
+        });
+      }
+
       const sale = await tx.sale.create({
         data: {
           sale_number: saleNumber,
           sale_date: new Date(),
-          customer_id,
           warehouse_id,
           subtotal,
-          discount_amount,
+          discount_amount: totalDiscount,
           tax_rate,
           tax_amount: taxAmount,
           total_amount: finalTotal,
@@ -308,9 +549,24 @@ export async function POST(request: NextRequest) {
           payment_status: "paid",
           status: "completed",
           created_by: session?.user?.id || null,
+          promotion_id: promotionId,
+          promotion_code: promotionCodeNormalized,
           note,
           items: {
-            create: processedItems,
+            create: processedItems.map((item) => ({
+              product_id: item.product_id,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              discount_percent: item.discount_percent,
+              discount_amount: item.discount_amount,
+              total_amount: item.total_amount,
+              cost_price: item.cost_price,
+              base_quantity: item.base_quantity,
+              note: item.note,
+              toppings: {
+                create: item.toppings,
+              },
+            })),
           },
         },
         include: {
@@ -326,9 +582,22 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Deduct stock for each item
-      for (const item of sale.items) {
-        await deductStock(item.product_id, Number(item.base_quantity));
+      // Deduct stock for each item (and any toppings on it), inside this same
+      // transaction so a shortage anywhere rolls back the whole sale (no
+      // partial writes, no half-claimed promotion).
+      const deductCtx: DeductStockContext = {
+        saleId: sale.id,
+        createdBy: session?.user?.id || null,
+        locale,
+        t,
+      };
+      for (let i = 0; i < sale.items.length; i++) {
+        const saleItem = sale.items[i];
+        const processed = processedItems[i];
+        await deductStock(tx, saleItem.product_id, Number(saleItem.base_quantity), deductCtx);
+        for (const topping of processed.toppings) {
+          await deductToppingStock(tx, topping.topping_id, topping.quantity, deductCtx);
+        }
       }
 
       return sale;
@@ -345,6 +614,7 @@ export async function POST(request: NextRequest) {
             full_name: true,
           },
         },
+        promotion: { select: { id: true, code: true, name_i18n: true } },
         items: {
           include: {
             product: {
@@ -354,6 +624,11 @@ export async function POST(request: NextRequest) {
               },
             },
             recipe: true,
+            toppings: {
+              include: {
+                topping: { select: { id: true, name_i18n: true } },
+              },
+            },
           },
         },
       },

@@ -7,47 +7,38 @@ import { ProductCard } from "./product-card";
 import { usePOSManager } from "./helper";
 import { Button } from "@/components/ui/button";
 import { CheckoutModal } from "./checkout-modal";
+import { ToppingModal } from "./topping-modal";
 import { toast } from "@/lib/toast";
 import { useTranslations } from "next-intl";
 import { Pagination } from "@/components/ui/pagination";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 export default function POSContent() {
-  const {
-    products,
-    categories,
-    loading,
-    selectedCategory,
-    setSelectedCategory,
-    searchQuery,
-    setSearchQuery,
-    cart,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-    getCartItemQuantity,
-    cartTotal,
-    cartItemCount,
-    checkout,
-    locale,
-    currentPage,
-    setCurrentPage,
-    totalItems,
-    pageSize,
-    setPageSize,
-  } = usePOSManager();
+  const { catalog, cart, checkout, locale, pagination } = usePOSManager();
 
   const t = useTranslations("pos");
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [customizeProduct, setCustomizeProduct] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Reset to page 1 when category, search, or pageSize changes
   useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, searchQuery, pageSize, setCurrentPage]);
+    pagination.setCurrentPage(1);
+  }, [
+    catalog.selectedCategory,
+    catalog.searchQuery,
+    pagination.pageSize,
+    pagination.setCurrentPage,
+  ]);
 
-  const handleCheckout = async (paymentMethod: string) => {
+  const handleCheckout = async (
+    paymentMethod: string,
+    promotionCode?: string,
+  ) => {
     try {
-      await checkout(paymentMethod);
+      await checkout(paymentMethod, promotionCode);
       setIsCheckoutModalOpen(false);
     } catch (error) {
       const errorMessage =
@@ -57,38 +48,38 @@ export default function POSContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex overflow-hidden">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
         {/* Left Sidebar - Categories */}
-        <div className="lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto">
-          <div className="p-4 border-b border-gray-200">
+        <div className="xl:w-56 bg-white border-b xl:border-b-0 xl:border-r border-gray-200 overflow-y-auto">
+          <div className="p-4 pt-16 md:pt-4 border-b border-gray-200">
             <h2 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-              <Grid3x3 className="w-5 h-5 text-[#213559]" />
+              <Grid3x3 className="w-5 h-5 text-primary" />
               {t("categories")}
             </h2>
           </div>
 
-          <div className="p-2 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible">
+          <div className="p-2 flex xl:flex-col gap-2 overflow-x-auto xl:overflow-x-visible">
             <button
-              onClick={() => setSelectedCategory(null)}
-              className={`whitespace-nowrap lg:w-full text-left px-4 py-3 rounded-lg transition-all ${
-                selectedCategory === null
-                  ? "bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg"
+              onClick={() => catalog.setSelectedCategory(null)}
+              className={`shrink-0 whitespace-nowrap xl:w-full text-left px-4 py-3 rounded-lg transition-all ${
+                catalog.selectedCategory === null
+                  ? "bg-gradient-to-r from-primary to-primary-light text-white shadow-lg"
                   : "hover:bg-gray-100 text-gray-700"
               }`}
             >
               <span className="font-medium">{t("allCategories")}</span>
             </button>
 
-            {categories.map((category) => (
+            {catalog.categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`whitespace-nowrap lg:w-full text-left px-4 py-3 rounded-lg transition-all ${
-                  selectedCategory === category.id
-                    ? "bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg"
+                onClick={() => catalog.setSelectedCategory(category.id)}
+                className={`shrink-0 whitespace-nowrap xl:w-full text-left px-4 py-3 rounded-lg transition-all ${
+                  catalog.selectedCategory === category.id
+                    ? "bg-gradient-to-r from-primary to-primary-light text-white shadow-lg"
                     : "hover:bg-gray-100 text-gray-700"
                 }`}
               >
@@ -102,30 +93,30 @@ export default function POSContent() {
 
         {/* Main Content - Products */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-4 lg:p-6 pb-24 lg:pb-6">
+          <div className="p-4 lg:p-6 pb-28 xl:pb-6">
             {/* Search Bar */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <div className="relative max-w-2xl">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder={t("searchPlaceholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#213559] focus:border-transparent shadow-sm"
+                  value={catalog.searchQuery}
+                  onChange={(e) => catalog.setSearchQuery(e.target.value)}
+                  className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 text-base sm:text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm"
                 />
               </div>
             </div>
 
             {/* Products Grid */}
-            {loading ? (
+            {catalog.loading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#213559] mx-auto mb-4"></div>
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4"></div>
                   <p className="text-gray-600 text-lg">{t("loading")}</p>
                 </div>
               </div>
-            ) : products.length === 0 ? (
+            ) : catalog.products.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                   <ShoppingCart className="h-12 w-12 text-gray-400" />
@@ -134,8 +125,10 @@ export default function POSContent() {
               </div>
             ) : (
               <>
-                <div className="grid  xl:grid-cols-4 2xl:grid-cols-4 gap-4">
-                  {products.map((product) => {
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+                  {catalog.products.map((product) => {
+                    const isCustomizable =
+                      product.product_type?.type === PRODUCTS_TYPES.SEMI_FINISHED;
                     return (
                       <ProductCard
                         key={product.id}
@@ -145,9 +138,18 @@ export default function POSContent() {
                         image={product.primary_image_url || undefined}
                         category={product.category?.name_i18n[locale]}
                         stock={product.available_quantity || 0}
-                        onAdd={addToCart}
-                        quantity={getCartItemQuantity(product.id)}
-                        onQuantityChange={updateQuantity}
+                        onAdd={(id) => {
+                          if (isCustomizable) {
+                            setCustomizeProduct({
+                              id,
+                              name: product.name_i18n[locale],
+                            });
+                          } else {
+                            cart.addToCart(id);
+                          }
+                        }}
+                        quantity={cart.getCartItemQuantity(product.id)}
+                        onQuantityChange={cart.updateQuantity}
                       />
                     );
                   })}
@@ -156,12 +158,14 @@ export default function POSContent() {
                 {/* Pagination */}
                 <div className="mt-6">
                   <Pagination
-                    currentPage={currentPage}
-                    totalPages={Math.ceil(totalItems / pageSize)}
-                    onPageChange={setCurrentPage}
-                    itemsPerPage={pageSize}
-                    totalItems={totalItems}
-                    onItemsPerPageChange={setPageSize}
+                    currentPage={pagination.currentPage}
+                    totalPages={Math.ceil(
+                      pagination.totalItems / pagination.pageSize,
+                    )}
+                    onPageChange={pagination.setCurrentPage}
+                    itemsPerPage={pagination.pageSize}
+                    totalItems={pagination.totalItems}
+                    onItemsPerPageChange={pagination.setPageSize}
                   />
                 </div>
               </>
@@ -170,16 +174,16 @@ export default function POSContent() {
         </div>
 
         {/* Right Sidebar - Cart (Desktop) */}
-        <div className="hidden lg:flex lg:w-96 bg-white border-l border-gray-200 flex-col">
+        <div className="hidden xl:flex xl:w-80 bg-white border-l border-gray-200 flex-col">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-bold text-xl text-gray-900 flex items-center gap-2">
-                <ShoppingCart className="w-6 h-6 text-[#213559]" />
+                <ShoppingCart className="w-6 h-6 text-primary" />
                 {t("cart")}
               </h2>
-              {cart.length > 0 && (
+              {cart.items.length > 0 && (
                 <button
-                  onClick={clearCart}
+                  onClick={cart.clearCart}
                   className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
                   title={t("clearCart")}
                 >
@@ -188,30 +192,39 @@ export default function POSContent() {
               )}
             </div>
             <p className="text-gray-500 text-sm">
-              {cartItemCount} {t("items")}
+              {cart.itemCount} {t("items")}
             </p>
           </div>
 
           {/* Cart Items */}
           <div className="flex-1 overflow-y-auto p-4">
-            {cart.length === 0 ? (
+            {cart.items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <ShoppingCart className="w-16 h-16 mb-4" />
                 <p className="text-center">{t("emptyCart")}</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {cart.map((item) => (
+                {cart.items.map((item) => (
                   <div
-                    key={item.id}
+                    key={item.lineId}
                     className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900 flex-1 pr-2">
-                        {item.name}
-                      </h3>
+                      <div className="flex-1 pr-2">
+                        <h3 className="font-semibold text-gray-900">
+                          {item.name}
+                        </h3>
+                        {item.toppings.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {t("toppingsSummary", {
+                              names: item.toppings.map((tp) => tp.name).join(", "),
+                            })}
+                          </p>
+                        )}
+                      </div>
                       <button
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => cart.removeFromCart(item.lineId)}
                         className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
                       >
                         <X className="w-4 h-4" />
@@ -222,7 +235,7 @@ export default function POSContent() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() =>
-                            updateQuantity(item.id, item.quantity - 1)
+                            cart.updateLineQuantity(item.lineId, item.quantity - 1)
                           }
                           className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                         >
@@ -233,7 +246,7 @@ export default function POSContent() {
                         </span>
                         <button
                           onClick={() =>
-                            updateQuantity(item.id, item.quantity + 1)
+                            cart.updateLineQuantity(item.lineId, item.quantity + 1)
                           }
                           className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                         >
@@ -243,10 +256,15 @@ export default function POSContent() {
 
                       <div className="text-right">
                         <p className="text-sm text-gray-500">
-                          ฿{item.price.toLocaleString()} x {item.quantity}
+                          ฿
+                          {(
+                            item.price +
+                            item.toppings.reduce((sum, tp) => sum + tp.price, 0)
+                          ).toLocaleString()}{" "}
+                          x {item.quantity}
                         </p>
-                        <p className="font-bold text-[#213559]">
-                          ฿{(item.price * item.quantity).toLocaleString()}
+                        <p className="font-bold text-primary">
+                          ฿{cart.lineTotal(item).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -257,13 +275,13 @@ export default function POSContent() {
           </div>
 
           {/* Cart Summary */}
-          {cart.length > 0 && (
+          {cart.items.length > 0 && (
             <div className="border-t border-gray-200 p-6 bg-gray-50">
               <div className="space-y-3 mb-4">
                 <div className="border-t border-gray-300 pt-3 flex justify-between text-xl font-bold text-gray-900">
                   <span>{t("total")}</span>
-                  <span className="text-[#213559]">
-                    ฿{cartTotal.toLocaleString()}
+                  <span className="text-primary">
+                    ฿{cart.total.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -280,18 +298,18 @@ export default function POSContent() {
       </div>
 
       {/* Mobile Cart Bar (Bottom) */}
-      {cart.length > 0 && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-2xl z-50">
+      {cart.items.length > 0 && (
+        <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-2xl z-50">
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <ShoppingCart className="w-5 h-5 text-[#213559]" />
+                <ShoppingCart className="w-5 h-5 text-primary" />
                 <span className="font-bold text-gray-900">
-                  {cartItemCount} {t("items")}
+                  {cart.itemCount} {t("items")}
                 </span>
               </div>
-              <div className="text-xl font-bold text-[#213559]">
-                ฿{cartTotal.toLocaleString()}
+              <div className="text-xl font-bold text-primary">
+                ฿{cart.total.toLocaleString()}
               </div>
             </div>
             <Button
@@ -308,9 +326,23 @@ export default function POSContent() {
       <CheckoutModal
         isOpen={isCheckoutModalOpen}
         onClose={() => setIsCheckoutModalOpen(false)}
-        cartTotal={cartTotal}
-        cartItemCount={cartItemCount}
+        cartTotal={cart.total}
+        cartItemCount={cart.itemCount}
         onConfirm={handleCheckout}
+      />
+
+      {/* Topping Customization Modal */}
+      <ToppingModal
+        isOpen={customizeProduct !== null}
+        onClose={() => setCustomizeProduct(null)}
+        productId={customizeProduct?.id ?? null}
+        productName={customizeProduct?.name ?? ""}
+        locale={locale}
+        onConfirm={(toppings) => {
+          if (customizeProduct) {
+            cart.addToppedItemToCart(customizeProduct.id, toppings);
+          }
+        }}
       />
     </div>
   );
