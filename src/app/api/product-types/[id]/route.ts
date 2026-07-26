@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 
 // GET /api/product-types/[id] - ดึงข้อมูลประเภทสินค้าตาม ID
 export async function GET(
@@ -9,9 +10,8 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.view");
+    if (denied) return denied;
 
     const { id } = await params;
 
@@ -48,9 +48,8 @@ export async function PUT(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.update");
+    if (denied) return denied;
 
     const { id } = await params;
     const body = await request.json();
@@ -119,9 +118,8 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.update");
+    if (denied) return denied;
 
     const { id } = await params;
 

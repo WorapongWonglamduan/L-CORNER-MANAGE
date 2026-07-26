@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
+import type { RecipeInput } from "@/types/product-request";
 
 // GET /api/products/[id] - ดึงข้อมูลสินค้าตาม ID
 export async function GET(
@@ -9,9 +12,8 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.view");
+    if (denied) return denied;
 
     const { id } = await params;
 
@@ -74,9 +76,8 @@ export async function PUT(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.update");
+    if (denied) return denied;
 
     const { id } = await params;
     const body = await request.json();
@@ -87,7 +88,6 @@ export async function PUT(
       category_id,
       product_type_id,
       base_unit_id,
-      image_url,
       is_active,
       has_serial,
       has_expiry,
@@ -124,10 +124,29 @@ export async function PUT(
       }
     }
 
+    // Recipes only ever make sense for SEMI_FINISHED products. Determine the
+    // *new* type being saved so a type change away from semi_finished always
+    // cleans up any existing recipe, regardless of whether the request body
+    // happened to include a `recipes` payload (previously, omitting it left
+    // orphaned recipes attached to a now-non-semi_finished product).
+    const newProductType = await prisma.productType.findUnique({
+      where: { id: product_type_id },
+    });
+    const isSemiFinished =
+      newProductType?.type === PRODUCTS_TYPES.SEMI_FINISHED;
+
+    if (!isSemiFinished && recipes && recipes.length > 0) {
+      return NextResponse.json(
+        { error: "Only semi-finished products can have recipes" },
+        { status: 400 },
+      );
+    }
+
     // Use transaction to update product and recipes
     const product = await prisma.$transaction(async (tx) => {
-      // Delete existing recipes if new recipes are provided
-      if (recipes !== undefined) {
+      // Replace recipes when: the product is no longer semi_finished (always
+      // clear stale recipes), or new recipes were explicitly provided.
+      if (!isSemiFinished || recipes !== undefined) {
         // First, delete all recipe ingredients for this product's recipes
         await tx.recipeIngredient.deleteMany({
           where: {
@@ -153,7 +172,6 @@ export async function PUT(
           category_id: category_id || null,
           product_type_id,
           base_unit_id,
-          image_url: image_url || null,
           is_active,
           has_serial,
           has_expiry,
@@ -164,11 +182,12 @@ export async function PUT(
           selling_price: selling_price ?? undefined,
           cost_price: cost_price ?? undefined,
 
-          // Create new recipes if provided
+          // Create new recipes if provided (only ever valid when semi_finished,
+          // enforced above)
           recipes:
-            recipes?.length > 0
+            isSemiFinished && recipes?.length > 0
               ? {
-                  create: recipes.map((recipe) => ({
+                  create: recipes.map((recipe: RecipeInput) => ({
                     name_i18n: recipe.name_i18n,
                     is_default: recipe.is_default ?? true,
                     serving_qty: recipe.serving_qty || 1,
@@ -176,7 +195,7 @@ export async function PUT(
 
                     // Nested create for recipe ingredients
                     ingredients:
-                      recipe.ingredients?.length > 0
+                      recipe.ingredients && recipe.ingredients.length > 0
                         ? {
                             create: recipe.ingredients.map((ing) => ({
                               ingredient_id: ing.ingredient_id,
@@ -258,9 +277,8 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.delete");
+    if (denied) return denied;
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);

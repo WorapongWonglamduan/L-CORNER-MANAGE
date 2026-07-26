@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 
 // DELETE /api/recipes/[id] - ลบ recipe
 export async function DELETE(
@@ -9,9 +10,8 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.update");
+    if (denied) return denied;
 
     const { id } = await params;
 

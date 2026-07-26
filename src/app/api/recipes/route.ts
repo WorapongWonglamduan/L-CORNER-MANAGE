@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
+import { Prisma } from "@prisma/client";
 
 // GET /api/recipes - ดึงข้อมูล recipes
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.view");
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("product_id");
     const includeIngredients = searchParams.get("include_ingredients") === "true";
 
-    const where: any = {
+    const where: Prisma.RecipeWhereInput = {
       is_active: true,
     };
 
@@ -84,9 +85,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.update");
+    if (denied) return denied;
 
     const body = await request.json();
     const {

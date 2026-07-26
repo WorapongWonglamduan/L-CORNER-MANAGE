@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { MOVEMENT_DIRECTIONS } from "@/constants/inventory";
+import type { I18nText } from "@/types/i18n";
 
 // POST /api/production - สร้างรายการผลิตสินค้า semi_finished
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "inventory.adjust");
+    if (denied) return denied;
 
     const body = await request.json();
     const { product_id, quantity, reason, note } = body;
@@ -65,6 +66,10 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const productName = product.name_i18n as unknown as I18nText;
+    const baseUnitAbbr = product.base_unit.abbreviation_i18n as unknown as I18nText;
+    const recipeName = recipe.name_i18n as unknown as I18nText;
 
     // คำนวณวัตถุดิบที่ต้องใช้
     const requiredIngredients = recipe.ingredients.map((ing) => ({
@@ -123,11 +128,11 @@ export async function POST(request: NextRequest) {
             quantity_after: ingredientBefore - requiredQty,
             reason_text: reason || "ใช้ในการผลิต",
             note: note
-              ? `${note} (ผลิต ${product.name_i18n["th"] || product.name_i18n["en"]} ${quantity} ${product.base_unit.abbreviation_i18n["th"] || product.base_unit.abbreviation_i18n["en"]})`
-              : `ผลิต ${product.name_i18n["th"] || product.name_i18n["en"]} ${quantity} ${product.base_unit.abbreviation_i18n["th"] || product.base_unit.abbreviation_i18n["en"]}`,
+              ? `${note} (ผลิต ${productName.th || productName.en} ${quantity} ${baseUnitAbbr.th || baseUnitAbbr.en})`
+              : `ผลิต ${productName.th || productName.en} ${quantity} ${baseUnitAbbr.th || baseUnitAbbr.en}`,
             reference_type: "production",
             reference_id: product_id,
-            created_by: session.user?.id || "system",
+            created_by: session?.user?.id || "system",
           },
         });
 
@@ -155,10 +160,10 @@ export async function POST(request: NextRequest) {
           quantity_change: quantity,
           quantity_after: productBefore + quantity,
           reason_text: reason || "ผลิตสินค้า",
-          note: note || `ผลิตจากสูตร ${recipe.name_i18n["th"] || recipe.name_i18n["en"]}`,
+          note: note || `ผลิตจากสูตร ${recipeName.th || recipeName.en}`,
           reference_type: "production",
           reference_id: recipe.id,
-          created_by: session.user?.id || "system",
+          created_by: session?.user?.id || "system",
         },
       });
 

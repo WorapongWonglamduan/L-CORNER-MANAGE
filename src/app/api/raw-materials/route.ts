@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 // GET /api/raw-materials - ดึงรายการวัตถุดิบทั้งหมด (จาก products table)
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.view");
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     const items = rawMaterials.map((product) => {
       // Find primary image from ProductMedia relations
       const primaryProductMedia = product.media?.find(
-        (pm: any) => pm.is_primary,
+        (pm) => pm.is_primary,
       );
       let primaryImageUrl = primaryProductMedia?.media?.file_path || null;
 
@@ -119,9 +119,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.create");
+    if (denied) return denied;
 
     const body = await request.json();
 

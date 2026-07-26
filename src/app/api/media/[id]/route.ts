@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { requirePermission } from '@/lib/permissions'
 import { deleteImage } from '@/lib/image-upload'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const media = await prisma.media.findUnique({
       where: { id },
@@ -39,12 +43,8 @@ export async function DELETE(
   try {
     // Check authentication
     const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const denied = requirePermission(session, 'products.update')
+    if (denied) return denied
 
     const { id } = await params
     const media = await prisma.media.findUnique({

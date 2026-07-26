@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 
 // GET /api/categories - ดึงรายการหมวดหมู่ทั้งหมด
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.view");
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -66,9 +65,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.update");
+    if (denied) return denied;
 
     const body = await request.json();
     const { name_i18n, parent_id, sort_order, is_active } = body;

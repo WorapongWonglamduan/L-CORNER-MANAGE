@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
+import type { RecipeInput } from "@/types/product-request";
 
 // GET /api/products - ดึงรายการสินค้าทั้งหมด
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.view");
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -215,9 +216,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "products.create");
+    if (denied) return denied;
 
     const body = await request.json();
     const {
@@ -227,7 +227,6 @@ export async function POST(request: NextRequest) {
       category_id,
       product_type_id,
       base_unit_id,
-      image_url,
       is_active,
       has_serial,
       has_expiry,
@@ -261,6 +260,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Recipes only ever make sense for SEMI_FINISHED products.
+    if (recipes && recipes.length > 0) {
+      const newProductType = await prisma.productType.findUnique({
+        where: { id: product_type_id },
+      });
+      if (newProductType?.type !== PRODUCTS_TYPES.SEMI_FINISHED) {
+        return NextResponse.json(
+          { error: "Only semi-finished products can have recipes" },
+          { status: 400 },
+        );
+      }
+    }
+
     // Use transaction to create product with nested relations
     const product = await prisma.$transaction(async (tx) => {
       return await tx.product.create({
@@ -271,7 +283,6 @@ export async function POST(request: NextRequest) {
           category_id: category_id || null,
           product_type_id,
           base_unit_id,
-          image_url: image_url || null,
           is_active: is_active ?? true,
           has_serial: has_serial ?? false,
           has_expiry: has_expiry ?? false,
@@ -286,7 +297,7 @@ export async function POST(request: NextRequest) {
           recipes:
             recipes?.length > 0
               ? {
-                  create: recipes.map((recipe) => ({
+                  create: recipes.map((recipe: RecipeInput) => ({
                     name_i18n: recipe.name_i18n,
                     is_default: recipe.is_default ?? true,
                     serving_qty: recipe.serving_qty || 1,
@@ -294,7 +305,7 @@ export async function POST(request: NextRequest) {
 
                     // Nested create for recipe ingredients
                     ingredients:
-                      recipe.ingredients?.length > 0
+                      recipe.ingredients && recipe.ingredients.length > 0
                         ? {
                             create: recipe.ingredients.map((ing) => ({
                               ingredient_id: ing.ingredient_id,

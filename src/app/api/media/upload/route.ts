@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { requirePermission } from '@/lib/permissions'
 import { uploadImage, ImageUploadError } from '@/lib/image-upload'
 import { prisma } from '@/lib/prisma'
 
@@ -7,12 +8,8 @@ export async function POST(request: NextRequest) {
   try {
     // Check authentication
     const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const denied = requirePermission(session, 'products.create')
+    if (denied) return denied
 
     // Get form data
     const formData = await request.formData()
@@ -52,7 +49,7 @@ export async function POST(request: NextRequest) {
         entity_id: entityId,
         folder,
         alt_text: altText,
-        uploaded_by: session.user.id,
+        uploaded_by: session?.user?.id,
       },
     })
 

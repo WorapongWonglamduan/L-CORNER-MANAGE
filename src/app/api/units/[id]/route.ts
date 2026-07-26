@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 
 // GET /api/units/[id] - ดึงข้อมูลหน่วยตาม ID
 export async function GET(
@@ -9,9 +10,8 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.view");
+    if (denied) return denied;
 
     const { id } = await params;
 
@@ -40,9 +40,8 @@ export async function PUT(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.update");
+    if (denied) return denied;
 
     const { id } = await params;
     const body = await request.json();
@@ -86,9 +85,8 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.update");
+    if (denied) return denied;
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -101,9 +99,7 @@ export async function DELETE(
         _count: {
           select: {
             products_as_base: true,
-            product_units: true,
             recipe_ingredients: true,
-            toppings: true,
           },
         },
       },
@@ -115,35 +111,25 @@ export async function DELETE(
 
     // Hard delete - check for relations first
     if (hardDelete) {
-      const hasRelations = 
-        existingUnit._count.products_as_base > 0 || 
-        existingUnit._count.product_units > 0 ||
-        existingUnit._count.recipe_ingredients > 0 ||
-        existingUnit._count.toppings > 0;
+      const hasRelations =
+        existingUnit._count.products_as_base > 0 ||
+        existingUnit._count.recipe_ingredients > 0;
 
       if (hasRelations) {
         const errors = [];
         if (existingUnit._count.products_as_base > 0) {
           errors.push(`${existingUnit._count.products_as_base} products (as base unit)`);
         }
-        if (existingUnit._count.product_units > 0) {
-          errors.push(`${existingUnit._count.product_units} product units`);
-        }
         if (existingUnit._count.recipe_ingredients > 0) {
           errors.push(`${existingUnit._count.recipe_ingredients} recipe ingredients`);
         }
-        if (existingUnit._count.toppings > 0) {
-          errors.push(`${existingUnit._count.toppings} toppings`);
-        }
 
         return NextResponse.json(
-          { 
+          {
             error: `Cannot delete unit with existing: ${errors.join(", ")}`,
             details: {
               products_as_base: existingUnit._count.products_as_base,
-              product_units: existingUnit._count.product_units,
               recipe_ingredients: existingUnit._count.recipe_ingredients,
-              toppings: existingUnit._count.toppings,
             },
           },
           { status: 400 }

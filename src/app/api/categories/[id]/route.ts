@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 
 // GET /api/categories/[id] - ดึงข้อมูลหมวดหมู่ตาม ID
 export async function GET(
@@ -9,9 +10,8 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.view");
+    if (denied) return denied;
 
     const { id } = await params;
 
@@ -48,9 +48,8 @@ export async function PUT(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.update");
+    if (denied) return denied;
 
     const { id } = await params;
     const body = await request.json();
@@ -66,6 +65,32 @@ export async function PUT(
         { error: "Category not found" },
         { status: 404 }
       );
+    }
+
+    // Reject a parent assignment that would create a cycle (self or one of
+    // its own descendants), walking up the chain from the proposed parent.
+    if (parent_id) {
+      if (parent_id === id) {
+        return NextResponse.json(
+          { error: "A category cannot be its own parent" },
+          { status: 400 }
+        );
+      }
+      let ancestorId: string | null = parent_id;
+      while (ancestorId) {
+        if (ancestorId === id) {
+          return NextResponse.json(
+            { error: "Cannot assign a descendant category as the parent" },
+            { status: 400 }
+          );
+        }
+        const ancestor: { parent_id: string | null } | null =
+          await prisma.category.findUnique({
+            where: { id: ancestorId },
+            select: { parent_id: true },
+          });
+        ancestorId = ancestor?.parent_id ?? null;
+      }
     }
 
     const category = await prisma.category.update({
@@ -95,9 +120,8 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "settings.update");
+    if (denied) return denied;
 
     const { id } = await params;
 
@@ -106,9 +130,8 @@ export async function DELETE(
       where: { id },
       include: {
         _count: {
-          select: { 
+          select: {
             products: true,
-            toppings: true,
             children: true,
           },
         },
@@ -126,14 +149,6 @@ export async function DELETE(
     if (category._count.products > 0) {
       return NextResponse.json(
         { error: `Cannot delete category with existing products (${category._count.products} products)` },
-        { status: 400 }
-      );
-    }
-
-    // Check if category has toppings
-    if (category._count.toppings > 0) {
-      return NextResponse.json(
-        { error: `Cannot delete category with existing toppings (${category._count.toppings} toppings)` },
         { status: 400 }
       );
     }

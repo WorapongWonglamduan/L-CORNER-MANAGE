@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 import { unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -9,6 +11,10 @@ import path from "path";
  * DELETE /api/media/cleanup
  */
 export async function DELETE() {
+  const session = await auth();
+  const denied = requirePermission(session, "settings.update");
+  if (denied) return denied;
+
   try {
     console.log("🔍 Finding orphan media records...");
 

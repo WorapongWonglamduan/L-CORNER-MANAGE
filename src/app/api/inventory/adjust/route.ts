@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requirePermission } from "@/lib/permissions";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "inventory.adjust");
+    if (denied) return denied;
 
     const body = await request.json();
     const { 
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           note: note || null,
           reference_type: reference_type || null,
           reference_id: reference_id || null,
-          created_by: session.user?.id || "",
+          created_by: session?.user?.id || "",
           transaction_date: new Date(),
         },
       });
