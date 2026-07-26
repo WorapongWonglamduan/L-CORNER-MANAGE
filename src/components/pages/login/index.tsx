@@ -51,7 +51,7 @@ export default function LoginPageContent() {
 
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-white/50 backdrop-blur-sm">
         <div className="w-full max-w-md">
-          <div className="absolute top-4 right-4 sm:top-8 sm:right-8">
+          <div className="flex justify-end mb-4">
             <LanguageSwitcher />
           </div>
 
