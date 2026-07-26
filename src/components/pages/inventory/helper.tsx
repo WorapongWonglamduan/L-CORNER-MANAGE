@@ -1,36 +1,25 @@
 import { useLocale } from "next-intl";
 import { useEntityList } from "@/hooks/useEntityList";
 import { FilterOptions } from "@/hooks/usePagination";
+import type { I18nText, Locale } from "@/types/i18n";
 
-interface Product {
+export interface Product {
   id: string;
   code: string;
-  name_i18n: {
-    th: string;
-    en: string;
-  };
+  name_i18n: I18nText;
   current_stock: string;
   min_stock_level: string;
   low_stock_threshold: string;
   track_stock: boolean;
   base_unit: {
     id: string;
-    name_i18n: {
-      th: string;
-      en: string;
-    };
-    abbreviation_i18n: {
-      th: string;
-      en: string;
-    };
+    name_i18n: I18nText;
+    abbreviation_i18n: I18nText;
   };
   product_type: {
     id: string;
     type: string;
-    name_i18n: {
-      th: string;
-      en: string;
-    };
+    name_i18n: I18nText;
   };
 }
 
@@ -41,7 +30,7 @@ interface InventoryFilterOptions extends FilterOptions {
 }
 
 export function useInventoryManager() {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
 
   const {
     items: products,
@@ -104,18 +93,22 @@ export function useInventoryManager() {
   return {
     products,
     loading,
-    searchQuery: filterOptions.search || "",
-    setSearchQuery: handleSearchChange,
-    typeFilter: filterOptions.type || "",
-    setTypeFilter,
-    statusFilter: filterOptions.stockStatus || "",
-    setStatusFilter,
-    page: filterOptions.page,
-    pageSize: filterOptions.pageSize,
-    totalPages,
-    totalItems,
-    setPage: handlePageChange,
-    setPageSize: handlePageSizeChange,
+    filters: {
+      search: filterOptions.search || "",
+      setSearch: handleSearchChange,
+      type: filterOptions.type || "",
+      setType: setTypeFilter,
+      status: filterOptions.stockStatus || "",
+      setStatus: setStatusFilter,
+    },
+    pagination: {
+      page: filterOptions.page,
+      pageSize: filterOptions.pageSize,
+      totalPages,
+      totalItems,
+      setPage: handlePageChange,
+      setPageSize: handlePageSizeChange,
+    },
     locale,
     refetch,
     getStockStatus,

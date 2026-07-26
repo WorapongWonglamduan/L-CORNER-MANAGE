@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useConfirm } from "@/hooks/useConfirm";
+import { toast } from "@/lib/toast";
 
 interface Sale {
   id: string;
   sale_number: string;
   sale_date: string;
-  customer_id: string | null;
   warehouse_id: string;
   subtotal: string;
   discount_amount: string;
@@ -77,6 +78,8 @@ interface SaleItem {
 
 export function useSalesManager() {
   const locale = useLocale();
+  const t = useTranslations("sales");
+  const { confirm, ConfirmDialog } = useConfirm();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -132,22 +135,59 @@ export function useSalesManager() {
     setPage(1);
   }, [searchQuery, startDate, endDate]);
 
+  const handleVoid = async (sale: Sale) => {
+    const confirmed = await confirm({
+      title: t("voidConfirmTitle"),
+      description: t("voidConfirmDesc", { saleNumber: sale.sale_number }),
+      confirmText: t("voidSale"),
+      cancelText: "ยกเลิก",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/sales/${sale.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to void sale");
+      }
+      toast.success(t("voidSuccess"));
+      fetchSales();
+    } catch (error) {
+      console.error("Error voiding sale:", error);
+      toast.error(t("voidError"));
+    }
+  };
+
   return {
-    sales,
-    loading,
-    searchQuery,
-    setSearchQuery,
-    startDate,
-    setStartDate,
-    endDate,
-    setEndDate,
-    page,
-    pageSize,
-    totalPages,
-    totalItems,
-    setPage,
-    setPageSize,
-    locale,
-    refetch: fetchSales,
+    table: {
+      sales,
+      loading,
+      locale,
+    },
+    filters: {
+      searchQuery,
+      setSearchQuery,
+      startDate,
+      setStartDate,
+      endDate,
+      setEndDate,
+    },
+    pagination: {
+      page,
+      pageSize,
+      totalPages,
+      totalItems,
+      setPage,
+      setPageSize,
+    },
+    actions: {
+      refetch: fetchSales,
+      handleVoid,
+    },
+    modal: {
+      ConfirmDialog,
+    },
   };
 }

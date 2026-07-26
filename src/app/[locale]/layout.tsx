@@ -2,6 +2,8 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { setRequestLocale } from 'next-intl/server'
 import { ToastProvider } from '@/components/ui/toast-provider'
+import { SessionProvider } from 'next-auth/react'
+import { auth } from '@/auth'
 
 const locales = ['th', 'en']
 
@@ -19,11 +21,14 @@ export default async function LocaleLayout({
   const { locale } = await params
   setRequestLocale(locale)
   const messages = await getMessages()
+  const session = await auth()
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      {children}
-      <ToastProvider />
+      <SessionProvider session={session}>
+        {children}
+        <ToastProvider />
+      </SessionProvider>
     </NextIntlClientProvider>
   )
 }

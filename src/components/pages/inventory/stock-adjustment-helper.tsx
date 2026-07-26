@@ -8,6 +8,7 @@ import {
   getStockAdjustmentFormConfig,
   StockAdjustmentFormData,
 } from "./stock-adjustment-config";
+import type { I18nText } from "@/types/i18n";
 
 interface Product {
   id: string;
@@ -16,6 +17,31 @@ interface Product {
   current_stock: number;
   unit: string;
   product_type: string;
+}
+
+export interface RecipeIngredient {
+  id: string;
+  quantity: number | string;
+  ingredient?: {
+    name_i18n?: I18nText;
+    code?: string;
+    current_stock?: number | string;
+  };
+  unit?: {
+    abbreviation_i18n?: I18nText;
+  };
+}
+
+export interface Recipe {
+  id: string;
+  name_i18n: I18nText;
+  ingredients: RecipeIngredient[];
+}
+
+interface InsufficientIngredient {
+  name: I18nText;
+  required: number;
+  available: number;
 }
 
 interface UseStockAdjustmentProps {
@@ -35,7 +61,7 @@ export const useStockAdjustment = ({
     ADJUSTMENT_TYPES.IN,
   );
   const [loading, setLoading] = useState(false);
-  const [recipe, setRecipe] = useState(null);
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loadingRecipe, setLoadingRecipe] = useState(false);
 
   const t = useTranslations("inventory.adjustment");
@@ -143,7 +169,7 @@ export const useStockAdjustment = ({
 
         if (!response.ok) {
           if (data.insufficient) {
-            const insufficientList = data.insufficient
+            const insufficientList = (data.insufficient as InsufficientIngredient[])
               .map(
                 (ing) =>
                   `${ing.name.th || ing.name.en}: ต้องการ ${ing.required} มีอยู่ ${ing.available}`,

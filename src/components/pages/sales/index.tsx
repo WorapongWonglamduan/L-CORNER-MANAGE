@@ -2,33 +2,32 @@
 
 import { useState } from "react";
 import { Sidebar } from "@/components/sidebar";
-import { Search, Eye, X } from "lucide-react";
+import { Search, Eye, Ban, X } from "lucide-react";
 import { useSalesManager } from "./helper";
 import { Button } from "@/components/ui/button";
 import { SalesDetailsModal } from "./sales-details-modal";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/pagination";
+import { usePermission } from "@/hooks/usePermission";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 
 export default function SalesContent() {
+  const { table, filters, pagination, actions, modal } = useSalesManager();
+  const { sales, loading, locale } = table;
   const {
-    sales,
-    loading,
     searchQuery,
     setSearchQuery,
     startDate,
     setStartDate,
     endDate,
     setEndDate,
-    page,
-    pageSize,
-    totalPages,
-    totalItems,
-    setPage,
-    setPageSize,
-    locale,
-  } = useSalesManager();
+  } = filters;
+  const { page, pageSize, totalPages, totalItems, setPage, setPageSize } =
+    pagination;
+  const { handleVoid } = actions;
+  const { ConfirmDialog } = modal;
+  const canVoid = usePermission("sales.void");
 
   const t = useTranslations("sales");
   const tCommon = useTranslations("common");
@@ -93,10 +92,10 @@ export default function SalesContent() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
       <Sidebar />
 
-      <div className="flex-1 px-4 py-8 overflow-auto">
+      <div className="flex-1 px-4 pt-20 pb-8 md:py-8 overflow-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             {t("title")}
           </h1>
           <p className="text-gray-600">{tCommon("manageYourData")}</p>
@@ -113,7 +112,7 @@ export default function SalesContent() {
                 placeholder={t("search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#213559] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
 
@@ -186,7 +185,7 @@ export default function SalesContent() {
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#213559] mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="text-gray-600">{t("loading")}</p>
               </div>
             </div>
@@ -282,15 +281,28 @@ export default function SalesContent() {
                           {getStatusBadge(sale.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <Button
-                            onClick={() => handleViewDetails(sale)}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2"
-                          >
-                            <Eye className="w-4 h-4" />
-                            {t("viewDetails")}
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={() => handleViewDetails(sale)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              {t("viewDetails")}
+                            </Button>
+                            {canVoid && sale.status !== "cancelled" && (
+                              <Button
+                                onClick={() => handleVoid(sale)}
+                                variant="destructive"
+                                size="sm"
+                                className="flex items-center gap-2"
+                              >
+                                <Ban className="w-4 h-4" />
+                                {t("voidSale")}
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -321,6 +333,8 @@ export default function SalesContent() {
           locale={locale}
         />
       )}
+
+      <ConfirmDialog />
     </div>
   );
 }

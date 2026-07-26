@@ -149,8 +149,8 @@ export function SalesDetailsModal({
             <h3 className="text-lg font-bold text-gray-900 mb-4">
               {t("items")} ({sale.items?.length || 0})
             </h3>
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <table className="w-full">
+            <div className="border border-gray-200 rounded-lg overflow-x-auto">
+              <table className="w-full min-w-125">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
@@ -224,7 +224,7 @@ export function SalesDetailsModal({
                 </div>
               )}
 
-              <div className="border-t border-gray-300 pt-3 flex justify-between text-xl font-bold text-[#213559]">
+              <div className="border-t border-gray-300 pt-3 flex justify-between text-xl font-bold text-primary">
                 <span>{t("grandTotal")}</span>
                 <span>฿{Number(sale.total_amount).toLocaleString()}</span>
               </div>
@@ -246,7 +246,7 @@ export function SalesDetailsModal({
         <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
           <Button
             onClick={onClose}
-            className="w-full bg-[#213559] hover:bg-[#2c4a7a] text-white py-3 text-lg font-semibold"
+            className="w-full bg-primary hover:bg-primary-light text-white py-3 text-lg font-semibold"
           >
             Close
           </Button>

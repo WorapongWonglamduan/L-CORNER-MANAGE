@@ -10,23 +10,23 @@ import { StockAdjustmentModal } from "./stock-adjustment-modal";
 import { StockHistoryModal } from "./stock-history-modal";
 import { Pagination } from "@/components/ui/pagination";
 import { useTranslations } from "next-intl";
+import type { Product } from "./helper";
+
+interface SelectedProduct {
+  id: string;
+  name: string;
+  code: string;
+  current_stock: number;
+  unit: string;
+  product_type: string;
+}
 
 export default function InventoryContent() {
   const {
     products,
     loading,
-    searchQuery,
-    setSearchQuery,
-    typeFilter,
-    setTypeFilter,
-    statusFilter,
-    setStatusFilter,
-    page,
-    pageSize,
-    totalPages,
-    totalItems,
-    setPage,
-    setPageSize,
+    filters,
+    pagination,
     refetch,
     getStockStatus,
     locale,
@@ -35,11 +35,11 @@ export default function InventoryContent() {
   const t = useTranslations("inventory");
   const tCommon = useTranslations("common");
 
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState<SelectedProduct | null>(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-  const handleAdjustStock = useCallback((product) => {
+  const handleAdjustStock = useCallback((product: Product) => {
     setSelectedProduct({
       id: product.id,
       name: product.name_i18n[locale],
@@ -51,7 +51,7 @@ export default function InventoryContent() {
     setIsStockModalOpen(true);
   }, [locale]);
 
-  const handleViewHistory = useCallback((product) => {
+  const handleViewHistory = useCallback((product: Product) => {
     setSelectedProduct({
       id: product.id,
       name: product.name_i18n[locale],
@@ -67,10 +67,10 @@ export default function InventoryContent() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
       <Sidebar />
 
-      <div className="flex-1 px-4 py-8 overflow-auto">
+      <div className="flex-1 px-4 pt-20 pb-8 md:py-8 overflow-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             {t("title")}
           </h1>
           <p className="text-gray-600">{tCommon("manageYourData")}</p>
@@ -83,15 +83,15 @@ export default function InventoryContent() {
             <Input
               inputType={INPUT_TYPES.TEXT}
               placeholder={tCommon("search")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={filters.search}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => filters.setSearch(e.target.value)}
             />
 
             {/* Type Filter */}
             <Input
               inputType={INPUT_TYPES.SELECT}
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              value={filters.type}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => filters.setType(e.target.value)}
               options={[
                 { value: "ingredient", label: t("rawMaterial") },
                 { value: "finished_good", label: t("finishedGood") },
@@ -102,8 +102,8 @@ export default function InventoryContent() {
             {/* Status Filter */}
             <Input
               inputType={INPUT_TYPES.SELECT}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={filters.status}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => filters.setStatus(e.target.value)}
               options={[
                 { value: "low", label: t("lowStock") },
                 { value: "out", label: t("outOfStock") },
@@ -118,7 +118,7 @@ export default function InventoryContent() {
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#213559] mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="text-gray-600">{tCommon("loading")}</p>
               </div>
             </div>
@@ -268,12 +268,12 @@ export default function InventoryContent() {
 
               {/* Pagination */}
               <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-                itemsPerPage={pageSize}
-                totalItems={totalItems}
-                onItemsPerPageChange={setPageSize}
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={pagination.setPage}
+                itemsPerPage={pagination.pageSize}
+                totalItems={pagination.totalItems}
+                onItemsPerPageChange={pagination.setPageSize}
               />
             </>
           )}
