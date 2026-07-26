@@ -59,7 +59,7 @@ export function Pagination({
         <select
           value={itemsPerPage}
           onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-          className="px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#213559]"
+          className="px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value={5}>5</option>
           <option value={10}>10</option>
@@ -93,10 +93,10 @@ export function Pagination({
               disabled={page === "..."}
               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                 page === currentPage
-                  ? "bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-md"
+                  ? "bg-gradient-to-r from-primary to-primary-light text-white shadow-md"
                   : page === "..."
                   ? "cursor-default text-gray-400"
-                  : "hover:bg-[#213559]/10 text-gray-700"
+                  : "hover:bg-primary/10 text-gray-700"
               }`}
             >
               {page}

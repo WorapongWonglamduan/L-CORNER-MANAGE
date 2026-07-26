@@ -49,13 +49,13 @@ export default function LoginPageContent() {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-8 bg-white/50 backdrop-blur-sm">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-white/50 backdrop-blur-sm">
         <div className="w-full max-w-md">
-          <div className="absolute top-8 right-8">
+          <div className="absolute top-4 right-4 sm:top-8 sm:right-8">
             <LanguageSwitcher />
           </div>
-          
-          <div className={`bg-white ${theme.rounded.xl} ${theme.shadows['2xl']} p-8 ${theme.borders.medium}`}>
+
+          <div className={`bg-white ${theme.rounded.xl} ${theme.shadows['2xl']} p-6 sm:p-8 ${theme.borders.medium}`}>
             <LoginForm />
           </div>
 

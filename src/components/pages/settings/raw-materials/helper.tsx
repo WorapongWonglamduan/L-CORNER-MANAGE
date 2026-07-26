@@ -252,7 +252,7 @@ export function useRawMaterialsManager() {
     transformToForm: (rawMaterial) => {
       // Convert existing images from server to ImageFile format
       const existingImages: ImageFile[] =
-        rawMaterial.images?.map((img: any) => ({
+        rawMaterial.images?.map((img: { id: string; url: string; isPrimary: boolean }) => ({
           id: img.id,
           preview: img.url, // Use server URL as preview
           isPrimary: img.isPrimary,
@@ -282,31 +282,43 @@ export function useRawMaterialsManager() {
 
   return {
     t,
-    rawMaterials,
-    units: optionsData.units,
-    productTypes: optionsData.productTypes,
-    dataLoading,
-    loading,
-    searchQuery: filterOptions.search || "",
-    setSearchQuery: handleSearchChange,
-    dialogOpen,
-    editingRawMaterial,
-    filterOptions,
-    totalItems,
-    totalPages,
-    handleCreate,
-    handleEdit,
-    handleDelete: (id: string) => handleDelete(id, t("confirmDelete")),
-    handleDialogClose,
-    handleFormSubmit,
-    handlePageChange,
-    handlePageSizeChange,
-    formControl: control,
-    formHandleSubmit: handleSubmit,
-    formWatch: watch,
-    formErrors: errors,
-    formLoading,
-    formError,
-    ConfirmDialog,
+    table: {
+      items: rawMaterials,
+      loading,
+    },
+    filters: {
+      searchQuery: filterOptions.search || "",
+      setSearchQuery: handleSearchChange,
+    },
+    pagination: {
+      filterOptions,
+      totalItems,
+      totalPages,
+      handlePageChange,
+      handlePageSizeChange,
+    },
+    actions: {
+      handleCreate,
+      handleEdit,
+      handleDelete: (id: string) => handleDelete(id, t("confirmDelete")),
+    },
+    dialog: {
+      open: dialogOpen,
+      editingItem: editingRawMaterial,
+      onClose: handleDialogClose,
+      ConfirmDialog,
+    },
+    form: {
+      control,
+      handleSubmit,
+      watch,
+      errors,
+      loading: formLoading,
+      error: formError,
+      onSubmit: handleFormSubmit,
+      dataLoading,
+      units: optionsData.units,
+      productTypes: optionsData.productTypes,
+    },
   };
 }

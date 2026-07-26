@@ -1,5 +1,5 @@
 import { FieldConfig } from "@/components/ui/FormBuilder";
-import { ProductTypeFormData } from "./helper";
+import { ProductTypeFormData } from "../helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 
 export const getProductTypeFormConfig = (

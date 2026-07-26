@@ -186,12 +186,18 @@ export const useDashboard = () => {
 
   return {
     t,
-    loading,
-    refreshing,
-    statsCards,
-    quickActions,
-    handleQuickAction,
-    handleRefresh,
-    dashboardData,
+    status: {
+      loading,
+      refreshing,
+    },
+    stats: {
+      statsCards,
+      dashboardData,
+    },
+    actions: {
+      quickActions,
+      handleQuickAction,
+      handleRefresh,
+    },
   };
 };

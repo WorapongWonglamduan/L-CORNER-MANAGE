@@ -16,31 +16,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
 import { useProductForm, type ProductFormData } from "./helper";
 import { getProductFormConfig, getPriceStockConfig } from "./config";
-import { FieldError, Controller } from "react-hook-form";
+import { FieldError, Controller, RegisterOptions } from "react-hook-form";
 import { INPUT_TYPES } from "@/constants/input-types";
+import type { Locale } from "@/types/i18n";
 
 export default function AddProductContent() {
   const router = useRouter();
   const params = useParams();
-  const locale = params.locale as string;
+  const locale = params.locale as Locale;
   const t = useTranslations("settings.products");
 
   const {
-    handleSubmit,
-    control,
-    watch,
-    setValue,
-    errors,
-    loading,
-    dataLoading,
+    form: { handleSubmit, control, watch, setValue, errors, onSubmit },
+    loading: { loading, dataLoading },
     optionsData,
-    fields,
-    append,
-    remove,
-    isSemiFinished,
-    isFinishedGood,
-    onSubmit,
-    isEdit,
+    recipeFields: { fields, append, remove },
+    flags: { isSemiFinished, isFinishedGood, isEdit },
     handleProductTypeChange,
   } = useProductForm();
 
@@ -60,7 +51,7 @@ export default function AddProductContent() {
         <Sidebar />
         <div className="flex-1 flex items-center justify-center py-20">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#213559] mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600 text-lg">{t("loadingUnits")}</p>
           </div>
         </div>
@@ -72,21 +63,21 @@ export default function AddProductContent() {
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
 
-      <div className="flex-1 p-6 lg:p-8 overflow-auto">
+      <div className="flex-1 p-6 pt-20 md:pt-6 lg:p-8 overflow-auto">
         <button
           onClick={() => router.push(`/${locale}/products/list`)}
-          className="flex items-center gap-2 text-gray-600 hover:text-[#213559] mb-6 transition-colors group"
+          className="flex items-center gap-2 text-gray-600 hover:text-primary mb-6 transition-colors group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           <span className="font-medium">กลับไปรายการสินค้า</span>
         </button>
 
         <div className="flex items-center gap-4 mb-8">
-          <div className="w-14 h-14 bg-[#213559] rounded-xl flex items-center justify-center">
+          <div className="w-14 h-14 bg-primary rounded-xl flex items-center justify-center">
             <Package className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[#213559]">
+            <h1 className="text-3xl font-bold text-primary">
               {isEdit ? t("editProduct") : t("addNewProduct")}
             </h1>
             <p className="text-gray-600 mt-1">
@@ -104,7 +95,7 @@ export default function AddProductContent() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                  <Package className="w-5 h-5 text-[#213559]" />
+                  <Package className="w-5 h-5 text-primary" />
                 </div>
                 <h2 className="text-lg font-bold text-gray-900">
                   {t("basicInfo")}
@@ -124,7 +115,13 @@ export default function AddProductContent() {
                           <Input
                             inputType={INPUT_TYPES.MULTI_IMAGE_UPLOAD}
                             label={field.label}
-                            {...(controllerField as any)}
+                            // Input's public prop type is a union of native HTML input attrs and
+                            // doesn't model MULTI_IMAGE_UPLOAD's real ImageFile[] shape (Input.tsx
+                            // re-casts it internally too) — cast through unknown at this one boundary.
+                            value={controllerField.value as unknown as string[]}
+                            onChange={
+                              controllerField.onChange as unknown as React.ChangeEventHandler<HTMLInputElement>
+                            }
                             error={errors.images as FieldError | undefined}
                             containerClassName={field.gridCols || ""}
                             required={!!field.rules?.required}
@@ -141,7 +138,7 @@ export default function AddProductContent() {
                         key={field.name}
                         name="product_type_id"
                         control={control}
-                        rules={field.rules as any}
+                        rules={field.rules as RegisterOptions<ProductFormData, "product_type_id">}
                         render={({ field: controllerField }) => (
                           <Input
                             inputType={field.type}
@@ -149,7 +146,7 @@ export default function AddProductContent() {
                             placeholder={field.placeholder}
                             options={field.options}
                             value={controllerField.value}
-                            onChange={(e) => {
+                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                               handleProductTypeChange(e.target.value);
                             }}
                             error={
@@ -169,7 +166,7 @@ export default function AddProductContent() {
                       key={field.name}
                       name={field.name as keyof ProductFormData}
                       control={control}
-                      rules={field.rules as any}
+                      rules={field.rules as RegisterOptions<ProductFormData, keyof ProductFormData>}
                       render={({ field: controllerField }) => (
                         <Input
                           inputType={field.type}
@@ -201,7 +198,7 @@ export default function AddProductContent() {
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                      <ChefHat className="w-5 h-5 text-[#213559]" />
+                      <ChefHat className="w-5 h-5 text-primary" />
                     </div>
                     <div>
                       <h2 className="text-lg font-bold text-gray-900">
@@ -217,7 +214,7 @@ export default function AddProductContent() {
                     onClick={() =>
                       append({ ingredient_id: "", quantity: 0, unit_id: "" })
                     }
-                    className="bg-[#213559] hover:bg-[#1a2a47] text-white"
+                    className="bg-primary hover:bg-[#1a2a47] text-white"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t("addIngredient")}
@@ -262,7 +259,7 @@ export default function AddProductContent() {
                                     })),
                                   ]}
                                   value={controllerField.value ?? ""}
-                                  onChange={(e) => {
+                                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                     const newIngredientId = e.target.value;
                                     controllerField.onChange(newIngredientId);
 
@@ -306,7 +303,7 @@ export default function AddProductContent() {
                                   placeholder="0.00"
                                   step="1"
                                   value={controllerField.value ?? ""}
-                                  onChange={(e) => {
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                     const value = parseFloat(e.target.value);
                                     controllerField.onChange(
                                       isNaN(value) ? "" : value,
@@ -380,7 +377,7 @@ export default function AddProductContent() {
                     key={field.name}
                     name={field.name as keyof ProductFormData}
                     control={control}
-                    rules={field.rules as any}
+                    rules={field.rules as RegisterOptions<ProductFormData, keyof ProductFormData>}
                     render={({ field: controllerField }) => (
                       <Input
                         inputType="number"
@@ -435,7 +432,7 @@ export default function AddProductContent() {
                         key={field.name}
                         name={field.name as keyof ProductFormData}
                         control={control}
-                        rules={validationRules as any}
+                        rules={validationRules as RegisterOptions<ProductFormData, keyof ProductFormData>}
                         render={({ field: controllerField }) => (
                           <Input
                             inputType="number"
@@ -487,7 +484,7 @@ export default function AddProductContent() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full py-6 text-lg bg-[#213559] hover:bg-[#1a2a47] text-white shadow-lg"
+              className="w-full py-6 text-lg bg-primary hover:bg-[#1a2a47] text-white shadow-lg"
             >
               {loading ? (
                 <>

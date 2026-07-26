@@ -8,38 +8,41 @@ import { SearchInput } from "@/components/ui/search-input";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useRawMaterialsManager } from "./helper";
-import { getRawMaterialFormConfig } from "./config";
+import { getRawMaterialFormConfig } from "./form/config";
 import { useLocale } from "next-intl";
+import type { Locale } from "@/types/i18n";
 
 export default function RawMaterialsManager() {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
   const {
     t,
-    rawMaterials,
-    units,
-    productTypes,
-    dataLoading,
-    loading,
-    searchQuery,
-    setSearchQuery,
-    dialogOpen,
-    editingRawMaterial,
-    filterOptions,
-    totalItems,
-    totalPages,
-    handleCreate,
-    handleEdit,
-    handleDelete,
-    handleDialogClose,
-    handleFormSubmit,
-    handlePageChange,
-    handlePageSizeChange,
-    formControl,
-    formHandleSubmit,
-    formErrors,
-    formLoading,
-    formError,
-    ConfirmDialog,
+    table: { items: rawMaterials, loading },
+    filters: { searchQuery, setSearchQuery },
+    pagination: {
+      filterOptions,
+      totalItems,
+      totalPages,
+      handlePageChange,
+      handlePageSizeChange,
+    },
+    actions: { handleCreate, handleEdit, handleDelete },
+    dialog: {
+      open: dialogOpen,
+      editingItem: editingRawMaterial,
+      onClose: handleDialogClose,
+      ConfirmDialog,
+    },
+    form: {
+      control: formControl,
+      handleSubmit: formHandleSubmit,
+      errors: formErrors,
+      loading: formLoading,
+      error: formError,
+      onSubmit: handleFormSubmit,
+      dataLoading,
+      units,
+      productTypes,
+    },
   } = useRawMaterialsManager();
 
   const getTypeLabel = (
@@ -62,7 +65,7 @@ export default function RawMaterialsManager() {
         />
         <Button
           onClick={handleCreate}
-          className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
+          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
         >
           <Plus className="h-4 w-4 mr-2" />
           {t("addRawMaterial")}
@@ -72,7 +75,7 @@ export default function RawMaterialsManager() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#213559] mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600">{t("loading")}</p>
           </div>
         </div>
@@ -87,11 +90,11 @@ export default function RawMaterialsManager() {
             {rawMaterials.map((rawMaterial) => (
               <div
                 key={rawMaterial.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-[#213559] group relative"
+                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-[#213559]/10 group-hover:bg-[#213559]/20 transition-colors shrink-0">
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-primary/10 group-hover:bg-primary/20 transition-colors shrink-0">
                       {rawMaterial.primary_image_url && rawMaterial.primary_image_url.startsWith('/') ? (
                         <Image
                           src={rawMaterial.primary_image_url}
@@ -103,7 +106,7 @@ export default function RawMaterialsManager() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-8 w-8 text-[#213559]" />
+                          <Package className="h-8 w-8 text-primary" />
                         </div>
                       )}
                     </div>

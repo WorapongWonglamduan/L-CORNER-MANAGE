@@ -17,10 +17,10 @@ export function ActionButtons({
     <div className="flex gap-1">
       <button
         onClick={onEdit}
-        className="p-2 hover:bg-[#213559]/10 rounded-lg transition-colors"
+        className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
         title={editTitle}
       >
-        <Pencil className="h-4 w-4 text-[#213559]" />
+        <Pencil className="h-4 w-4 text-primary" />
       </button>
       <button
         onClick={onDelete}

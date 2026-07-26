@@ -7,35 +7,14 @@ import { SearchInput } from "@/components/ui/search-input";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useCategoriesManager } from "./helper";
-import { getCategoryFormConfig } from "./config";
+import { getCategoryFormConfig } from "./form/config";
 
 export default function CategoriesManager() {
-  const {
-    t,
-    categories,
-    allCategories,
-    loading,
-    searchQuery,
-    setSearchQuery,
-    dialogOpen,
-    editingCategory,
-    filterOptions,
-    totalItems,
-    totalPages,
-    handleCreate,
-    handleEdit,
-    handleDelete,
-    handleDialogClose,
-    handleFormSubmit,
-    handlePageChange,
-    handlePageSizeChange,
-    formControl,
-    formHandleSubmit,
-    formErrors,
-    formLoading,
-    formError,
-    ConfirmDialog,
-  } = useCategoriesManager();
+  const { t, table, filters, pagination, actions, modal, form, ConfirmDialog } =
+    useCategoriesManager();
+  const { categories, allCategories, loading } = table;
+  const { searchQuery, setSearchQuery } = filters;
+  const { handleCreate, handleEdit, handleDelete } = actions;
 
   const getParentName = (parentId?: string) => {
     if (!parentId) return "-";
@@ -53,7 +32,7 @@ export default function CategoriesManager() {
         />
         <Button
           onClick={handleCreate}
-          className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
+          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
         >
           <Plus className="h-4 w-4 mr-2" />
           {t("addCategory")}
@@ -63,7 +42,7 @@ export default function CategoriesManager() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#213559] mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600">{t("loading")}</p>
           </div>
         </div>
@@ -78,12 +57,12 @@ export default function CategoriesManager() {
             {categories.map((category) => (
               <div
                 key={category.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-[#213559] group relative"
+                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-[#213559]/10 p-3 rounded-xl group-hover:bg-[#213559]/20 transition-colors">
-                      <FolderTree className="h-6 w-6 text-[#213559]" />
+                    <div className="bg-primary/10 p-3 rounded-xl group-hover:bg-primary/20 transition-colors">
+                      <FolderTree className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">
@@ -103,14 +82,14 @@ export default function CategoriesManager() {
                 </div>
 
                 <div className="space-y-2">
-                  {/* <div className="flex items-center justify-between py-2.5">
+                  <div className="flex items-center justify-between py-2.5">
                     <span className="text-sm text-gray-600">
                       {t("parentCategory")}:
                     </span>
                     <span className="font-semibold text-gray-900">
                       {getParentName(category.parent_id)}
                     </span>
-                  </div> */}
+                  </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">
                       {t("sortOrder")}:
@@ -139,27 +118,30 @@ export default function CategoriesManager() {
           </div>
 
           <Pagination
-            currentPage={filterOptions.page}
-            totalPages={totalPages}
-            itemsPerPage={filterOptions.pageSize}
-            totalItems={totalItems}
-            onPageChange={handlePageChange}
-            onItemsPerPageChange={handlePageSizeChange}
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            itemsPerPage={pagination.pageSize}
+            totalItems={pagination.totalItems}
+            onPageChange={pagination.onPageChange}
+            onItemsPerPageChange={pagination.onPageSizeChange}
           />
         </>
       )}
 
       <EntityDialog
-        open={dialogOpen}
-        onClose={handleDialogClose}
-        title={editingCategory ? t("editCategory") : t("addCategory")}
-        fields={getCategoryFormConfig(t, allCategories)}
-        control={formControl}
-        handleSubmit={formHandleSubmit}
-        onSubmit={handleFormSubmit}
-        errors={formErrors}
-        loading={formLoading}
-        error={formError}
+        open={modal.isOpen}
+        onClose={modal.onClose}
+        title={modal.editingCategory ? t("editCategory") : t("addCategory")}
+        fields={getCategoryFormConfig(
+          t,
+          allCategories.filter((cat) => cat.id !== modal.editingCategory?.id),
+        )}
+        control={form.control}
+        handleSubmit={form.handleSubmit}
+        onSubmit={form.onSubmit}
+        errors={form.errors}
+        loading={form.loading}
+        error={form.error}
         cancelText={t("cancel")}
         saveText={t("save")}
         savingText={t("saving")}

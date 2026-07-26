@@ -115,7 +115,7 @@ export function Navbar({ userName }: NavbarProps) {
                     onClick={() => router.push(item.href)}
                     className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all ${
                       active
-                        ? "bg-white text-[#213559] font-semibold shadow-lg"
+                        ? "bg-white text-primary font-semibold shadow-lg"
                         : "text-white hover:bg-white/10"
                     }`}
                   >

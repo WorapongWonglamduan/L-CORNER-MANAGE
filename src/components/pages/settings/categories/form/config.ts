@@ -1,5 +1,5 @@
 import { FieldConfig } from "@/components/ui/FormBuilder";
-import { CategoryFormData } from "./helper";
+import { CategoryFormData } from "../helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 
 export const getCategoryFormConfig = (
@@ -20,18 +20,16 @@ export const getCategoryFormConfig = (
     placeholder: t("nameEnPlaceholder"),
     rules: { required: t("nameEnRequired") },
   },
-  // {
-  //   name: "parent_id",
-  //   type: INPUT_TYPES.SELECT,
-  //   label: `${t("parentCategory")}`,
-  //   placeholder: t("parentCategoryPlaceholder"),
-  //   options: [
-  //     ...categories.map((cat) => ({
-  //       value: cat.id,
-  //       label: cat.name_i18n.th,
-  //     })),
-  //   ],
-  // },
+  {
+    name: "parent_id",
+    type: INPUT_TYPES.SELECT,
+    label: `${t("parentCategory")}`,
+    placeholder: t("parentCategoryPlaceholder"),
+    options: categories.map((cat) => ({
+      value: cat.id,
+      label: cat.name_i18n.th,
+    })),
+  },
   {
     name: "sort_order",
     type: INPUT_TYPES.NUMBER,

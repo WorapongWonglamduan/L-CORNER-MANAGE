@@ -49,7 +49,6 @@ interface Product {
   cost_price: number | null;
   min_stock_level: number;
   low_stock_threshold: number;
-  image_url: string | null;
   primary_image_url: string | null;
   track_stock: boolean;
   has_serial: boolean;
@@ -80,7 +79,6 @@ export interface ProductFormData {
   cost_price?: number;
   min_stock_level?: number;
   low_stock_threshold?: number;
-  image_url?: string;
   track_stock?: boolean;
   has_serial?: boolean;
   has_expiry?: boolean;
@@ -116,6 +114,10 @@ export function useProductsManager() {
     router.push(`/${locale}/products/add`);
   };
 
+  const handleView = (product: Product) => {
+    router.push(`/${locale}/products/${product.id}`);
+  };
+
   const handleEdit = (product: Product) => {
     router.push(`/${locale}/products/edit/${product.id}`);
   };
@@ -148,18 +150,29 @@ export function useProductsManager() {
 
   return {
     t,
-    products,
-    loading,
-    searchQuery: filterOptions.search || "",
-    setSearchQuery: handleSearchChange,
-    filterOptions,
-    totalItems,
-    totalPages,
-    handleCreate,
-    handleEdit,
-    handleDelete,
-    handlePageChange,
-    handlePageSizeChange,
-    ConfirmDialog,
+    table: {
+      products,
+      loading,
+    },
+    filters: {
+      searchQuery: filterOptions.search || "",
+      setSearchQuery: handleSearchChange,
+      filterOptions,
+    },
+    pagination: {
+      totalItems,
+      totalPages,
+      handlePageChange,
+      handlePageSizeChange,
+    },
+    actions: {
+      handleCreate,
+      handleView,
+      handleEdit,
+      handleDelete,
+    },
+    modal: {
+      ConfirmDialog,
+    },
   };
 }

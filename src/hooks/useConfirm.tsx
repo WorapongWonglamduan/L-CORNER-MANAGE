@@ -69,9 +69,9 @@ export function useConfirm() {
   const ConfirmDialog = useCallback(
     () => (
       <Dialog open={state.isOpen} onOpenChange={handleCancel}>
-        <DialogContent className="sm:max-w-md border-[#213559]/20">
+        <DialogContent className="sm:max-w-md border-primary/20">
           <DialogHeader>
-            <DialogTitle className="text-[#213559] text-xl font-bold">
+            <DialogTitle className="text-primary text-xl font-bold">
               {state.title}
             </DialogTitle>
             <DialogDescription className="text-gray-600">
@@ -92,7 +92,7 @@ export function useConfirm() {
               className={
                 state.variant === "destructive"
                   ? ""
-                  : "bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
+                  : "bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
               }
             >
               {state.confirmText}

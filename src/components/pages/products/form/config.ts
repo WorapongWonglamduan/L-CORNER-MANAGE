@@ -1,24 +1,25 @@
 interface Category {
   id: string;
-  name_i18n: { th: string; en: string };
+  name_i18n: I18nText;
 }
 
 interface Unit {
   id: string;
-  name_i18n: { th: string; en: string };
-  abbreviation_i18n: { th: string; en: string };
+  name_i18n: I18nText;
+  abbreviation_i18n: I18nText;
 }
 
 interface ProductType {
   id: string;
   code: string;
-  name_i18n: { th: string; en: string };
+  name_i18n: I18nText;
 }
 
 import { FieldConfig } from "@/components/ui/FormBuilder";
 import { RegisterOptions } from "react-hook-form";
 import { ProductFormData } from "./helper";
 import { INPUT_TYPES } from "@/constants/input-types";
+import { I18nText, Locale } from "@/types/i18n";
 
 export interface ProductFormField extends Omit<FieldConfig, "name" | "rules"> {
   name: string;
@@ -31,7 +32,7 @@ export const getProductFormConfig = (
   units: Unit[],
   productsTypes: ProductType[],
   t: (key: string) => string,
-  locale: string = "th",
+  locale: Locale = "th",
 ): ProductFormField[] => [
   {
     name: "code",

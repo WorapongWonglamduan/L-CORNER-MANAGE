@@ -21,6 +21,7 @@ export type FieldType =
   | "number"
   | "tel"
   | "url"
+  | "date"
   | "textarea"
   | "select"
   | "checkbox"
@@ -47,6 +48,8 @@ export interface FieldConfig<T extends FieldValues = FieldValues> {
   max?: string | number;
   step?: string | number;
   rules?: RegisterOptions<T>;
+  /** Grid column span on the `sm:grid-cols-2` layout. Defaults to 2 (full width) for textarea/image fields, 1 otherwise. */
+  colSpan?: 1 | 2;
 }
 
 export interface FormConfig<T extends FieldValues = FieldValues> {
@@ -54,6 +57,19 @@ export interface FormConfig<T extends FieldValues = FieldValues> {
   submitLabel?: string;
   loadingLabel?: string;
   className?: string;
+  /** Render fields in a responsive 2-column grid instead of stacking them all in one column. */
+  grid?: boolean;
+}
+
+const FULL_WIDTH_TYPES = new Set<FieldType>([
+  "textarea",
+  "image-upload",
+  "multi-image-upload",
+]);
+
+function colSpanClass<T extends FieldValues>(field: FieldConfig<T>) {
+  const span = field.colSpan ?? (FULL_WIDTH_TYPES.has(field.type) ? 2 : 1);
+  return span === 2 ? "sm:col-span-2" : undefined;
 }
 
 interface FormBuilderProps<T extends FieldValues = FieldValues> {
@@ -80,39 +96,53 @@ export function FormBuilder<T extends FieldValues = FieldValues>({
       onSubmit={handleSubmit(onSubmit)}
       className={config.className || "space-y-5"}
     >
-      {config.fields.map((field) => (
-        <Controller
-          key={field.name}
-          name={field.name}
-          control={control}
-          rules={field.rules}
-          render={({ field: { onChange, onBlur, value, ref } }) => (
-            <Input
-              {...field}
-              ref={ref}
-              inputType={field.type}
-              id={field.name}
-              label={field.label}
-              placeholder={field.placeholder}
-              helperText={field.helperText}
-              icon={field.icon}
-              error={errors[field.name] as FieldError | undefined}
-              value={field.type === "checkbox" ? undefined : value || ""}
-              checked={field.type === "checkbox" ? value : undefined}
-              onCheckedChange={field.type === "checkbox" ? onChange : undefined}
-              onChange={field.type !== "checkbox" ? onChange : undefined}
-              onBlur={onBlur}
-              disabled={field.disabled || isLoading}
-              autoComplete={field.autoComplete}
-              options={field.options}
-              rows={field.rows}
-              min={field.min}
-              max={field.max}
-              step={field.step}
-            />
-          )}
-        />
-      ))}
+      {(() => {
+        const fieldElements = config.fields.map((field) => (
+          <Controller
+            key={field.name}
+            name={field.name}
+            control={control}
+            rules={field.rules}
+            render={({ field: { onChange, onBlur, value, ref } }) => (
+              <Input
+                {...field}
+                ref={ref}
+                inputType={field.type}
+                id={field.name}
+                label={field.label}
+                placeholder={field.placeholder}
+                helperText={field.helperText}
+                icon={field.icon}
+                error={errors[field.name] as FieldError | undefined}
+                value={field.type === "checkbox" ? undefined : value || ""}
+                checked={field.type === "checkbox" ? value : undefined}
+                onCheckedChange={field.type === "checkbox" ? onChange : undefined}
+                onChange={field.type !== "checkbox" ? onChange : undefined}
+                onBlur={onBlur}
+                disabled={field.disabled || isLoading}
+                autoComplete={field.autoComplete}
+                options={field.options}
+                rows={field.rows}
+                min={field.min}
+                max={field.max}
+                step={field.step}
+              />
+            )}
+          />
+        ));
+
+        if (!config.grid) return fieldElements;
+
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {config.fields.map((field, index) => (
+              <div key={field.name} className={colSpanClass(field)}>
+                {fieldElements[index]}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {error && (
         <div

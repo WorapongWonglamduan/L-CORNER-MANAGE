@@ -104,7 +104,7 @@ export function StockAdjustmentModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
+        <div className="sticky top-0 bg-gradient-to-r from-primary to-primary-light text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 p-2 rounded-lg">
               <Package className="w-6 h-6" />
@@ -218,21 +218,21 @@ export function StockAdjustmentModal({
                 onClick={() => setAdjustmentType("adjustment")}
                 className={`p-4 rounded-xl border-2 transition-all ${
                   adjustmentType === "adjustment"
-                    ? "border-[#213559] bg-[#213559]/10 shadow-md"
-                    : "border-gray-200 hover:border-[#213559]/30 hover:bg-[#213559]/5"
+                    ? "border-primary bg-primary/10 shadow-md"
+                    : "border-gray-200 hover:border-primary/30 hover:bg-primary/5"
                 }`}
               >
                 <RotateCcw
                   className={`w-6 h-6 mx-auto mb-2 ${
                     adjustmentType === "adjustment"
-                      ? "text-[#213559]"
+                      ? "text-primary"
                       : "text-gray-400"
                   }`}
                 />
                 <p
                   className={`text-sm font-medium ${
                     adjustmentType === "adjustment"
-                      ? "text-[#213559]"
+                      ? "text-primary"
                       : "text-gray-600"
                   }`}
                 >
@@ -321,7 +321,7 @@ export function StockAdjustmentModal({
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-[#213559] to-[#2c4a7a] hover:from-[#1a2a47] hover:to-[#213559] text-white"
+              className="flex-1 bg-gradient-to-r from-primary to-primary-light hover:from-[#1a2a47] hover:to-primary text-white"
               disabled={loading || newStock < 0}
             >
               {loading ? t("saving") : t("save")}

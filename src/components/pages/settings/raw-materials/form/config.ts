@@ -1,16 +1,17 @@
 import { FieldConfig } from "@/components/ui/FormBuilder";
-import { RawMaterialFormData } from "./helper";
+import { RawMaterialFormData } from "../helper";
 import { INPUT_TYPES } from "@/constants/input-types";
+import { I18nText, Locale } from "@/types/i18n";
 
 export const getRawMaterialFormConfig = (
   t: (key: string) => string,
   units: Array<{
     id: string;
-    name_i18n: { th: string; en: string };
-    abbreviation_i18n: { th: string; en: string };
+    name_i18n: I18nText;
+    abbreviation_i18n: I18nText;
   }>,
-  productTypes: Array<{ id: string; name_i18n: { th: string; en: string } }>,
-  locale: string = "th",
+  productTypes: Array<{ id: string; name_i18n: I18nText }>,
+  locale: Locale = "th",
 ): FieldConfig<RawMaterialFormData>[] => [
   {
     name: "code",

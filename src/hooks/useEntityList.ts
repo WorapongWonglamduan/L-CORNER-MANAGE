@@ -64,6 +64,7 @@ export function useEntityList<
   } as F);
   // Debounce search to avoid fetching on every keystroke
   const debouncedSearch = useDebounce(filterOptions.search, debounceDelay);
+  const filterOptionsKey = JSON.stringify(filterOptions);
 
   const fetchItems = useCallback(async () => {
     try {
@@ -123,7 +124,7 @@ export function useEntityList<
     debouncedSearch,
     setTotalItems,
     transform,
-    JSON.stringify(filterOptions),
+    filterOptionsKey,
   ]);
 
   useEffect(() => {

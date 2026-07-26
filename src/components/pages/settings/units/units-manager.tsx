@@ -7,35 +7,16 @@ import { SearchInput } from "@/components/ui/search-input";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useUnitsManager } from "./helper";
-import { getUnitFormConfig } from "./config";
+import { getUnitFormConfig } from "./form/config";
 
 export default function UnitsManager() {
-  const {
-    t,
-    units,
-    allUnits,
-    loading,
-    searchQuery,
-    setSearchQuery,
-    dialogOpen,
-    editingUnit,
-    filterOptions,
-    totalItems,
-    totalPages,
-    handleCreate,
-    handleEdit,
-    handleDelete,
-    handleDialogClose,
-    handleFormSubmit,
-    handlePageChange,
-    handlePageSizeChange,
-    formControl,
-    formHandleSubmit,
-    formErrors,
-    formLoading,
-    formError,
-    ConfirmDialog,
-  } = useUnitsManager();
+  const { t, table, filters, pagination, actions, dialog, ConfirmDialog } =
+    useUnitsManager();
+  const { units, allUnits, loading } = table;
+  const { searchQuery, setSearchQuery } = filters;
+  const { filterOptions, totalItems, totalPages, handlePageChange, handlePageSizeChange } =
+    pagination;
+  const { handleCreate, handleEdit, handleDelete } = actions;
 
   return (
     <div className="space-y-4">
@@ -47,7 +28,7 @@ export default function UnitsManager() {
         />
         <Button
           onClick={handleCreate}
-          className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40"
+          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
         >
           <Plus className="h-4 w-4 mr-2" />
           {t("addUnit")}
@@ -57,7 +38,7 @@ export default function UnitsManager() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#213559] mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600">{t("loading")}</p>
           </div>
         </div>
@@ -72,12 +53,12 @@ export default function UnitsManager() {
             {units.map((unit) => (
               <div
                 key={unit.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-[#213559] group relative"
+                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-[#213559]/10 p-3 rounded-xl group-hover:bg-[#213559]/20 transition-colors">
-                      <Package className="h-6 w-6 text-[#213559]" />
+                    <div className="bg-primary/10 p-3 rounded-xl group-hover:bg-primary/20 transition-colors">
+                      <Package className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">
@@ -158,16 +139,16 @@ export default function UnitsManager() {
       )}
 
       <EntityDialog
-        open={dialogOpen}
-        onClose={handleDialogClose}
-        title={editingUnit ? t("editUnit") : t("addUnit")}
+        open={dialog.open}
+        onClose={dialog.onClose}
+        title={dialog.editingUnit ? t("editUnit") : t("addUnit")}
         fields={getUnitFormConfig(t)}
-        control={formControl}
-        handleSubmit={formHandleSubmit}
-        onSubmit={handleFormSubmit}
-        errors={formErrors}
-        loading={formLoading}
-        error={formError}
+        control={dialog.control}
+        handleSubmit={dialog.handleSubmit}
+        onSubmit={dialog.onSubmit}
+        errors={dialog.errors}
+        loading={dialog.loading}
+        error={dialog.error}
         cancelText={t("cancel")}
         saveText={t("save")}
         savingText={t("saving")}

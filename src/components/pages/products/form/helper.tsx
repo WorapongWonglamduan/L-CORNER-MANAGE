@@ -28,7 +28,6 @@ export interface ProductFormData {
   min_stock_level?: number;
   low_stock_threshold?: number;
   current_stock?: number;
-  image_url?: string;
   images?: ImageFile[];
   track_stock: boolean;
   has_serial: boolean;
@@ -79,7 +78,6 @@ interface ProductData {
   category_id?: string;
   product_type_id: string;
   base_unit_id: string;
-  image_url?: string;
   images?: Array<{
     id: string;
     url: string;
@@ -206,7 +204,7 @@ export function useProductForm() {
 
           // Convert existing images from server to ImageFile format
           const existingImages: ImageFile[] =
-            productData.images?.map((img) => ({
+            productData.images?.map((img: { id: string; url: string; isPrimary: boolean }) => ({
               id: img.id,
               preview: img.url,
               isPrimary: img.isPrimary,
@@ -228,7 +226,6 @@ export function useProductForm() {
             min_stock_level: productData.min_stock_level || 0,
             low_stock_threshold: productData.low_stock_threshold || 0,
             current_stock: productData.current_stock || 0,
-            image_url: productData.image_url || "",
             images: existingImages,
             track_stock: productData.track_stock ?? true,
             has_serial: productData.has_serial ?? false,
@@ -338,7 +335,6 @@ export function useProductForm() {
         category_id: data.category_id || null,
         product_type_id: data.product_type_id,
         base_unit_id: data.base_unit_id,
-        image_url: data.image_url || null,
         is_active: data.is_active,
         has_serial: data.has_serial,
         has_expiry: data.has_expiry,
@@ -408,22 +404,29 @@ export function useProductForm() {
   };
 
   return {
-    register,
-    handleSubmit,
-    control,
-    watch,
-    setValue,
-    errors,
-    loading,
-    dataLoading,
+    form: {
+      handleSubmit,
+      control,
+      watch,
+      setValue,
+      errors,
+      onSubmit,
+    },
+    loading: {
+      loading,
+      dataLoading,
+    },
     optionsData,
-    fields,
-    append,
-    remove,
-    isSemiFinished,
-    isFinishedGood,
-    onSubmit,
-    isEdit,
+    recipeFields: {
+      fields,
+      append,
+      remove,
+    },
+    flags: {
+      isSemiFinished,
+      isFinishedGood,
+      isEdit,
+    },
     handleProductTypeChange,
   };
 }

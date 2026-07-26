@@ -63,7 +63,7 @@ export function EntityDialog<T extends FieldValues>({
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent className={`${maxWidthClass} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
-          <DialogTitle className="text-[#213559] text-xl font-bold">
+          <DialogTitle className="text-primary text-xl font-bold">
             {title}
           </DialogTitle>
         </DialogHeader>
@@ -109,7 +109,7 @@ export function EntityDialog<T extends FieldValues>({
             <Button
               type="submit"
               disabled={loading}
-              className="bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white"
+              className="bg-gradient-to-r from-primary to-primary-light text-white"
             >
               {loading ? savingText : saveText}
             </Button>

@@ -163,9 +163,9 @@ export const Input = forwardRef<
               onClick={() => onCheckedChange?.(!checked)}
               id={id}
               className={cn(
-                "peer h-5 w-5 shrink-0 rounded border-2 border-gray-300 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#213559] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+                "peer h-5 w-5 shrink-0 rounded border-2 border-gray-300 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
                 checked &&
-                  "bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white border-[#213559]",
+                  "bg-gradient-to-r from-primary to-primary-light text-white border-primary",
               )}
               data-state={checked ? "checked" : "unchecked"}
             >

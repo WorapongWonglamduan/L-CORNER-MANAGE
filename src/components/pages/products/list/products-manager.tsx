@@ -18,19 +18,11 @@ import { useProductsManager } from "./helper";
 export default function ProductsManager() {
   const {
     t,
-    products,
-    loading,
-    searchQuery,
-    setSearchQuery,
-    filterOptions,
-    totalItems,
-    totalPages,
-    handleCreate,
-    handleEdit,
-    handleDelete,
-    handlePageChange,
-    handlePageSizeChange,
-    ConfirmDialog,
+    table: { products, loading },
+    filters: { searchQuery, setSearchQuery, filterOptions },
+    pagination: { totalItems, totalPages, handlePageChange, handlePageSizeChange },
+    actions: { handleCreate, handleView, handleEdit, handleDelete },
+    modal: { ConfirmDialog },
   } = useProductsManager();
 
   const getCategoryLabel = (
@@ -64,7 +56,7 @@ export default function ProductsManager() {
         </div>
         <Button
           onClick={handleCreate}
-          className="w-full sm:w-auto bg-gradient-to-r from-[#213559] to-[#2c4a7a] text-white shadow-lg shadow-[#213559]/30 hover:shadow-xl hover:shadow-[#213559]/40 transition-all px-6 py-2.5"
+          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all px-6 py-2.5"
         >
           <Plus className="h-5 w-5 mr-2" />
           {t("addProduct")}
@@ -74,7 +66,7 @@ export default function ProductsManager() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#213559] mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600">{t("loading")}</p>
           </div>
         </div>
@@ -85,7 +77,7 @@ export default function ProductsManager() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {products.map((product) => {
               const profit =
                 product.selling_price && product.cost_price
@@ -99,7 +91,7 @@ export default function ProductsManager() {
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-[#213559]/30 overflow-hidden"
+                  className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-primary/30 overflow-hidden"
                 >
                   {/* Product Image */}
                   <div className="relative h-48 bg-gray-100">
@@ -119,9 +111,10 @@ export default function ProductsManager() {
                     )}
                   </div>
 
-                  <div className="relative bg-gradient-to-r from-[#213559] to-[#2c4a7a] p-4">
+                  <div className="relative bg-gradient-to-r from-primary to-primary-light p-4">
                     <div className="absolute top-3 right-3">
                       <ProductActionButtons
+                        onView={() => handleView(product)}
                         onEdit={() => handleEdit(product)}
                         onDelete={() => handleDelete(product.id, true)}
                         editTitle={t("edit") || "แก้ไข"}
@@ -158,7 +151,7 @@ export default function ProductsManager() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
-                          <Layers className="w-3.5 h-3.5 text-[#213559]/60" />
+                          <Layers className="w-3.5 h-3.5 text-primary/60" />
                           <span className="text-xs text-gray-500">ประเภท</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-900 truncate">
@@ -168,7 +161,7 @@ export default function ProductsManager() {
 
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
-                          <Tag className="w-3.5 h-3.5 text-[#213559]/60" />
+                          <Tag className="w-3.5 h-3.5 text-primary/60" />
                           <span className="text-xs text-gray-500">
                             หมวดหมู่
                           </span>
@@ -179,17 +172,17 @@ export default function ProductsManager() {
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-[#213559]/5 to-[#213559]/10 rounded-lg p-3 space-y-2.5 mt-3">
+                    <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-3 space-y-2.5 mt-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="bg-[#213559] p-1 rounded">
+                          <div className="bg-primary p-1 rounded">
                             <DollarSign className="w-3.5 h-3.5 text-white" />
                           </div>
                           <span className="text-xs font-medium text-gray-600">
                             ราคาขาย
                           </span>
                         </div>
-                        <span className="text-xl font-bold text-[#213559]">
+                        <span className="text-xl font-bold text-primary">
                           {product.selling_price
                             ? `฿${Number(product.selling_price).toLocaleString()}`
                             : "-"}
@@ -197,7 +190,7 @@ export default function ProductsManager() {
                       </div>
 
                       {product.cost_price && (
-                        <div className="flex items-center justify-between text-xs pt-2 border-t border-[#213559]/10">
+                        <div className="flex items-center justify-between text-xs pt-2 border-t border-primary/10">
                           <span className="text-gray-600">ราคาทุน</span>
                           <span className="font-semibold text-gray-700">
                             ฿{Number(product.cost_price).toLocaleString()}
@@ -206,7 +199,7 @@ export default function ProductsManager() {
                       )}
 
                       {profit !== null && profitMargin !== null && (
-                        <div className="flex items-center justify-between pt-2 border-t border-[#213559]/10">
+                        <div className="flex items-center justify-between pt-2 border-t border-primary/10">
                           <div className="flex items-center gap-1.5">
                             <TrendingUp className="w-3.5 h-3.5 text-green-600" />
                             <span className="text-xs font-medium text-gray-600">

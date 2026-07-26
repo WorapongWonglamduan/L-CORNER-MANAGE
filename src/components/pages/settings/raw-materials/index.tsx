@@ -14,18 +14,18 @@ export default function RawMaterialsContent() {
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
 
-      <div className="flex-1 p-6 lg:p-8 overflow-auto">
+      <div className="flex-1 p-6 pt-20 md:pt-6 lg:p-8 overflow-auto">
         <div className="mb-8">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#213559] mb-4 transition-colors"
+            className="flex items-center gap-2 text-gray-600 hover:text-primary mb-4 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-medium">กลับ</span>
           </button>
           
           <div className="flex items-center gap-3 mb-2">
-            <div className="bg-gradient-to-r from-[#213559] to-[#2c4a7a] p-2 rounded-lg shadow-lg shadow-[#213559]/30">
+            <div className="bg-gradient-to-r from-primary to-primary-light p-2 rounded-lg shadow-lg shadow-primary/30">
               <Package className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900">{t("title")}</h1>

@@ -4,6 +4,7 @@ import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 import { useLocale } from "next-intl";
+import type { Locale } from "@/types/i18n";
 
 export interface ProductTypeFormData {
   code: string;
@@ -38,7 +39,7 @@ interface TypesFilterOptions extends FilterOptions {
 export function useProductTypesManager() {
   const t = useTranslations("settings.productTypes");
   const { confirm, ConfirmDialog } = useConfirm();
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
 
   const {
     items: types,
@@ -109,29 +110,41 @@ export function useProductTypesManager() {
 
   return {
     t,
-    types,
-    allTypes: types,
-    loading,
-    searchQuery: filterOptions.search || "",
-    setSearchQuery: handleSearchChange,
-    dialogOpen,
-    editingType: editingEntity,
-    filterOptions,
-    totalItems,
-    totalPages,
-    handleCreate,
-    handleEdit,
-    handleDelete: (id: string) => handleDelete(id, t("confirmDelete")),
-    handleDialogClose,
-    handleFormSubmit,
-    handlePageChange,
-    handlePageSizeChange,
-    formControl: control,
-    formHandleSubmit: handleSubmit,
-    formErrors: errors,
-    formLoading,
-    formError,
-    ConfirmDialog,
     locale,
+    table: {
+      types,
+      allTypes: types,
+      loading,
+      totalItems,
+      totalPages,
+    },
+    filters: {
+      searchQuery: filterOptions.search || "",
+      setSearchQuery: handleSearchChange,
+      filterOptions,
+    },
+    pagination: {
+      handlePageChange,
+      handlePageSizeChange,
+    },
+    actions: {
+      handleCreate,
+      handleEdit,
+      handleDelete: (id: string) => handleDelete(id, t("confirmDelete")),
+    },
+    form: {
+      dialogOpen,
+      editingType: editingEntity,
+      control,
+      handleSubmit,
+      errors,
+      loading: formLoading,
+      error: formError,
+      handleDialogClose,
+      handleFormSubmit,
+    },
+    modal: {
+      ConfirmDialog,
+    },
   };
 }
