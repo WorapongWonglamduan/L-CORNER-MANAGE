@@ -3,11 +3,27 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* App brand color — overridden per-request via an inline style on <html>
+     (see src/app/layout.tsx), sourced from the AppSettings DB row. These
+     defaults match the original hardcoded navy so nothing changes until a
+     theme color is actually saved. */
+  --primary: #213559;
+  --primary-light: #2c4a7a;
+  --primary-dark: #1a2844;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* "inline" keeps these as `var(--primary)` in generated utilities (e.g.
+     `.bg-primary { background-color: var(--color-primary) }`) instead of
+     resolving to a static hex at build time — required for the value to be
+     swappable per-request via the inline style on <html>. */
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
 }
 
 @media (prefers-color-scheme: dark) {
