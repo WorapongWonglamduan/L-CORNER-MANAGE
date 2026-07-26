@@ -1,7 +1,9 @@
-# Docker Setup Guide
+﻿# Docker Setup Guide
 ## L-Corner POS System
 
-> **PostgreSQL Port:** 5435 (mapped from container port 5432)
+> **PostgreSQL Port:** 5436 (mapped from container port 5432, per `docker-compose.yml`)
+>
+> ⚠️ `env.template`'s sample `DATABASE_URL` still points at port `5435` — this is a known mismatch between the two files. If `docker-compose up -d postgres` fails to connect from your `.env`, check which port you're actually using.
 
 ---
 
@@ -59,7 +61,7 @@ npx prisma db seed
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | **Next.js App** | http://localhost:3077 | - |
-| **PostgreSQL** | localhost:5435 | User: `postgres`<br>Password: `postgres`<br>Database: `l_corner_pos` |
+| **PostgreSQL** | localhost:5436 | User: `postgres`<br>Password: `postgres`<br>Database: `l_corner_pos` |
 | **PgAdmin** | http://localhost:5050 | Email: `admin@lcorner.local`<br>Password: `admin` |
 
 ---
@@ -133,7 +135,7 @@ docker-compose logs pgadmin
 docker-compose up -d
 
 # App runs on http://localhost:3000 with hot-reload
-# Database on localhost:5435
+# Database on localhost:5436
 ```
 
 ### Option 2: Local Development + Docker Database
@@ -145,7 +147,7 @@ docker-compose up -d postgres pgadmin
 # Run app locally
 npm run dev
 
-# Database connection: localhost:5435
+# Database connection: localhost:5436
 ```
 
 ---
@@ -157,7 +159,7 @@ npm run dev
 3. Add new server:
    - **Name:** L-Corner POS
    - **Host:** postgres (or localhost if running locally)
-   - **Port:** 5432 (internal) or 5435 (external)
+   - **Port:** 5432 (internal) or 5436 (external)
    - **Database:** l_corner_pos
    - **Username:** postgres
    - **Password:** postgres
@@ -221,8 +223,8 @@ docker-compose -f docker-compose.prod.yml up -d
 ### Port Already in Use
 
 ```bash
-# Check what's using port 5435
-netstat -ano | findstr :5435
+# Check what's using port 5436
+netstat -ano | findstr :5436
 
 # Stop the service or change port in docker-compose.yml
 ```
@@ -237,7 +239,7 @@ docker-compose ps postgres
 docker-compose logs postgres
 
 # Verify connection string in .env
-# Should be: postgresql://postgres:postgres@localhost:5435/l_corner_pos
+# Should be: postgresql://postgres:postgres@localhost:5436/l_corner_pos
 ```
 
 ### Container Won't Start
@@ -280,7 +282,7 @@ l-corner-manage/
 ├── Dockerfile                       # Production image
 ├── Dockerfile.dev                   # Development image
 ├── env.template                     # Environment template
-└── DOCKER.md                        # This file
+└── docs/guides/DOCKER.md            # This file
 ```
 
 ---
@@ -369,5 +371,5 @@ chmod +x backup.sh
 
 For issues or questions:
 - Check logs: `docker-compose logs`
-- Review spec: `POS_System_Spec.md`
+- Review the legacy design spec: `docs/archive/POS_System_Spec.md` (historical, does not reflect current schema)
 - Verify environment: `.env`

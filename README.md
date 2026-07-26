@@ -1,4 +1,4 @@
-# L-Corner POS System
+﻿# L-Corner POS System
 ## ระบบจุดขายพร้อมจัดการสต็อกสินค้า
 
 > **Tech Stack:** Next.js 16+ · PostgreSQL 16+ · Prisma · TypeScript 5+ · shadcn/ui · next-intl
@@ -122,7 +122,7 @@ pnpm install
 # Start PostgreSQL container
 docker-compose up -d postgres
 
-# PostgreSQL จะรันที่ localhost:5435
+# PostgreSQL จะรันที่ localhost:5436
 ```
 
 ### Option 2: ใช้ PostgreSQL ที่ติดตั้งในเครื่อง
@@ -152,12 +152,22 @@ npm run db:push
 npm run db:seed
 ```
 
+> **Windows note:** if `npm run db:*` fails in PowerShell with "running scripts is disabled on this system", run it from Git Bash instead.
+
 ### Default Admin Credentials
 
 หลังจาก seed database แล้ว ใช้ข้อมูลนี้ login:
 
 - **Username:** `admin`
 - **Password:** `admin123`
+
+### Prisma Studio
+
+```bash
+npm run db:studio
+```
+
+Opens a database GUI at [http://localhost:5555](http://localhost:5555).
 
 ---
 
@@ -204,7 +214,7 @@ docker-compose logs -f
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | **Next.js App** | http://localhost:3077 | - |
-| **PostgreSQL** | localhost:5435 | User: `postgres`<br>Password: `postgres`<br>Database: `l_corner_pos` |
+| **PostgreSQL** | localhost:5436 | User: `postgres`<br>Password: `postgres`<br>Database: `l_corner_pos` |
 | **PgAdmin** | http://localhost:5050 | Email: `admin@lcorner.local`<br>Password: `admin` |
 
 ### Stop Services
@@ -217,7 +227,7 @@ docker-compose down
 docker-compose down -v
 ```
 
-📖 **อ่านเพิ่มเติม:** [docs/DOCKER.md](./docs/DOCKER.md)
+📖 **อ่านเพิ่มเติม:** [docs/guides/DOCKER.md](./docs/guides/DOCKER.md)
 
 ---
 
@@ -257,7 +267,9 @@ l-corner-manage/
 │   │   └── ui/                  # Reusable UI components (shadcn)
 │   ├── hooks/                   # Custom React hooks
 │   ├── lib/                     # Utilities & helpers
-│   └── middleware.ts            # Next.js middleware
+│   ├── constants/                # Shared enums/constants
+│   └── proxy.ts                 # Next.js middleware (intl + auth gate)
+├── auth.ts                       # NextAuth v5 config (root, outside src/)
 ├── prisma/
 │   ├── schema.prisma            # Database schema
 │   └── seed.ts                  # Seed data
@@ -268,9 +280,9 @@ l-corner-manage/
 │   ├── request.ts
 │   └── routing.ts
 ├── docs/                        # Documentation
-│   ├── COMPONENT_PATTERN.md    # Component architecture
-│   ├── DOCKER.md               # Docker setup guide
-│   └── ...
+│   ├── guides/                  # How to work day-to-day (component pattern, inputs, Docker)
+│   ├── architecture/            # Accurate current-state system docs (auth/roles, stock, media)
+│   └── archive/                 # Superseded/historical docs, kept for context only
 ├── docker/                      # Docker configs
 ├── public/                      # Static files
 ├── .env                         # Environment variables (gitignored)
@@ -295,7 +307,7 @@ cp env.template .env
 
 ```env
 # Database (ถ้าใช้ Docker ใช้ค่า default ได้เลย)
-DATABASE_URL="postgresql://postgres:postgres@localhost:5435/l_corner_pos?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5436/l_corner_pos?schema=public"
 
 # NextAuth (⚠️ ต้องเปลี่ยนใน production)
 NEXTAUTH_SECRET="your-secret-key-here-change-in-production"
@@ -314,11 +326,17 @@ PORT=3077
 
 📚 **เอกสารเพิ่มเติม:**
 
-- **[POS_System_Spec.md](./POS_System_Spec.md)** - System specification, database schema, business logic
-- **[docs/COMPONENT_PATTERN.md](./docs/COMPONENT_PATTERN.md)** - Component architecture, best practices, code patterns
-- **[docs/DOCKER.md](./docs/DOCKER.md)** - Docker setup & commands
-- **[docs/MIGRATION_GUIDE.md](./docs/MIGRATION_GUIDE.md)** - Migration guide
-- **[docs/IMPLEMENTATION_SUMMARY.md](./docs/IMPLEMENTATION_SUMMARY.md)** - Implementation summary
+**Guides** (day-to-day patterns):
+- **[docs/guides/COMPONENT_PATTERN.md](./docs/guides/COMPONENT_PATTERN.md)** - Component architecture (index/helper/configs split)
+- **[docs/guides/INPUT_COMPONENTS.md](./docs/guides/INPUT_COMPONENTS.md)** - Using and extending the shared `Input` component
+- **[docs/guides/DOCKER.md](./docs/guides/DOCKER.md)** - Docker setup & commands
+
+**Architecture** (accurate current-state system docs):
+- **[docs/architecture/AUTH_ROLES.md](./docs/architecture/AUTH_ROLES.md)** - User/Role/UserRole structure & permissions
+- **[docs/architecture/STOCK_MANAGEMENT.md](./docs/architecture/STOCK_MANAGEMENT.md)** - `StockMovement`-based inventory system
+- **[docs/architecture/IMAGE_UPLOAD_SYSTEM.md](./docs/architecture/IMAGE_UPLOAD_SYSTEM.md)** - Media/ProductMedia design
+
+> Older planning/migration docs (original POS spec, superseded stock-management drafts, rejected auth migration approach) were deleted rather than archived — they described designs that were never built or were later replaced, and the docs above already reflect the current, accurate state.
 
 ---
 
@@ -417,7 +435,7 @@ docker-compose up -d --build --force-recreate
 # 1. สร้าง branch ใหม่
 git checkout -b feature/your-feature
 
-# 2. เขียนโค้ดตาม pattern ใน docs/COMPONENT_PATTERN.md
+# 2. เขียนโค้ดตาม pattern ใน docs/guides/COMPONENT_PATTERN.md
 
 # 3. Test
 npm run dev
@@ -460,7 +478,7 @@ t('key')
 
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Follow code patterns in `docs/COMPONENT_PATTERN.md`
+3. Follow code patterns in `docs/guides/COMPONENT_PATTERN.md`
 4. Commit changes (`git commit -m 'feat: add amazing feature'`)
 5. Push to branch (`git push origin feature/amazing-feature`)
 6. Open Pull Request
