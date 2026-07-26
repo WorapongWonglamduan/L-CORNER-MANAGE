@@ -1,9 +1,9 @@
-import { User, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { FieldConfig } from "@/components/ui/FormBuilder";
 
 // Login Form Config
 export interface LoginFormData {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -11,14 +11,14 @@ export const createLoginFormConfig = (
   t: (key: string) => string,
 ): FieldConfig<LoginFormData>[] => [
   {
-    name: "username",
-    type: "text",
-    label: t("username"),
-    placeholder: "admin",
-    icon: User,
-    autoComplete: "username",
+    name: "email",
+    type: "email",
+    label: t("email"),
+    placeholder: "admin@lcorner.local",
+    icon: Mail,
+    autoComplete: "email",
     rules: {
-      required: t("validation.usernameRequired"),
+      required: t("validation.emailRequired"),
     },
   },
   {

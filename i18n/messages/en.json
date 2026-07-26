@@ -5,13 +5,13 @@
       "subtitle": "Point of Sale with Inventory Management",
       "tagline": "Point of Sale & Inventory Management System",
       "taglineEn": "Point of Sale & Inventory Management",
-      "username": "Username",
+      "email": "Email",
       "password": "Password",
       "submit": "Sign In",
       "loading": "Signing in...",
-      "error": "Invalid username or password",
+      "error": "Invalid email or password",
       "serverError": "An error occurred. Please try again",
-      "testAccount": "Test account: admin / admin123",
+      "testAccount": "Test account: admin@lcorner.local / admin123",
       "features": {
         "inventory": {
           "title": "Smart Inventory Management",
@@ -28,7 +28,7 @@
       },
       "footer": "© 2026 L-Corner POS. All rights reserved.",
       "validation": {
-        "usernameRequired": "Please enter username",
+        "emailRequired": "Please enter email",
         "passwordRequired": "Please enter password",
         "passwordMin": "Password must be at least 6 characters"
       }
@@ -112,6 +112,14 @@
     "title": "Settings",
     "pageTitle": "System Settings",
     "pageDescription": "Manage various system settings",
+    "posSection": {
+      "title": "POS & Sales Settings",
+      "description": "Manage units, categories, product types, toppings, and promotions for the point of sale"
+    },
+    "systemSection": {
+      "title": "System Settings",
+      "description": "Manage users, roles, warehouses, and the system theme"
+    },
     "units": {
       "title": "Manage Units",
       "description": "Manage product measurement units and conversions",

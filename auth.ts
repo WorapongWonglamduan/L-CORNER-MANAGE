@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { NextAuthConfig } from "next-auth";
 
 const loginSchema = z.object({
-  username: z.string(),
+  email: z.string().email(),
   password: z.string().min(6),
 });
 
@@ -27,7 +27,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         const parsedCredentials = loginSchema.safeParse(credentials);
         if (!parsedCredentials.success) return null;
 
-        const { username, password } = parsedCredentials.data;
+        const { email, password } = parsedCredentials.data;
 
         // Dynamic import to avoid bundling Prisma into Edge Runtime
         const [{ prisma }, bcrypt] = await Promise.all([
@@ -36,7 +36,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         ]);
 
         const user = await prisma.user.findUnique({
-          where: { username, is_active: true },
+          where: { email, is_active: true },
           include: {
             user_roles: {
               include: { role: true },

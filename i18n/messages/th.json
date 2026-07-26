@@ -5,13 +5,13 @@
       "subtitle": "ระบบจุดขายพร้อมจัดการสต้อกสินค้า",
       "tagline": "ระบบจุดขายและจัดการสต็อกสินค้า",
       "taglineEn": "Point of Sale & Inventory Management",
-      "username": "ชื่อผู้ใช้",
+      "email": "อีเมล",
       "password": "รหัสผ่าน",
       "submit": "เข้าสู่ระบบ",
       "loading": "กำลังเข้าสู่ระบบ...",
-      "error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+      "error": "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
       "serverError": "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
-      "testAccount": "ทดสอบระบบ: admin / admin123",
+      "testAccount": "ทดสอบระบบ: admin@lcorner.local / admin123",
       "features": {
         "inventory": {
           "title": "จัดการสต็อกอัจฉริยะ",
@@ -28,7 +28,7 @@
       },
       "footer": "© 2026 L-Corner POS. All rights reserved.",
       "validation": {
-        "usernameRequired": "กรุณากรอกชื่อผู้ใช้",
+        "emailRequired": "กรุณากรอกอีเมล",
         "passwordRequired": "กรุณากรอกรหัสผ่าน",
         "passwordMin": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"
       }
@@ -213,6 +213,14 @@
     "title": "ตั้งค่า",
     "pageTitle": "ตั้งค่าระบบ",
     "pageDescription": "จัดการการตั้งค่าต่างๆ ของระบบ",
+    "posSection": {
+      "title": "ตั้งค่าการขายสินค้า POS",
+      "description": "จัดการหน่วย หมวดหมู่ ประเภทสินค้า topping และโปรโมชั่นสำหรับหน้าขาย"
+    },
+    "systemSection": {
+      "title": "ตั้งค่าระบบ",
+      "description": "จัดการผู้ใช้ บทบาท คลังสินค้า และธีมของระบบ"
+    },
     "units": {
       "title": "จัดการหน่วย",
       "description": "จัดการหน่วยวัดสินค้าและการแปลงหน่วย",

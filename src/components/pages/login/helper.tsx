@@ -13,7 +13,7 @@ export interface FeatureItem {
 }
 
 export type LoginFormData = {
-  username: string;
+  email: string;
   password: string;
 };
 
@@ -66,7 +66,7 @@ export const useLoginForm = () => {
 
     try {
       const result = await signIn("credentials", {
-        username: data.username,
+        email: data.email,
         password: data.password,
         redirect: false,
       });
