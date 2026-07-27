@@ -110,6 +110,9 @@ export interface WarehouseOption {
   id: string;
   code: string;
   name_i18n: { th: string; en: string };
+  address?: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface DashboardData {
@@ -223,6 +226,17 @@ export const useDashboard = () => {
 
   const quickActions = getQuickActions(locale);
 
+  // The stats query already scopes to the selected branch server-side; the
+  // map has no server round-trip, so it needs the same "all" vs one-branch
+  // filter applied client-side to match.
+  const visibleWarehouses = useMemo(
+    () =>
+      warehouseId === "all"
+        ? warehouses
+        : warehouses.filter((w) => w.id === warehouseId),
+    [warehouses, warehouseId],
+  );
+
   const handleQuickAction = (href: string) => {
     router.push(href);
   };
@@ -252,6 +266,7 @@ export const useDashboard = () => {
     },
     warehouse: {
       warehouses,
+      visibleWarehouses,
       warehouseId,
       setWarehouseId,
     },

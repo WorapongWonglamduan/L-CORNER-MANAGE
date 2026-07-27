@@ -1,14 +1,25 @@
 'use client'
 
-import { ArrowUpRight, ArrowDownRight, TrendingUp, Clock, RefreshCw, Calendar, ChevronRight } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { ArrowUpRight, ArrowDownRight, TrendingUp, Clock, RefreshCw, Calendar, MapPin, BarChart3 } from 'lucide-react'
 import { useLocale } from 'next-intl'
 import { Sidebar } from '@/components/sidebar'
 import { Button } from '@/components/ui/button'
 import { DynamicFormFields } from '@/components/dynamic-form/dynamic-form-fields'
 import { INPUT_TYPES } from '@/constants/input-types'
+import { SalesTrendChart } from './sales-trend-chart'
+import { TopProductsChart } from './top-products-chart'
 import { useDashboard } from './helper'
 import { theme } from '@/lib/theme'
 import type { Locale } from '@/types/i18n'
+
+// Leaflet touches `window`/`document` at module scope — this page is a
+// client component but Next still server-renders it once, so the map must
+// be excluded from that pass entirely.
+const BranchesMap = dynamic(
+  () => import('./branches-map').then((mod) => mod.BranchesMap),
+  { ssr: false, loading: () => <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100" /> },
+)
 
 interface DashboardContentProps {
   userName?: string
@@ -102,7 +113,7 @@ export default function DashboardContent({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {status.loading ? (
             Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-md p-6 animate-pulse">
+              <div key={index} className={`${theme.cards.flat} p-6 animate-pulse`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="bg-gray-200 w-14 h-14 rounded-xl"></div>
                   <div className="bg-gray-200 h-6 w-16 rounded"></div>
@@ -117,7 +128,7 @@ export default function DashboardContent({
               return (
                 <div
                   key={index}
-                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all hover:-translate-y-1"
+                  className={`${theme.cards.flat} p-6 hover:shadow-xl transition-all hover:-translate-y-1`}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className={`${stat.colorClass} w-14 h-14 rounded-xl flex items-center justify-center shadow-lg`}>
@@ -144,6 +155,26 @@ export default function DashboardContent({
           )}
         </div>
 
+        {/* Sales Trend */}
+        <div className={`${theme.cards.flat} p-6 mb-8`}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              {t('salesChart')}
+            </h2>
+            <span className="text-xs text-gray-500">7 {t('days')}</span>
+          </div>
+          {status.loading ? (
+            <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100" />
+          ) : (
+            <SalesTrendChart
+              data={stats.dashboardData?.salesByDay || []}
+              locale={locale}
+              seriesLabel={t('stats.todaySales')}
+            />
+          )}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Top Products */}
           <div className={`lg:col-span-2 ${theme.cards.flat} p-6`}>
@@ -154,52 +185,17 @@ export default function DashboardContent({
               </h2>
               <span className="text-xs text-gray-500">30 {t('days')}</span>
             </div>
-            <div className="space-y-3">
-              {status.loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg animate-pulse">
-                    <div className="bg-gray-200 w-10 h-10 rounded"></div>
-                    <div className="flex-1">
-                      <div className="bg-gray-200 h-4 w-32 rounded mb-2"></div>
-                      <div className="bg-gray-200 h-3 w-24 rounded"></div>
-                    </div>
-                    <div className="bg-gray-200 h-6 w-20 rounded"></div>
-                  </div>
-                ))
-              ) : stats.dashboardData?.topProducts && stats.dashboardData.topProducts.length > 0 ? (
-                stats.dashboardData.topProducts.map((product, index) => {
-                  const rankColors = [
-                    'bg-gradient-to-br from-yellow-400 to-yellow-600',
-                    'bg-gradient-to-br from-gray-300 to-gray-500',
-                    'bg-gradient-to-br from-orange-400 to-orange-600',
-                    'bg-gradient-to-br from-blue-500 to-blue-600',
-                    'bg-gradient-to-br from-purple-500 to-purple-600',
-                  ]
-                  return (
-                    <div key={product.id} className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-transparent rounded-xl hover:from-blue-100 transition-all hover:shadow-md group">
-                      <div className={`${rankColors[index] || 'bg-gradient-to-br from-blue-500 to-blue-600'} text-white w-12 h-12 rounded-xl flex items-center justify-center font-bold shadow-lg`}>
-                        #{index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 mb-1 truncate">{product.name_i18n.th}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
-                          <span className="px-2 py-0.5 bg-gray-100 rounded">{product.code}</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span className="font-medium">{product.totalQuantity.toLocaleString()} {t('units')}</span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-bold text-green-600 text-base sm:text-lg">฿{product.totalRevenue.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">รายได้</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors hidden sm:block" />
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="text-center py-8 text-gray-500">{t('noData')}</div>
-              )}
-            </div>
+            {status.loading ? (
+              <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100" />
+            ) : stats.dashboardData?.topProducts && stats.dashboardData.topProducts.length > 0 ? (
+              <TopProductsChart
+                data={stats.dashboardData.topProducts}
+                locale={locale}
+                seriesLabel={t('revenue')}
+              />
+            ) : (
+              <div className="text-center py-8 text-gray-500">{t('noData')}</div>
+            )}
           </div>
 
           {/* Recent Sales */}
@@ -244,6 +240,19 @@ export default function DashboardContent({
               )}
             </div>
           </div>
+        </div>
+
+        {/* Branches Map */}
+        <div className={`${theme.cards.flat} p-6 mb-8`}>
+          <div className="flex items-center gap-2 mb-4">
+            <MapPin className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-900">{t('branchesMap')}</h2>
+          </div>
+          <BranchesMap
+            warehouses={warehouse.visibleWarehouses}
+            locale={locale}
+            emptyLabel={t('noBranchLocation')}
+          />
         </div>
 
         {/* Quick Actions */}

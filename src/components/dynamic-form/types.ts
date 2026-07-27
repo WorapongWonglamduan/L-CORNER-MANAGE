@@ -1,4 +1,4 @@
-import { FieldValues, Path, RegisterOptions } from "react-hook-form";
+import { FieldValues, Path, RegisterOptions, UseFormSetValue } from "react-hook-form";
 import { LucideIcon } from "lucide-react";
 
 export type FieldType =
@@ -40,4 +40,6 @@ export interface FieldConfig<T extends FieldValues = FieldValues> {
   colSpan?: 1 | 2;
   /** One-off Tailwind override for the rendered control's own className (e.g. `py-2!` to match a neighboring Button's height) — not for layout/grid placement, use `colSpan` for that. */
   className?: string;
+  /** Side-effect fired after this field's own value changes (e.g. parse a pasted map link and fill sibling lat/long fields). Requires the form's `setValue` to be threaded down to `DynamicFormFields`/`EntityDialog` — a no-op if omitted. */
+  onValueChange?: (value: string, helpers: { setValue?: UseFormSetValue<T> }) => void;
 }

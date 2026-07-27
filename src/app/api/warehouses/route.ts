@@ -66,7 +66,15 @@ export async function POST(request: NextRequest) {
     if (denied) return denied;
 
     const body = await request.json();
-    const { code, name_i18n, address, is_active = true, is_default = false } = body;
+    const {
+      code,
+      name_i18n,
+      address,
+      latitude = null,
+      longitude = null,
+      is_active = true,
+      is_default = false,
+    } = body;
 
     if (!code || !name_i18n) {
       return NextResponse.json(
@@ -95,6 +103,8 @@ export async function POST(request: NextRequest) {
           code,
           name_i18n,
           address,
+          latitude,
+          longitude,
           is_active,
           is_default,
         },

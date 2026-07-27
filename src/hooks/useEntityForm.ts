@@ -14,7 +14,7 @@ interface UseEntityFormOptions<T extends FieldValues, E extends BaseEntity> {
   transformToPayload: (data: T) => unknown;
   transformToForm: (entity: E) => T;
   onSuccess?: () => void;
-  confirmDelete?: (options: {
+  confirmDelete: (options: {
     title?: string;
     description?: string;
     confirmText?: string;
@@ -28,6 +28,7 @@ interface UseEntityFormResult<T extends FieldValues, E extends BaseEntity> {
   errors: ReturnType<typeof useForm<T>>["formState"]["errors"];
   reset: ReturnType<typeof useForm<T>>["reset"];
   watch: ReturnType<typeof useForm<T>>["watch"];
+  setValue: ReturnType<typeof useForm<T>>["setValue"];
   loading: boolean;
   error: string;
   editingEntity: E | null;
@@ -69,6 +70,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<T>(formConfig);
 
@@ -115,14 +117,12 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
       confirmMessage = "Are you sure you want to delete this item?",
       hard = false,
     ) => {
-      const confirmed = confirmDelete
-        ? await confirmDelete({
-            title: "Confirm Delete",
-            description: confirmMessage,
-            confirmText: "Delete",
-            cancelText: "Cancel",
-          })
-        : confirm(confirmMessage);
+      const confirmed = await confirmDelete({
+        title: t("confirmDeleteTitle"),
+        description: confirmMessage,
+        confirmText: t("delete"),
+        cancelText: t("cancel"),
+      });
 
       if (!confirmed) return;
 
@@ -207,6 +207,7 @@ export function useEntityForm<T extends FieldValues, E extends BaseEntity>(
     errors,
     reset,
     watch,
+    setValue,
     loading,
     error,
     editingEntity,

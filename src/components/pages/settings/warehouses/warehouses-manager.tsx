@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Plus, Warehouse as WarehouseIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
@@ -10,6 +11,14 @@ import { useWarehousesManager } from "./helper";
 import { getWarehouseFormConfig } from "./form/config";
 import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
+
+// Leaflet touches `window`/`document` at module scope — must be excluded
+// from Next's server-render pass of this client component (same reason as
+// the dashboard's branches map).
+const LocationPreviewMap = dynamic(
+  () => import("./location-preview-map").then((mod) => mod.LocationPreviewMap),
+  { ssr: false, loading: () => <div className="h-48 w-full animate-pulse rounded-lg bg-gray-100" /> },
+);
 
 export default function WarehousesManager() {
   const locale = useLocale() as Locale;
@@ -36,11 +45,16 @@ export default function WarehousesManager() {
       control: formControl,
       handleSubmit: formHandleSubmit,
       errors: formErrors,
+      setValue: formSetValue,
+      watch: formWatch,
       loading: formLoading,
       error: formError,
       onSubmit: handleFormSubmit,
     },
   } = useWarehousesManager();
+
+  const watchedLatitude = formWatch("latitude");
+  const watchedLongitude = formWatch("longitude");
 
   const filterFields: FilterFieldConfig[] = [
     { name: "search", type: "text", placeholder: t("searchPlaceholder") },
@@ -69,7 +83,7 @@ export default function WarehousesManager() {
         />
         <Button
           onClick={handleCreate}
-          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
+          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white"
         >
           <Plus className="h-4 w-4 mr-2" />
           {t("addWarehouse")}
@@ -171,12 +185,23 @@ export default function WarehousesManager() {
         handleSubmit={formHandleSubmit}
         onSubmit={handleFormSubmit}
         errors={formErrors}
+        setValue={formSetValue}
         loading={formLoading}
         error={formError}
         cancelText={t("cancel")}
         saveText={t("save")}
         savingText={t("saving")}
         maxWidth="2xl"
+        fieldSlot={{
+          after: "mapLink",
+          content: (
+            <LocationPreviewMap
+              latitude={watchedLatitude ? Number(watchedLatitude) : null}
+              longitude={watchedLongitude ? Number(watchedLongitude) : null}
+              emptyLabel={t("mapPreviewEmpty")}
+            />
+          ),
+        }}
       />
 
       <ConfirmDialog />

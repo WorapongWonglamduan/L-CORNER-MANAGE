@@ -11,6 +11,14 @@
   --primary: #213559;
   --primary-light: #2c4a7a;
   --primary-dark: #1a2844;
+
+  /* Chart mark color — deliberately NOT var(--primary): the brand navy is
+     too dark/desaturated to read as a data mark (fails the dataviz skill's
+     lightness-band and chroma-floor checks — validated via
+     scripts/validate_palette.js). This is a brighter blue in the same hue
+     family, picked specifically to work as a chart fill; confirmed passing
+     against the white card surface used everywhere in this app. */
+  --chart-1: #3b6ec2;
 }
 
 @theme inline {
@@ -36,4 +44,17 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Tailwind v4's preflight resets <button> to `cursor: default` (matching
+   native browser behavior) instead of v3's `cursor: pointer` — every action
+   button across the app (shared Button component, raw edit/delete icon
+   buttons, etc.) inherited that, so none of them showed a hand cursor.
+   Fixed once globally rather than patching each button usage individually. */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }

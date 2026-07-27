@@ -1,6 +1,6 @@
 "use client";
 
-import type { ControllerRenderProps, FieldError, FieldValues } from "react-hook-form";
+import type { ControllerRenderProps, FieldError, FieldValues, UseFormSetValue } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
 import { Combobox } from "@/components/ui/Combobox";
 import type { FieldConfig, FieldType } from "./types";
@@ -10,6 +10,7 @@ type RHFField = ControllerRenderProps<FieldValues, string>;
 interface RenderOptions {
   error?: FieldError;
   disabled?: boolean;
+  setValue?: UseFormSetValue<FieldValues>;
 }
 
 type FieldRenderer = (
@@ -35,7 +36,10 @@ const inputLikeField: FieldRenderer = (field, rhf, opts) => (
     icon={field.icon}
     error={opts.error}
     value={(rhf.value as string | number) ?? ""}
-    onChange={rhf.onChange}
+    onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      rhf.onChange(e);
+      field.onValueChange?.(e.target.value, { setValue: opts.setValue });
+    }}
     onBlur={rhf.onBlur}
     disabled={opts.disabled}
     autoComplete={field.autoComplete}
