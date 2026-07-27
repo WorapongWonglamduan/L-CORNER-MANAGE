@@ -28,7 +28,7 @@ export default function CatchAllNotFound() {
         <div className="space-y-4">
           <Link
             href={`/${locale}`}
-            className="block w-full rounded-xl bg-gradient-to-r from-primary to-primary-light px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-200"
+            className="block w-full rounded-xl bg-gradient-to-r from-primary to-primary-light px-6 py-3 text-sm font-semibold text-white hover:scale-105 active:scale-95 transition-all duration-200"
           >
             {t("backHome")}
           </Link>

@@ -88,6 +88,7 @@ export interface ProductFormData {
 
 export function useProductsManager() {
   const t = useTranslations("settings.products");
+  const tCommon = useTranslations("common");
   const { confirm, ConfirmDialog } = useConfirm();
   const router = useRouter();
   const params = useParams();
@@ -137,10 +138,10 @@ export function useProductsManager() {
 
   const handleDelete = async (id: string, hard: boolean) => {
     const confirmed = await confirm({
-      title: "ยืนยันการลบ",
+      title: tCommon("confirmDeleteTitle"),
       description: t("confirmDelete"),
-      confirmText: "ลบ",
-      cancelText: "ยกเลิก",
+      confirmText: tCommon("delete"),
+      cancelText: tCommon("cancel"),
       variant: "destructive",
     });
     if (!confirmed) return;
@@ -157,7 +158,7 @@ export function useProductsManager() {
       refetch();
     } catch (error) {
       console.error("Error deleting product:", error);
-      toast.error("เกิดข้อผิดพลาดในการลบสินค้า");
+      toast.error(tCommon("deleteError"));
     }
   };
 

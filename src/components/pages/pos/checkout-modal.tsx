@@ -2,11 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { X, CreditCard, Banknote, Tag } from "lucide-react";
+import { CreditCard, Banknote, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { PAYMENT_METHODS, PaymentMethod } from "@/constants/payment";
 import { useTranslations } from "next-intl";
+import { toast } from "@/lib/toast";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -69,8 +77,6 @@ export function CheckoutModal({
     }
   }, [isOpen, setValue]);
 
-  if (!isOpen) return null;
-
   const handleApplyPromo = async () => {
     if (!promoCodeInput.trim()) return;
     setPromoLoading(true);
@@ -114,6 +120,11 @@ export function CheckoutModal({
       setValue("amountPaid", "");
     } catch (error) {
       console.error("Payment error:", error);
+      toast.error(
+        t("paymentError", {
+          message: error instanceof Error ? error.message : t("cannotSave"),
+        }),
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -128,18 +139,21 @@ export function CheckoutModal({
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="shrink-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-2xl font-bold text-gray-900">{t("checkoutTitle")}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        // Blocks accidental close (outside click / Escape) while a payment
+        // is actually being submitted — everything else behaves like every
+        // other dialog in the app.
+        if (!open && !isProcessing) onClose();
+      }}
+    >
+      <DialogContent className="max-w-md max-h-[90vh]! overflow-hidden! p-0! flex! flex-col! gap-0! rounded-2xl!">
+        <DialogHeader className="shrink-0 border-b border-gray-200 p-6">
+          <DialogTitle className="text-2xl font-bold text-gray-900">
+            {t("checkoutTitle")}
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Content */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
@@ -336,11 +350,10 @@ export function CheckoutModal({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
-          <div className="flex gap-3">
+        <DialogFooter className="shrink-0 border-t border-gray-200 p-6 sm:justify-stretch">
+          <div className="flex gap-3 w-full">
             <Button
-              onClick={onClose}
+              onClick={() => onClose()}
               variant="outline"
               className="flex-1 py-6 text-lg font-semibold"
               disabled={isProcessing}
@@ -354,13 +367,13 @@ export function CheckoutModal({
                 (paymentMethod === "cash" &&
                   (!amountPaid || Number(amountPaid) < discountedTotal))
               }
-              className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold shadow-lg"
+              className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold"
             >
               {isProcessing ? t("processing") : t("confirm")}
             </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -159,7 +159,7 @@ export function ToppingModal({
             <Button
               onClick={handleConfirm}
               disabled={loading}
-              className="flex-1 bg-gradient-to-r from-primary to-primary-light text-white py-6 text-lg font-bold shadow-lg"
+              className="flex-1 bg-gradient-to-r from-primary to-primary-light text-white py-6 text-lg font-bold"
             >
               {t("addWithToppings")}
             </Button>

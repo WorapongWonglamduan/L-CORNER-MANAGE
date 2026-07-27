@@ -109,7 +109,7 @@ export function DynamicForm<T extends FieldValues = FieldValues>({
       <button
         type="submit"
         disabled={isLoading}
-        className={`w-full ${theme.rounded.md} ${theme.buttons.primary} focus:outline-none focus:ring-2 focus:ring-[${theme.colors.primary.main}] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none  p-3 cursor-pointer`}
+        className={`w-full ${theme.rounded.md} ${theme.buttons.primary} focus:outline-none focus:ring-2 focus:ring-[${theme.colors.primary.main}] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 p-3 cursor-pointer`}
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">

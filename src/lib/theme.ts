@@ -52,7 +52,7 @@ export const theme = {
     primary: 'border border-primary',
   },
   buttons: {
-    primary: 'bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-200',
+    primary: 'bg-gradient-to-r from-primary to-primary-light text-white hover:scale-105 active:scale-95 transition-all duration-200',
     secondary: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors',
     ghost: 'bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-all duration-200 border border-white/20',
   },

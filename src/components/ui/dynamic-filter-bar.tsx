@@ -76,6 +76,9 @@ export function DynamicFilterBar({
 }: DynamicFilterBarProps) {
   const basicFields = fields.filter((field) => !field.advanced);
   const advancedFields = fields.filter((field) => field.advanced);
+  const activeFilterCount = Object.values(values ?? {}).filter(
+    (value) => value !== "" && value !== undefined,
+  ).length;
 
   const { watch, setValue, reset } = useForm<FilterValues>({
     defaultValues: { ...emptyValues(fields), ...values },
@@ -166,6 +169,11 @@ export function DynamicFilterBar({
         <Button size="sm" variant="outline" onClick={handleReset}>
           <RotateCcw className="mr-2 h-4 w-4" />
           {resetLabel}
+          {activeFilterCount > 0 && (
+            <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-primary text-white text-xs font-semibold">
+              {activeFilterCount}
+            </span>
+          )}
         </Button>
 
         {advancedFields.length > 0 && (

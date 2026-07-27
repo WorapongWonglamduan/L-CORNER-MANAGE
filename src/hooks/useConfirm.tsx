@@ -92,7 +92,7 @@ export function useConfirm() {
               className={
                 state.variant === "destructive"
                   ? ""
-                  : "bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
+                  : "bg-gradient-to-r from-primary to-primary-light text-white"
               }
             >
               {state.confirmText}

@@ -50,7 +50,7 @@ export default function CategoriesManager() {
         />
         <Button
           onClick={handleCreate}
-          className="w-full sm:w-auto shrink-0 bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
+          className="w-full sm:w-auto shrink-0 bg-gradient-to-r from-primary to-primary-light text-white"
         >
           <Plus className="h-4 w-4 mr-2" />
           {t("addCategory")}

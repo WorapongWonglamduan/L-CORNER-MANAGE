@@ -80,7 +80,7 @@ export default function ProductsManager() {
         />
         <Button
           onClick={handleCreate}
-          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all px-6 py-2.5"
+          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white px-6 py-2.5"
         >
           <Plus className="h-5 w-5 mr-2" />
           {t("addProduct")}

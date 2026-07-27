@@ -106,7 +106,7 @@ export function Sidebar({ userName }: SidebarProps) {
       {!isMobileOpen && (
         <button
           onClick={() => setIsMobileOpen(true)}
-          className={`fixed top-4 left-4 z-40 md:hidden w-11 h-11 rounded-full ${theme.gradients.primary} ${theme.shadows.lg} flex items-center justify-center`}
+          className={`fixed top-4 left-4 z-40 md:hidden w-11 h-11 rounded-full ${theme.gradients.primary} flex items-center justify-center hover:scale-105 transition-all`}
           aria-label="Open menu"
         >
           <Menu className="w-5 h-5 text-white" />

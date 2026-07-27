@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -134,6 +134,25 @@ export function usePOSManager() {
     [setValue],
   );
 
+  // Cart lines carry no warehouse tag of their own — they're only ever
+  // valid for whichever branch was selected when they were added. Switching
+  // branch with items still in the cart would otherwise let a single sale
+  // silently mix stock from two different warehouses (attributed entirely
+  // to whichever branch happens to be selected at checkout time), so the
+  // cart is cleared whenever the branch actually changes.
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
+  const previousWarehouseIdRef = useRef(warehouseId);
+  useEffect(() => {
+    if (previousWarehouseIdRef.current !== warehouseId) {
+      if (previousWarehouseIdRef.current !== null && cartRef.current.length > 0) {
+        setCart([]);
+        toast.info(t("branchSwitchClearedCart"));
+      }
+      previousWarehouseIdRef.current = warehouseId;
+    }
+  }, [warehouseId, t]);
+
   // Fetch products function
   const fetchProducts = useCallback(async () => {
     if (!warehouseId) return;
@@ -160,10 +179,11 @@ export function usePOSManager() {
       setTotalItems(data.total || 0);
     } catch (error) {
       console.error("Error fetching products:", error);
+      toast.error(t("loadProductsError"));
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, searchQuery, currentPage, pageSize, warehouseId]);
+  }, [selectedCategory, searchQuery, currentPage, pageSize, warehouseId, t]);
 
   // Fetch products on mount and when filters change
   useEffect(() => {
@@ -224,11 +244,12 @@ export function usePOSManager() {
         }
       } catch (error) {
         console.error("Error fetching initial data:", error);
+        toast.error(t("loadInitialDataError"));
       }
     };
 
     fetchInitialData();
-  }, [setWarehouseId, assignedWarehouseIds]);
+  }, [setWarehouseId, assignedWarehouseIds, t]);
 
   // Adds one unit of a product with no toppings selected (the "base" cart
   // line). Used by the plain +/- controls on the product grid.

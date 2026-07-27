@@ -26,7 +26,7 @@ export function ProductActionButtons({
       {onView && (
         <button
           onClick={onView}
-          className="p-2 sm:p-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg transition-all duration-200 group"
+          className="p-2 sm:p-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
           title={viewTitle}
         >
           <Eye className="h-4 w-4 text-white/90 group-hover:text-white" />
@@ -35,7 +35,7 @@ export function ProductActionButtons({
       {onManageWarehouses && (
         <button
           onClick={onManageWarehouses}
-          className="p-2 sm:p-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg transition-all duration-200 group"
+          className="p-2 sm:p-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
           title={manageWarehousesTitle}
         >
           <Warehouse className="h-4 w-4 text-white/90 group-hover:text-white" />
@@ -50,7 +50,7 @@ export function ProductActionButtons({
       </button>
       <button
         onClick={onDelete}
-        className="p-2 sm:p-1.5 bg-white/10 hover:bg-red-500/90 backdrop-blur-sm rounded-lg transition-all duration-200 group"
+        className="p-2 sm:p-1.5 bg-white/10 hover:bg-red-500/90 backdrop-blur-sm rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 group"
         title={deleteTitle}
       >
         <Trash2 className="h-4 w-4 text-white/90 group-hover:text-white" />
