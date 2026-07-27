@@ -13,6 +13,7 @@ export enum INPUT_TYPES {
   COLOR = "color",
   TEXTAREA = "textarea",
   SELECT = "select",
+  COMBOBOX = "combobox",
   CHECKBOX = "checkbox",
   DATE_RANGE = "date-range",
   IMAGE_UPLOAD = "image-upload",

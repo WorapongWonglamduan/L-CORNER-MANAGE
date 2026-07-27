@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("product_id");
     const includeIngredients = searchParams.get("include_ingredients") === "true";
+    // Scopes ingredient stock to one warehouse (used by the production
+    // planning preview); when omitted, stock is summed across all warehouses.
+    const warehouseId = searchParams.get("warehouseId");
 
     const where: Prisma.RecipeWhereInput = {
       is_active: true,
@@ -48,7 +51,9 @@ export async function GET(request: NextRequest) {
                     id: true,
                     code: true,
                     name_i18n: true,
-                    current_stock: true,
+                    stock: warehouseId
+                      ? { where: { warehouse_id: warehouseId } }
+                      : true,
                   },
                 },
                 unit: {
@@ -68,9 +73,36 @@ export async function GET(request: NextRequest) {
       ],
     });
 
+    // Flatten each ingredient's ProductStock rows into the current_stock
+    // number consumers already expect (summed, or the single scoped-warehouse
+    // row when warehouseId was given). Cast needed because Prisma's
+    // conditional `ingredients: includeIngredients ? {...} : false` include
+    // makes the static return type a union TS can't narrow from the same
+    // runtime flag here.
+    interface RecipeWithIngredientStock {
+      ingredients: {
+        ingredient: { stock: { current_stock: Prisma.Decimal }[] };
+      }[];
+    }
+    const items = includeIngredients
+      ? (recipes as unknown as RecipeWithIngredientStock[]).map((recipe) => ({
+          ...recipe,
+          ingredients: recipe.ingredients.map((ri) => ({
+            ...ri,
+            ingredient: {
+              ...ri.ingredient,
+              current_stock: ri.ingredient.stock.reduce(
+                (sum, s) => sum + Number(s.current_stock),
+                0,
+              ),
+            },
+          })),
+        }))
+      : recipes;
+
     return NextResponse.json({
-      items: recipes,
-      total: recipes.length,
+      items,
+      total: items.length,
     });
   } catch (error) {
     console.error("Error fetching recipes:", error);

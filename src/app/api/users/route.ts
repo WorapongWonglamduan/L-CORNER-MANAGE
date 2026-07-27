@@ -21,6 +21,13 @@ const USER_SAFE_SELECT = {
       },
     },
   },
+  user_warehouses: {
+    include: {
+      warehouse: {
+        select: { id: true, code: true, name_i18n: true },
+      },
+    },
+  },
 } as const;
 
 // GET /api/users - list users (paginated)

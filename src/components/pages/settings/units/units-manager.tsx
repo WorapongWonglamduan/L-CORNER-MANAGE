@@ -1,9 +1,10 @@
 "use client";
 
 import { Plus, Package } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useUnitsManager } from "./helper";
@@ -12,19 +13,36 @@ import { getUnitFormConfig } from "./form/config";
 export default function UnitsManager() {
   const { t, table, filters, pagination, actions, dialog, ConfirmDialog } =
     useUnitsManager();
+  const tCommon = useTranslations("common");
   const { units, allUnits, loading } = table;
-  const { searchQuery, setSearchQuery } = filters;
   const { filterOptions, totalItems, totalPages, handlePageChange, handlePageSizeChange } =
     pagination;
   const { handleCreate, handleEdit, handleDelete } = actions;
 
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t("searchPlaceholder")}
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
         />
         <Button
           onClick={handleCreate}

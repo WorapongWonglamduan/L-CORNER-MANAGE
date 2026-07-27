@@ -40,6 +40,7 @@
     "welcome": "Welcome",
     "role": "Role",
     "permissions": "Permissions",
+    "allBranches": "All branches",
     "stats": {
       "todaySales": "Today's Sales",
       "totalProducts": "Total Products",
@@ -82,6 +83,10 @@
     "edit": "Edit",
     "search": "Search",
     "filter": "Filter",
+    "reset": "Reset",
+    "allStatus": "-- All Status --",
+    "active": "Active",
+    "inactive": "Inactive",
     "export": "Export",
     "import": "Import",
     "noData": "No data available",
@@ -158,11 +163,11 @@
       "abbreviationThRequired": "Please enter Thai abbreviation",
       "abbreviationEnRequired": "Please enter English abbreviation"
     },
-    "rawMaterials": {
+    "ingredientsAndContainers": {
       "title": "Manage Ingredients / Container",
       "description": "Manage ingredients and inventory",
-      "addRawMaterial": "Add Raw Material",
-      "editRawMaterial": "Edit Raw Material",
+      "addIngredientContainer": "Add Ingredient/Container",
+      "editIngredientContainer": "Edit Ingredient/Container",
       "searchPlaceholder": "Search ingredients...",
       "code": "Code",
       "codePlaceholder": "e.g. RM001",
@@ -356,6 +361,19 @@
         "loadError": "Failed to load product",
         "deleteSuccess": "Product deleted successfully",
         "deleteError": "Failed to delete product"
+      },
+      "manageWarehouses": "Manage Branches",
+      "branchesTitle": "Available at branches",
+      "warehouses": {
+        "title": "Manage branches for this product",
+        "noWarehouseAssigned": "You haven't been assigned to any branch yet. Please contact an administrator.",
+        "currentStock": "Current Stock",
+        "visible": "Visible",
+        "hidden": "Hidden",
+        "hide": "Hide",
+        "restore": "Restore",
+        "hideRequiresZeroStock": "Stock must be 0 first",
+        "updateError": "Failed to update product visibility"
       }
     },
     "productTypes": {
@@ -421,9 +439,16 @@
     "filterByStatus": "Filter by Status",
     "allTypes": "All Types",
     "allStatus": "All Status",
+    "noWarehouseAssigned": "You haven't been assigned to any branch yet. Please contact an administrator.",
     "rawMaterial": "Raw Material",
     "finishedGood": "Finished Good",
     "semiFinished": "Semi-Finished",
+    "hideFromWarehouse": "Hide from this branch",
+    "confirmHideTitle": "Confirm hiding product",
+    "confirmHideDescription": "This product will be hidden from this branch's list immediately. You can bring it back later from the Products page.",
+    "hideRequiresZeroStock": "Stock must be adjusted to 0 before this product can be hidden from this branch.",
+    "hideSuccess": "Product hidden from this branch.",
+    "hideError": "Failed to hide product.",
     "adjustment": {
       "title": "Adjust Stock",
       "currentStock": "Current Stock",
@@ -497,6 +522,32 @@
         "expired": "Expired",
         "count": "Stock Count"
       }
+    },
+    "transfer": {
+      "title": "Transfer Stock",
+      "transferStock": "Transfer Stock",
+      "fromWarehouse": "From Warehouse",
+      "toWarehouse": "To Warehouse",
+      "product": "Product",
+      "selectProduct": "-- Select Product --",
+      "quantity": "Quantity",
+      "available": "Available",
+      "note": "Note",
+      "noteOptional": "Note (Optional)",
+      "notePlaceholder": "Enter additional details...",
+      "cancel": "Cancel",
+      "confirm": "Confirm Transfer",
+      "transferring": "Transferring...",
+      "successTransfer": "Stock transferred successfully",
+      "errorTransfer": "Failed to transfer stock",
+      "errorRequireProduct": "Please select a product",
+      "errorRequireQuantity": "Please enter quantity",
+      "errorInsufficientStock": "Insufficient stock at source warehouse",
+      "errorSameWarehouse": "Source and destination warehouse must be different",
+      "history": "Transfer History",
+      "date": "Date",
+      "from": "From",
+      "to": "To"
     }
   },
   "pos": {
@@ -505,6 +556,7 @@
     "searchPlaceholder": "Search products...",
     "loading": "Loading products...",
     "noProducts": "No products found",
+    "noWarehouseAssigned": "You haven't been assigned to any branch yet. Please contact an administrator.",
     "cart": "Shopping Cart",
     "clearCart": "Clear Cart",
     "items": "items",
@@ -684,6 +736,7 @@
     "roles": "Roles",
     "rolesPlaceholder": "-- Select roles --",
     "rolesRequired": "Select at least one role",
+    "branches": "Branches",
     "isActive": "Active",
     "status": "Status",
     "active": "Active",
@@ -741,7 +794,8 @@
       "update": "Update",
       "delete": "Delete",
       "adjust": "Adjust Stock",
-      "void": "Void Sale"
+      "void": "Void Sale",
+      "transfer": "Transfer"
     }
   },
   "warehouses": {
@@ -758,6 +812,8 @@
     "address": "Address",
     "addressPlaceholder": "Warehouse address",
     "isActive": "Active",
+    "isDefault": "Set as default warehouse",
+    "default": "Default",
     "status": "Status",
     "active": "Active",
     "inactive": "Inactive",

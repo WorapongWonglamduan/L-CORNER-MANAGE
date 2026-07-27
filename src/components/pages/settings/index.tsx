@@ -49,11 +49,11 @@ export default function SettingsContent() {
       href: `/${locale}/settings/categories`,
     },
     {
-      id: "raw-materials",
-      title: t("rawMaterials.title"),
-      description: t("rawMaterials.description"),
+      id: "ingredients-and-containers",
+      title: t("ingredientsAndContainers.title"),
+      description: t("ingredientsAndContainers.description"),
       icon: Beef,
-      href: `/${locale}/settings/raw-materials`,
+      href: `/${locale}/settings/ingredients-and-containers`,
     },
     {
       id: "product-types",

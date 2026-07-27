@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./button";
+import { Input, INPUT_TYPES } from "./Input";
 import { useTranslations } from "next-intl";
 
 interface PaginationProps {
@@ -56,16 +57,21 @@ export function Pagination({
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t">
       <div className="flex items-center gap-2 text-sm text-gray-600">
         <span className="hidden sm:inline">{t("show")}</span>
-        <select
+        <Input
+          inputType={INPUT_TYPES.SELECT}
           value={itemsPerPage}
-          onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-          className="px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option value={5}>5</option>
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-        </select>
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+            const value = Number(e.target.value);
+            if (value) onItemsPerPageChange(value);
+          }}
+          options={[
+            { value: 5, label: "5" },
+            { value: 10, label: "10" },
+            { value: 20, label: "20" },
+            { value: 50, label: "50" },
+          ]}
+          containerClassName="w-20"
+        />
         <span className="hidden sm:inline">
           {t("itemsPerPage")} ({startItem}-{endItem} {t("of")} {totalItems})
         </span>

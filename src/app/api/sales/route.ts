@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { requirePermission } from "@/lib/permissions";
+import {
+  requirePermission,
+  requireWarehouseAccess,
+  assertWarehouseAccessLive,
+} from "@/lib/permissions";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { Prisma } from "@prisma/client";
@@ -11,9 +15,36 @@ type TransactionClient = Prisma.TransactionClient;
 
 interface DeductStockContext {
   saleId: string;
+  warehouseId: string;
   createdBy: string | null;
   locale: Locale;
   t: Awaited<ReturnType<typeof getTranslations>>;
+}
+
+// Reads a product's current stock at the given warehouse (0 if no
+// ProductStock row exists yet — it simply hasn't been stocked there) and
+// deducts `amount` from it, creating the row if needed. Returns the
+// before/after quantities for the StockMovement audit row.
+async function deductProductStock(
+  tx: TransactionClient,
+  productId: string,
+  warehouseId: string,
+  amount: number,
+) {
+  const existing = await tx.productStock.findUnique({
+    where: { product_id_warehouse_id: { product_id: productId, warehouse_id: warehouseId } },
+  });
+
+  const currentQty = Number(existing?.current_stock) || 0;
+  const newQty = currentQty - amount;
+
+  await tx.productStock.upsert({
+    where: { product_id_warehouse_id: { product_id: productId, warehouse_id: warehouseId } },
+    create: { product_id: productId, warehouse_id: warehouseId, current_stock: newQty },
+    update: { current_stock: newQty },
+  });
+
+  return { currentQty, newQty };
 }
 
 // Deducts stock for one sale item, based on product type, inside the caller's
@@ -26,7 +57,7 @@ async function deductStock(
   quantity: number,
   ctx: DeductStockContext,
 ) {
-  const { saleId, createdBy, locale, t } = ctx;
+  const { saleId, warehouseId, createdBy, locale, t } = ctx;
 
   const product = await tx.product.findUnique({
     where: { id: productId },
@@ -54,28 +85,34 @@ async function deductStock(
 
   // FINISHED_GOOD / INGREDIENT: Deduct stock from the product itself
   if (productType !== PRODUCTS_TYPES.SEMI_FINISHED) {
-    const currentQty = Number(product.current_stock) || 0;
-    const newQty = currentQty - quantity;
-
-    if (product.track_stock && newQty < 0) {
-      const productName = (product.name_i18n as unknown as I18nText)[locale];
-      throw new Error(
-        t("insufficientStock", {
-          productName,
-          available: currentQty,
-          required: quantity,
-        }),
-      );
+    if (product.track_stock) {
+      const existing = await tx.productStock.findUnique({
+        where: { product_id_warehouse_id: { product_id: productId, warehouse_id: warehouseId } },
+      });
+      const available = Number(existing?.current_stock) || 0;
+      if (available - quantity < 0) {
+        const productName = (product.name_i18n as unknown as I18nText)[locale];
+        throw new Error(
+          t("insufficientStock", {
+            productName,
+            available,
+            required: quantity,
+          }),
+        );
+      }
     }
 
-    await tx.product.update({
-      where: { id: productId },
-      data: { current_stock: newQty },
-    });
+    const { currentQty, newQty } = await deductProductStock(
+      tx,
+      productId,
+      warehouseId,
+      quantity,
+    );
 
     await tx.stockMovement.create({
       data: {
         product_id: productId,
+        warehouse_id: warehouseId,
         movement_type: "sale",
         direction: "out",
         quantity_before: currentQty,
@@ -113,7 +150,12 @@ async function deductStock(
     for (const ri of recipeIngredients) {
       if (!ri.ingredient.track_stock) continue;
       const required = Number(ri.quantity) * quantity;
-      const available = Number(ri.ingredient.current_stock) || 0;
+      const existing = await tx.productStock.findUnique({
+        where: {
+          product_id_warehouse_id: { product_id: ri.ingredient_id, warehouse_id: warehouseId },
+        },
+      });
+      const available = Number(existing?.current_stock) || 0;
       if (available - required < 0) {
         const ingredientName = (ri.ingredient.name_i18n as unknown as I18nText)[
           locale
@@ -126,17 +168,17 @@ async function deductStock(
 
     for (const recipeIngredient of recipeIngredients) {
       const ingredientQty = Number(recipeIngredient.quantity) * quantity;
-      const currentQty = Number(recipeIngredient.ingredient.current_stock) || 0;
-      const newQty = currentQty - ingredientQty;
-
-      await tx.product.update({
-        where: { id: recipeIngredient.ingredient_id },
-        data: { current_stock: newQty },
-      });
+      const { currentQty, newQty } = await deductProductStock(
+        tx,
+        recipeIngredient.ingredient_id,
+        warehouseId,
+        ingredientQty,
+      );
 
       await tx.stockMovement.create({
         data: {
           product_id: recipeIngredient.ingredient_id,
+          warehouse_id: warehouseId,
           movement_type: "sale",
           direction: "out",
           quantity_before: currentQty,
@@ -162,7 +204,7 @@ async function deductToppingStock(
   servings: number,
   ctx: DeductStockContext,
 ) {
-  const { saleId, createdBy, locale, t } = ctx;
+  const { saleId, warehouseId, createdBy, locale, t } = ctx;
 
   const topping = await tx.topping.findUnique({
     where: { id: toppingId },
@@ -176,30 +218,38 @@ async function deductToppingStock(
   if (!topping.ingredient.track_stock) return;
 
   const required = Number(topping.quantity_per_serving) * servings;
-  const currentQty = Number(topping.ingredient.current_stock) || 0;
-  const newQty = currentQty - required;
 
-  if (newQty < 0) {
+  const existing = await tx.productStock.findUnique({
+    where: {
+      product_id_warehouse_id: { product_id: topping.ingredient_id, warehouse_id: warehouseId },
+    },
+  });
+  const available = Number(existing?.current_stock) || 0;
+
+  if (available - required < 0) {
     const ingredientName = (topping.ingredient.name_i18n as unknown as I18nText)[
       locale
     ];
     throw new Error(
       t("insufficientIngredient", {
         ingredientName,
-        available: currentQty,
+        available,
         required,
       }),
     );
   }
 
-  await tx.product.update({
-    where: { id: topping.ingredient_id },
-    data: { current_stock: newQty },
-  });
+  const { currentQty, newQty } = await deductProductStock(
+    tx,
+    topping.ingredient_id,
+    warehouseId,
+    required,
+  );
 
   await tx.stockMovement.create({
     data: {
       product_id: topping.ingredient_id,
+      warehouse_id: warehouseId,
       movement_type: "sale",
       direction: "out",
       quantity_before: currentQty,
@@ -230,6 +280,11 @@ export async function GET(request: NextRequest) {
     const warehouseId = searchParams.get("warehouseId");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+
+    if (warehouseId) {
+      const deniedWarehouse = requireWarehouseAccess(session, warehouseId);
+      if (deniedWarehouse) return deniedWarehouse;
+    }
 
     const skip = (page - 1) * pageSize;
 
@@ -349,6 +404,9 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    const deniedWarehouse = await assertWarehouseAccessLive(session, warehouse_id);
+    if (deniedWarehouse) return deniedWarehouse;
 
     // Calculate totals, resolving each item's product + any selected toppings
     let subtotal = 0;
@@ -587,6 +645,7 @@ export async function POST(request: NextRequest) {
       // partial writes, no half-claimed promotion).
       const deductCtx: DeductStockContext = {
         saleId: sale.id,
+        warehouseId: warehouse_id,
         createdBy: session?.user?.id || null,
         locale,
         t,

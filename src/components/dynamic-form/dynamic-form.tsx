@@ -3,54 +3,14 @@
 import {
   Controller,
   FieldValues,
-  Path,
   Control,
   FieldErrors,
   UseFormHandleSubmit,
   FieldError,
-  RegisterOptions,
 } from "react-hook-form";
-import { Input } from "./Input";
-import { LucideIcon } from "lucide-react";
 import { theme } from "@/lib/theme";
-
-export type FieldType =
-  | "text"
-  | "email"
-  | "password"
-  | "number"
-  | "tel"
-  | "url"
-  | "date"
-  | "textarea"
-  | "select"
-  | "checkbox"
-  | "image-upload"
-  | "multi-image-upload";
-
-export interface SelectOption {
-  value: string | number;
-  label: string;
-}
-
-export interface FieldConfig<T extends FieldValues = FieldValues> {
-  name: Path<T>;
-  type: FieldType;
-  label?: string;
-  placeholder?: string;
-  helperText?: string;
-  icon?: LucideIcon;
-  disabled?: boolean;
-  autoComplete?: string;
-  options?: SelectOption[];
-  rows?: number;
-  min?: string | number;
-  max?: string | number;
-  step?: string | number;
-  rules?: RegisterOptions<T>;
-  /** Grid column span on the `sm:grid-cols-2` layout. Defaults to 2 (full width) for textarea/image fields, 1 otherwise. */
-  colSpan?: 1 | 2;
-}
+import { renderDynamicFieldControl } from "./field-registry";
+import type { FieldType, FieldConfig } from "./types";
 
 export interface FormConfig<T extends FieldValues = FieldValues> {
   fields: FieldConfig<T>[];
@@ -72,7 +32,7 @@ function colSpanClass<T extends FieldValues>(field: FieldConfig<T>) {
   return span === 2 ? "sm:col-span-2" : undefined;
 }
 
-interface FormBuilderProps<T extends FieldValues = FieldValues> {
+interface DynamicFormProps<T extends FieldValues = FieldValues> {
   config: FormConfig<T>;
   control: Control<T>;
   handleSubmit: UseFormHandleSubmit<T>;
@@ -82,7 +42,7 @@ interface FormBuilderProps<T extends FieldValues = FieldValues> {
   isLoading?: boolean;
 }
 
-export function FormBuilder<T extends FieldValues = FieldValues>({
+export function DynamicForm<T extends FieldValues = FieldValues>({
   config,
   control,
   handleSubmit,
@@ -90,7 +50,7 @@ export function FormBuilder<T extends FieldValues = FieldValues>({
   errors,
   error,
   isLoading = false,
-}: FormBuilderProps<T>) {
+}: DynamicFormProps<T>) {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
@@ -103,31 +63,12 @@ export function FormBuilder<T extends FieldValues = FieldValues>({
             name={field.name}
             control={control}
             rules={field.rules}
-            render={({ field: { onChange, onBlur, value, ref } }) => (
-              <Input
-                {...field}
-                ref={ref}
-                inputType={field.type}
-                id={field.name}
-                label={field.label}
-                placeholder={field.placeholder}
-                helperText={field.helperText}
-                icon={field.icon}
-                error={errors[field.name] as FieldError | undefined}
-                value={field.type === "checkbox" ? undefined : value || ""}
-                checked={field.type === "checkbox" ? value : undefined}
-                onCheckedChange={field.type === "checkbox" ? onChange : undefined}
-                onChange={field.type !== "checkbox" ? onChange : undefined}
-                onBlur={onBlur}
-                disabled={field.disabled || isLoading}
-                autoComplete={field.autoComplete}
-                options={field.options}
-                rows={field.rows}
-                min={field.min}
-                max={field.max}
-                step={field.step}
-              />
-            )}
+            render={({ field: rhf }) =>
+              renderDynamicFieldControl(field, rhf, {
+                error: errors[field.name] as FieldError | undefined,
+                disabled: field.disabled || isLoading,
+              })
+            }
           />
         ));
 

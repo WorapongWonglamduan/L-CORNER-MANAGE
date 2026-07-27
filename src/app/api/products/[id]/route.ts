@@ -41,6 +41,7 @@ export async function GET(
             sort_order: "asc" as const,
           },
         },
+        stock: true,
       },
     });
 
@@ -56,8 +57,21 @@ export async function GET(
       sortOrder: pm.sort_order,
     })) || [];
 
+    // Product detail is master data (no warehouse selector on this page), so
+    // stock figures are summed across every warehouse the product is stocked at.
+    const { stock, ...productRest } = product;
+    const stockTotals = stock.reduce(
+      (acc, s) => ({
+        current_stock: acc.current_stock + Number(s.current_stock),
+        min_stock_level: acc.min_stock_level + Number(s.min_stock_level),
+        low_stock_threshold: acc.low_stock_threshold + Number(s.low_stock_threshold),
+      }),
+      { current_stock: 0, min_stock_level: 0, low_stock_threshold: 0 },
+    );
+
     return NextResponse.json({
-      ...product,
+      ...productRest,
+      ...stockTotals,
       images,
     });
   } catch (error) {
@@ -91,9 +105,6 @@ export async function PUT(
       is_active,
       has_serial,
       has_expiry,
-      min_stock_level,
-      low_stock_threshold,
-      current_stock,
       track_stock,
       selling_price,
       cost_price,
@@ -175,9 +186,6 @@ export async function PUT(
           is_active,
           has_serial,
           has_expiry,
-          min_stock_level: min_stock_level || 0,
-          low_stock_threshold: low_stock_threshold || 0,
-          current_stock: current_stock ?? undefined,
           track_stock,
           selling_price: selling_price ?? undefined,
           cost_price: cost_price ?? undefined,

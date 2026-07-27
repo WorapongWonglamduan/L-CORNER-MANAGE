@@ -6,8 +6,9 @@ import { FilterOptions } from "@/hooks/usePagination";
 import { useEffect, useState } from "react";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { ImageFile } from "@/components/ui/multi-image-upload";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
-export interface RawMaterialFormData {
+export interface IngredientContainerFormData {
   code: string;
   name_th: string;
   name_en: string;
@@ -16,13 +17,11 @@ export interface RawMaterialFormData {
   type_id?: string;
   unit_id?: string;
   cost_price?: number;
-  min_stock?: number;
-  current_stock?: number;
   images?: ImageFile[];
   is_active: boolean;
 }
 
-interface RawMaterial {
+interface IngredientContainer {
   id: string;
   code: string;
   name_i18n: {
@@ -90,14 +89,14 @@ interface ProductType {
   type: string;
 }
 
-interface RawMaterialsFilterOptions extends FilterOptions {
+interface IngredientsAndContainersFilterOptions extends FilterOptions {
   search?: string;
   isActive?: boolean;
   type_id?: string;
 }
 
-export function useRawMaterialsManager() {
-  const t = useTranslations("settings.rawMaterials");
+export function useIngredientsAndContainersManager() {
+  const t = useTranslations("settings.ingredientsAndContainers");
   const { confirm, ConfirmDialog } = useConfirm();
   const [optionsData, setOptionsData] = useState<{
     units: Unit[];
@@ -106,21 +105,33 @@ export function useRawMaterialsManager() {
   const [dataLoading, setDataLoading] = useState(true);
 
   const {
-    items: rawMaterials,
+    items: ingredientsAndContainers,
     loading,
     totalItems,
     totalPages,
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
-  } = useEntityList<RawMaterial, RawMaterialsFilterOptions>({
-    endpoint: "/api/raw-materials",
+  } = useEntityList<IngredientContainer, IngredientsAndContainersFilterOptions>({
+    endpoint: "/api/ingredients-and-containers",
     initialFilters: {
       search: "",
+      isActive: undefined,
     },
   });
+
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<IngredientsAndContainersFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<IngredientsAndContainersFilterOptions>);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -156,14 +167,14 @@ export function useRawMaterialsManager() {
     watch,
     loading: formLoading,
     error: formError,
-    editingEntity: editingRawMaterial,
+    editingEntity: editingIngredientContainer,
     dialogOpen,
     handleCreate,
     handleEdit,
     handleDelete,
     handleDialogClose,
     handleFormSubmit,
-  } = useEntityForm<RawMaterialFormData, RawMaterial>({
+  } = useEntityForm<IngredientContainerFormData, IngredientContainer>({
     formConfig: {
       defaultValues: {
         code: "",
@@ -176,12 +187,10 @@ export function useRawMaterialsManager() {
             ?.id || "",
         unit_id: "",
         cost_price: 0,
-        min_stock: 0,
-        current_stock: 0,
         is_active: true,
       },
     },
-    endpoint: "/api/raw-materials",
+    endpoint: "/api/ingredients-and-containers",
     transformToPayload: async (data) => {
       // Separate existing images from new uploads
       const mediaData: Array<{
@@ -241,18 +250,16 @@ export function useRawMaterialsManager() {
         type_id: data.type_id,
         unit_id: data.unit_id,
         cost_price: data.cost_price || null,
-        min_stock: data.min_stock || 0,
-        current_stock: data.current_stock || 0,
         is_active: data.is_active,
         media_data: mediaData,
       };
 
       return payload;
     },
-    transformToForm: (rawMaterial) => {
+    transformToForm: (ingredientContainer) => {
       // Convert existing images from server to ImageFile format
       const existingImages: ImageFile[] =
-        rawMaterial.images?.map((img: { id: string; url: string; isPrimary: boolean }) => ({
+        ingredientContainer.images?.map((img: { id: string; url: string; isPrimary: boolean }) => ({
           id: img.id,
           preview: img.url, // Use server URL as preview
           isPrimary: img.isPrimary,
@@ -262,17 +269,15 @@ export function useRawMaterialsManager() {
         })) || [];
 
       return {
-        code: rawMaterial.code,
-        name_th: rawMaterial.name_i18n.th,
-        name_en: rawMaterial.name_i18n.en,
-        description_th: rawMaterial.description_i18n?.th || "",
-        description_en: rawMaterial.description_i18n?.en || "",
-        type_id: rawMaterial.type_id || "",
-        unit_id: rawMaterial.unit_id,
-        cost_price: rawMaterial.cost_price || 0,
-        min_stock: Number(rawMaterial.min_stock) || 0,
-        current_stock: Number(rawMaterial.current_stock) || 0,
-        is_active: rawMaterial.is_active,
+        code: ingredientContainer.code,
+        name_th: ingredientContainer.name_i18n.th,
+        name_en: ingredientContainer.name_i18n.en,
+        description_th: ingredientContainer.description_i18n?.th || "",
+        description_en: ingredientContainer.description_i18n?.en || "",
+        type_id: ingredientContainer.type_id || "",
+        unit_id: ingredientContainer.unit_id,
+        cost_price: ingredientContainer.cost_price || 0,
+        is_active: ingredientContainer.is_active,
         images: existingImages,
       };
     },
@@ -283,12 +288,15 @@ export function useRawMaterialsManager() {
   return {
     t,
     table: {
-      items: rawMaterials,
+      items: ingredientsAndContainers,
       loading,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
     },
     pagination: {
       filterOptions,
@@ -304,7 +312,7 @@ export function useRawMaterialsManager() {
     },
     dialog: {
       open: dialogOpen,
-      editingItem: editingRawMaterial,
+      editingItem: editingIngredientContainer,
       onClose: handleDialogClose,
       ConfirmDialog,
     },

@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 
-// GET /api/raw-materials - ดึงรายการวัตถุดิบทั้งหมด (จาก products table)
+// GET /api/ingredients-and-containers - ดึงรายการวัตถุดิบ/ภาชนะทั้งหมด (จาก products table)
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause - query from products table
     const where: Record<string, unknown> = {
-      // Filter raw material and semi-finished product types
+      // Filter ingredient and container product types
       product_type: {
         type: {
           in: [PRODUCTS_TYPES.INGREDIENT, PRODUCTS_TYPES.CONTAINER],
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     const total = await prisma.product.count({ where });
 
     // Get paginated data from products
-    const rawMaterials = await prisma.product.findMany({
+    const ingredientsAndContainers = await prisma.product.findMany({
       where,
       include: {
         base_unit: true,
@@ -61,14 +61,17 @@ export async function GET(request: NextRequest) {
             sort_order: "asc",
           },
         },
+        stock: true,
       },
       orderBy: { created_at: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
 
-    // Transform to match old raw_materials format
-    const items = rawMaterials.map((product) => {
+    // Transform to match the ingredients-and-containers response shape.
+    // This is master data (no warehouse selector here), so stock is summed
+    // across every warehouse the ingredient/container is stocked at.
+    const items = ingredientsAndContainers.map((product) => {
       // Find primary image from ProductMedia relations
       const primaryProductMedia = product.media?.find(
         (pm) => pm.is_primary,
@@ -80,6 +83,14 @@ export async function GET(request: NextRequest) {
         primaryImageUrl = primaryImageUrl.replace(/\\/g, "/");
       }
 
+      const stockTotals = product.stock.reduce(
+        (acc, s) => ({
+          min_stock: acc.min_stock + Number(s.min_stock_level),
+          current_stock: acc.current_stock + Number(s.current_stock),
+        }),
+        { min_stock: 0, current_stock: 0 },
+      );
+
       return {
         id: product.id,
         code: product.code,
@@ -88,8 +99,8 @@ export async function GET(request: NextRequest) {
         type_id: product.product_type_id,
         unit_id: product.base_unit_id,
         cost_price: product.cost_price,
-        min_stock: product.min_stock_level,
-        current_stock: product.current_stock,
+        min_stock: stockTotals.min_stock,
+        current_stock: stockTotals.current_stock,
         is_active: product.is_active,
         created_at: product.created_at,
         updated_at: product.updated_at,
@@ -107,15 +118,15 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil(total / pageSize),
     });
   } catch (error) {
-    console.error("Error fetching raw materials:", error);
+    console.error("Error fetching ingredients/containers:", error);
     return NextResponse.json(
-      { error: "Failed to fetch raw materials" },
+      { error: "Failed to fetch ingredients/containers" },
       { status: 500 },
     );
   }
 }
 
-// POST /api/raw-materials - สร้างวัตถุดิบใหม่ (ใน products table)
+// POST /api/ingredients-and-containers - สร้างวัตถุดิบ/ภาชนะใหม่ (ใน products table)
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -131,8 +142,6 @@ export async function POST(request: NextRequest) {
       type_id,
       unit_id,
       cost_price,
-      min_stock,
-      current_stock,
       is_active,
       media_data,
     } = body;
@@ -157,7 +166,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create as product with raw_material type
+    // Create as a product with an ingredient/container product type
     const product = await prisma.product.create({
       data: {
         code,
@@ -166,8 +175,6 @@ export async function POST(request: NextRequest) {
         product_type_id: type_id,
         base_unit_id: unit_id,
         cost_price: cost_price || null,
-        min_stock_level: min_stock || 0,
-        current_stock: current_stock || 0,
         is_active: is_active ?? true,
         track_stock: true,
         has_serial: false,
@@ -206,8 +213,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Transform to match old raw_materials format
-    const rawMaterial = {
+    // Transform to match the ingredients-and-containers response shape
+    const ingredientContainer = {
       id: product.id,
       code: product.code,
       name_i18n: product.name_i18n,
@@ -215,8 +222,8 @@ export async function POST(request: NextRequest) {
       type_id: product.product_type_id,
       unit_id: product.base_unit_id,
       cost_price: product.cost_price,
-      min_stock: product.min_stock_level,
-      current_stock: product.current_stock,
+      min_stock: 0,
+      current_stock: 0,
       is_active: product.is_active,
       created_at: product.created_at,
       updated_at: product.updated_at,
@@ -224,11 +231,11 @@ export async function POST(request: NextRequest) {
       type: product.product_type,
     };
 
-    return NextResponse.json(rawMaterial, { status: 201 });
+    return NextResponse.json(ingredientContainer, { status: 201 });
   } catch (error) {
-    console.error("Error creating raw material:", error);
+    console.error("Error creating ingredient/container:", error);
     return NextResponse.json(
-      { error: "Failed to create raw material" },
+      { error: "Failed to create ingredient/container" },
       { status: 500 },
     );
   }

@@ -41,6 +41,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             user_roles: {
               include: { role: true },
             },
+            user_warehouses: {
+              select: { warehouse_id: true },
+            },
           },
         });
 
@@ -54,6 +57,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           Array.isArray(ur.role.permissions) ? ur.role.permissions : [],
         );
         const uniquePermissions = [...new Set(allPermissions)] as string[];
+        const warehouseIds = user.user_warehouses.map((uw) => uw.warehouse_id);
 
         return {
           id: user.id,
@@ -61,6 +65,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           email: user.email,
           roles,
           permissions: uniquePermissions,
+          warehouse_ids: warehouseIds,
         };
       },
     }),
@@ -71,6 +76,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         token.id = user.id;
         token.roles = user.roles;
         token.permissions = user.permissions;
+        token.warehouse_ids = user.warehouse_ids;
       }
       return token;
     },
@@ -80,6 +86,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         if (token.roles) session.user.roles = token.roles as string[];
         if (token.permissions)
           session.user.permissions = token.permissions as string[];
+        if (token.warehouse_ids)
+          session.user.warehouse_ids = token.warehouse_ids as string[];
       }
       return session;
     },

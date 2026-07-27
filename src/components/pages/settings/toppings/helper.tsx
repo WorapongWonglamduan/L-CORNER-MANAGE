@@ -6,6 +6,7 @@ import { FilterOptions } from "@/hooks/usePagination";
 import { useEffect, useState, useCallback } from "react";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { I18nText } from "@/types/i18n";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
 export interface ToppingFormData {
   name_th: string;
@@ -84,14 +85,26 @@ export function useToppingsManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
   } = useEntityList<Topping, ToppingsFilterOptions>({
     endpoint: "/api/toppings",
     initialFilters: {
       search: "",
+      isActive: undefined,
     },
   });
+
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<ToppingsFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<ToppingsFilterOptions>);
+  };
 
   const fetchOptions = useCallback(async () => {
     try {
@@ -181,8 +194,11 @@ export function useToppingsManager() {
       loading,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
     },
     pagination: {
       filterOptions,

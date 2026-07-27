@@ -9,11 +9,15 @@ import {
   Plus,
   Trash2,
   ChefHat,
+  Warehouse,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
+import { Combobox } from "@/components/ui/Combobox";
+import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
+import type { FieldConfig } from "@/components/dynamic-form/types";
 import { useProductForm, type ProductFormData } from "./helper";
 import { getProductFormConfig, getPriceStockConfig } from "./config";
 import { FieldError, Controller, RegisterOptions } from "react-hook-form";
@@ -31,8 +35,9 @@ export default function AddProductContent() {
     loading: { loading, dataLoading },
     optionsData,
     recipeFields: { fields, append, remove },
-    flags: { isSemiFinished, isFinishedGood, isEdit },
+    flags: { isSemiFinished, isEdit },
     handleProductTypeChange,
+    toggleWarehouseId,
   } = useProductForm();
 
   const formFields = getProductFormConfig(
@@ -160,33 +165,19 @@ export default function AddProductContent() {
                     );
                   }
 
-                  // Use Controller for all other field types
+                  // Fields with no custom onChange behavior (code, name_th,
+                  // name_en, category_id, base_unit_id, description_th) —
+                  // rendered one at a time via the shared FormFields component
+                  // so they stay in their original grid position, but get
+                  // combobox/etc. support for free.
                   return (
-                    <Controller
-                      key={field.name}
-                      name={field.name as keyof ProductFormData}
-                      control={control}
-                      rules={field.rules as RegisterOptions<ProductFormData, keyof ProductFormData>}
-                      render={({ field: controllerField }) => (
-                        <Input
-                          inputType={field.type}
-                          label={field.label}
-                          placeholder={field.placeholder}
-                          options={field.options}
-                          rows={field.rows}
-                          value={(controllerField.value ?? "") as string | number}
-                          onChange={controllerField.onChange}
-                          onBlur={controllerField.onBlur}
-                          error={
-                            errors[field.name as keyof typeof errors] as
-                              | FieldError
-                              | undefined
-                          }
-                          containerClassName={field.gridCols || ""}
-                          required={!!field.rules?.required}
-                        />
-                      )}
-                    />
+                    <div key={field.name} className={field.gridCols || ""}>
+                      <DynamicFormFields
+                        fields={[field as unknown as FieldConfig<ProductFormData>]}
+                        control={control}
+                        errors={errors}
+                      />
+                    </div>
                   );
                 })}
               </div>
@@ -232,8 +223,8 @@ export default function AddProductContent() {
                       const selectedIngredientId = watch(
                         `recipe_ingredients.${index}.ingredient_id`,
                       );
-                      const selectedIngredient = optionsData.rawMaterials.find(
-                        (rm) => rm.id === selectedIngredientId,
+                      const selectedIngredient = optionsData.ingredientsAndContainers.find(
+                        (ic) => ic.id === selectedIngredientId,
                       );
 
                       return (
@@ -249,24 +240,20 @@ export default function AddProductContent() {
                               control={control}
                               rules={{ required: "กรุณาเลือกวัตถุดิบ" }}
                               render={({ field: controllerField }) => (
-                                <Input
-                                  inputType="select"
+                                <Combobox
                                   label={t("ingredient")}
-                                  options={[
-                                    ...optionsData.rawMaterials.map((rm) => ({
-                                      value: rm.id,
-                                      label: `${rm.name_i18n[locale]} (${rm.code})`,
-                                    })),
-                                  ]}
+                                  options={optionsData.ingredientsAndContainers.map((ic) => ({
+                                    value: ic.id,
+                                    label: `${ic.name_i18n[locale]} (${ic.code})`,
+                                  }))}
                                   value={controllerField.value ?? ""}
-                                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                    const newIngredientId = e.target.value;
+                                  onChange={(newIngredientId: string) => {
                                     controllerField.onChange(newIngredientId);
 
                                     // Auto-set unit_id based on selected ingredient's unit_id
                                     const ingredient =
-                                      optionsData.rawMaterials.find(
-                                        (rm) => rm.id === newIngredientId,
+                                      optionsData.ingredientsAndContainers.find(
+                                        (ic) => ic.id === newIngredientId,
                                       );
                                     if (ingredient) {
                                       setValue(
@@ -348,13 +335,15 @@ export default function AddProductContent() {
                             />
                           </div>
 
-                          <button
+                          <Button
                             type="button"
                             onClick={() => remove(index)}
-                            className="mt-6 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            variant="ghost"
+                            size="icon"
+                            className="mt-6 text-red-600 hover:bg-red-50 hover:text-red-600"
                           >
                             <Trash2 className="w-5 h-5" />
-                          </button>
+                          </Button>
                         </div>
                       );
                     })
@@ -372,87 +361,62 @@ export default function AddProductContent() {
                 {t("price")}
               </h3>
               <div className="space-y-4">
-                {priceStockConfig.slice(0, 2).map((field) => (
-                  <Controller
-                    key={field.name}
-                    name={field.name as keyof ProductFormData}
-                    control={control}
-                    rules={field.rules as RegisterOptions<ProductFormData, keyof ProductFormData>}
-                    render={({ field: controllerField }) => (
-                      <Input
-                        inputType="number"
-                        label={field.label}
-                        placeholder={field.placeholder}
-                        step="1"
-                        value={(controllerField.value ?? "") as number | ""}
-                        onChange={controllerField.onChange}
-                        onBlur={controllerField.onBlur}
-                        error={
-                          errors[field.name as keyof typeof errors] as
-                            | FieldError
-                            | undefined
-                        }
-                        required={!!field.rules?.required}
-                      />
-                    )}
-                  />
-                ))}
+                <DynamicFormFields
+                  fields={priceStockConfig as unknown as FieldConfig<ProductFormData>[]}
+                  control={control}
+                  errors={errors}
+                />
               </div>
             </div>
 
-            {/* Stock */}
-            {!isSemiFinished && (
+            {/* Branches (create only — reassigning after creation happens via
+                the products-list "จัดการคลัง" modal, one place, not two) */}
+            {!isEdit && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">
-                  {t("stock")}
-                  {isFinishedGood && (
-                    <span className="text-red-500 ml-1">*</span>
-                  )}
-                </h3>
-                <div className="space-y-4">
-                  {priceStockConfig.slice(2).map((field) => {
-                    const isRequired =
-                      isFinishedGood &&
-                      (field.name === "min_stock_level" ||
-                        field.name === "current_stock");
-
-                    const validationRules = isRequired
-                      ? {
-                          required:
-                            field.name === "min_stock_level"
-                              ? "กรุณาระบุสต็อกขั้นต่ำ"
-                              : field.name === "current_stock"
-                                ? "กรุณาระบุสต็อกปัจจุบัน"
-                                : field.rules?.required,
-                        }
-                      : field.rules;
-
-                    return (
-                      <Controller
-                        key={field.name}
-                        name={field.name as keyof ProductFormData}
-                        control={control}
-                        rules={validationRules as RegisterOptions<ProductFormData, keyof ProductFormData>}
-                        render={({ field: controllerField }) => (
-                          <Input
-                            inputType="number"
-                            label={field.label}
-                            placeholder={field.placeholder}
-                            value={(controllerField.value ?? "") as number | ""}
-                            onChange={controllerField.onChange}
-                            onBlur={controllerField.onBlur}
-                            error={
-                              errors[field.name as keyof typeof errors] as
-                                | FieldError
-                                | undefined
-                            }
-                            required={isRequired || !!field.rules?.required}
-                          />
-                        )}
-                      />
-                    );
-                  })}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <Warehouse className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {t("branchesTitle")}
+                  </h3>
                 </div>
+                {optionsData.warehouses.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    {t("warehouses.noWarehouseAssigned")}
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {optionsData.warehouses.map((warehouse) => {
+                      const selected = (watch("warehouse_ids") || []).includes(
+                        warehouse.id,
+                      );
+                      return (
+                        <div
+                          key={warehouse.id}
+                          className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50"
+                        >
+                          <Input
+                            inputType={INPUT_TYPES.CHECKBOX}
+                            checked={selected}
+                            onCheckedChange={() =>
+                              toggleWarehouseId(warehouse.id)
+                            }
+                          />
+                          <span
+                            className="text-sm text-gray-900 cursor-pointer"
+                            onClick={() => toggleWarehouseId(warehouse.id)}
+                          >
+                            {warehouse.name_i18n[locale]}{" "}
+                            <span className="text-gray-500">
+                              ({warehouse.code})
+                            </span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

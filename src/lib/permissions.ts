@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { Session } from "next-auth";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Permission string convention: "<resource>.<action>", matching prisma/seed.ts
@@ -33,6 +34,61 @@ export function requirePermission(
   }
   if (!hasPermission(session, permission)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return null;
+}
+
+/**
+ * JWT-claim based (same staleness trade-off already accepted for
+ * permissions/roles — the assigned-branch list is baked in at login and
+ * only refreshes on next login). Use on read (GET) routes, where a stale
+ * grant/revoke means "sees slightly outdated authorized data" at worst.
+ */
+export function hasWarehouseAccess(
+  session: Session | null,
+  warehouseId: string,
+): boolean {
+  return !!session?.user?.warehouse_ids?.includes(warehouseId);
+}
+
+export function requireWarehouseAccess(
+  session: Session | null,
+  warehouseId: string,
+): NextResponse | null {
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!hasWarehouseAccess(session, warehouseId)) {
+    return NextResponse.json(
+      { error: "Forbidden: no access to this warehouse" },
+      { status: 403 },
+    );
+  }
+  return null;
+}
+
+/**
+ * Live DB check (not JWT-claim based) — use on mutating routes (creating a
+ * sale, adjusting/transferring stock, production), where a user who was just
+ * revoked access should not be able to keep writing to that branch until
+ * their JWT naturally rotates. Deliberately async and separate from
+ * `requireWarehouseAccess` so the two are never accidentally interchanged.
+ */
+export async function assertWarehouseAccessLive(
+  session: Session | null,
+  warehouseId: string,
+): Promise<NextResponse | null> {
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const count = await prisma.userWarehouse.count({
+    where: { user_id: session.user.id, warehouse_id: warehouseId },
+  });
+  if (count === 0) {
+    return NextResponse.json(
+      { error: "Forbidden: no access to this warehouse" },
+      { status: 403 },
+    );
   }
   return null;
 }

@@ -1,5 +1,5 @@
 import { Mail, Lock } from "lucide-react";
-import { FieldConfig } from "@/components/ui/FormBuilder";
+import type { FieldConfig } from "@/components/dynamic-form/types";
 
 // Login Form Config
 export interface LoginFormData {

@@ -3,7 +3,7 @@
 
 > **PostgreSQL Port:** 5436 (mapped from container port 5432, per `docker-compose.yml`)
 >
-> ⚠️ `env.template`'s sample `DATABASE_URL` still points at port `5435` — this is a known mismatch between the two files. If `docker-compose up -d postgres` fails to connect from your `.env`, check which port you're actually using.
+> ⚠️ `env.template`'s sample `DB_PORT` still points at port `5435` — this is a known mismatch between the two files. If `docker-compose up -d postgres` fails to connect from your `.env`, check which port you're actually using.
 
 ---
 
@@ -204,7 +204,11 @@ docker build -t l-corner-pos:latest .
 # Run production container
 docker run -d \
   -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:pass@host:5432/db" \
+  -e DB_HOST="host" \
+  -e DB_PORT="5432" \
+  -e DB_DATABASE="db" \
+  -e DB_USERNAME="user" \
+  -e DB_PASSWORD="pass" \
   -e NEXTAUTH_SECRET="your-secret" \
   l-corner-pos:latest
 ```
@@ -291,10 +295,11 @@ l-corner-manage/
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `POSTGRES_USER` | Database user | `postgres` |
-| `POSTGRES_PASSWORD` | Database password | `postgres` |
-| `POSTGRES_DB` | Database name | `l_corner_pos` |
-| `DATABASE_URL` | Prisma connection string | See env.template |
+| `DB_HOST` | Database host | `localhost` |
+| `DB_PORT` | Database port | `5436` |
+| `DB_DATABASE` | Database name | `l_corner_pos` |
+| `DB_USERNAME` | Database user | `postgres` |
+| `DB_PASSWORD` | Database password | `postgres` |
 | `NEXTAUTH_SECRET` | NextAuth secret key | Required |
 | `NODE_ENV` | Environment | `development` |
 

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { toast } from "@/lib/toast";
 import { ImageFile } from "@/components/ui/multi-image-upload";
+import type { I18nText } from "@/types/i18n";
 
 interface RecipeIngredient {
   ingredient_id: string;
@@ -25,15 +27,19 @@ export interface ProductFormData {
   base_unit_id: string;
   selling_price: number;
   cost_price?: number;
-  min_stock_level?: number;
-  low_stock_threshold?: number;
-  current_stock?: number;
   images?: ImageFile[];
   track_stock: boolean;
   has_serial: boolean;
   has_expiry: boolean;
   is_active: boolean;
   recipe_ingredients: RecipeIngredient[];
+  warehouse_ids: string[];
+}
+
+export interface WarehouseOption {
+  id: string;
+  code: string;
+  name_i18n: I18nText;
 }
 
 interface Category {
@@ -47,7 +53,7 @@ interface Unit {
   abbreviation_i18n: { th: string; en: string };
 }
 
-interface RawMaterial {
+interface IngredientContainer {
   id: string;
   code: string;
   name_i18n: { th: string; en: string };
@@ -88,9 +94,6 @@ interface ProductData {
   has_serial: boolean;
   has_expiry: boolean;
   is_active: boolean;
-  min_stock_level?: number;
-  low_stock_threshold?: number;
-  current_stock?: number;
   selling_price?: number;
   cost_price?: number;
   recipes?: Array<{
@@ -107,6 +110,12 @@ export function useProductForm() {
   const productId = params.id as string | undefined;
   const isEdit = !!productId;
   const t = useTranslations("settings.products");
+  const { data: session } = useSession();
+  const sessionWarehouseIds = session?.user?.warehouse_ids;
+  const assignedWarehouseIds = useMemo(
+    () => sessionWarehouseIds ?? [],
+    [sessionWarehouseIds],
+  );
 
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -115,12 +124,14 @@ export function useProductForm() {
     categories: Category[];
     productTypes: ProductType[];
     units: Unit[];
-    rawMaterials: RawMaterial[];
+    ingredientsAndContainers: IngredientContainer[];
+    warehouses: WarehouseOption[];
   }>({
     categories: [],
     productTypes: [],
     units: [],
-    rawMaterials: [],
+    ingredientsAndContainers: [],
+    warehouses: [],
   });
 
   const {
@@ -139,6 +150,7 @@ export function useProductForm() {
       has_expiry: false,
       is_active: true,
       recipe_ingredients: [],
+      warehouse_ids: [],
     },
   });
 
@@ -166,7 +178,8 @@ export function useProductForm() {
             `/api/product-types?pageSize=100&isActive=true&type=${PRODUCTS_TYPES.SEMI_FINISHED},${PRODUCTS_TYPES.FINISHED_GOOD}`,
           ),
           fetch("/api/units?pageSize=100&isActive=true"),
-          fetch("/api/raw-materials?pageSize=100&isActive=true"),
+          fetch("/api/ingredients-and-containers?pageSize=100&isActive=true"),
+          fetch("/api/warehouses?pageSize=100&isActive=true"),
         ];
 
         if (isEdit && productId) {
@@ -178,15 +191,21 @@ export function useProductForm() {
           categoriesData,
           productTypeData,
           unitsData,
-          rawMaterialsData,
+          ingredientsAndContainersData,
+          warehousesData,
           productData,
         ] = await Promise.all(responses.map((r) => r.json()));
+
+        const allWarehouses: WarehouseOption[] = warehousesData.items || [];
 
         setOptionsData({
           categories: categoriesData.items || [],
           productTypes: productTypeData.items || [],
           units: unitsData.items || [],
-          rawMaterials: rawMaterialsData.items || [],
+          ingredientsAndContainers: ingredientsAndContainersData.items || [],
+          warehouses: allWarehouses.filter((w) =>
+            assignedWarehouseIds.includes(w.id),
+          ),
         });
 
         // Set default product_type_id for new product (create mode)
@@ -223,9 +242,6 @@ export function useProductForm() {
             base_unit_id: productData.base_unit_id || "",
             selling_price: productData.selling_price || 0,
             cost_price: productData.cost_price || 0,
-            min_stock_level: productData.min_stock_level || 0,
-            low_stock_threshold: productData.low_stock_threshold || 0,
-            current_stock: productData.current_stock || 0,
             images: existingImages,
             track_stock: productData.track_stock ?? true,
             has_serial: productData.has_serial ?? false,
@@ -249,7 +265,17 @@ export function useProductForm() {
     };
 
     fetchData();
-  }, [isEdit, productId, reset, setValue]);
+  }, [isEdit, productId, reset, setValue, assignedWarehouseIds]);
+
+  const toggleWarehouseId = (id: string) => {
+    const current = watch("warehouse_ids") || [];
+    setValue(
+      "warehouse_ids",
+      current.includes(id)
+        ? current.filter((w) => w !== id)
+        : [...current, id],
+    );
+  };
 
   const handleProductTypeChange = (newProductTypeId: string) => {
     // Clear recipe ingredients when changing product type
@@ -338,9 +364,6 @@ export function useProductForm() {
         is_active: data.is_active,
         has_serial: data.has_serial,
         has_expiry: data.has_expiry,
-        min_stock_level: data.min_stock_level || 0,
-        low_stock_threshold: data.low_stock_threshold || 0,
-        current_stock: data.current_stock || 0,
         track_stock: data.track_stock,
         selling_price: data.selling_price || null,
         cost_price: data.cost_price || null,
@@ -384,7 +407,7 @@ export function useProductForm() {
         const response = await fetch("/api/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, warehouse_ids: data.warehouse_ids }),
         });
 
         if (!response.ok) {
@@ -428,5 +451,6 @@ export function useProductForm() {
       isEdit,
     },
     handleProductTypeChange,
+    toggleWarehouseId,
   };
 }

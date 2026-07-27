@@ -14,8 +14,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FormFields } from "@/components/ui/FormFields";
-import { FieldConfig } from "@/components/ui/FormBuilder";
+import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
+import type { FieldConfig } from "@/components/dynamic-form/types";
 
 interface EntityDialogProps<T extends FieldValues> {
   open: boolean;
@@ -70,7 +70,7 @@ export function EntityDialog<T extends FieldValues>({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-4">
-            <FormFields
+            <DynamicFormFields
               fields={fields}
               control={control}
               errors={errors}

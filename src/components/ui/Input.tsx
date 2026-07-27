@@ -9,7 +9,7 @@ import {
 import { FieldError, FieldErrors } from "react-hook-form";
 import { theme } from "@/lib/theme";
 import { LucideIcon } from "lucide-react";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { INPUT_TYPES, InputType } from "@/constants/input-types";
 import { DateRangePicker } from "./date-range-picker";
@@ -195,18 +195,25 @@ export const Input = forwardRef<
               onCheckedChange?: (checked: boolean) => void;
             };
           return (
-            <select
-              ref={ref as React.Ref<HTMLSelectElement>}
-              className={baseInputClass}
-              {...selectProps}
-            >
-              <option value="">-- เลือก --</option>
-              {options?.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                ref={ref as React.Ref<HTMLSelectElement>}
+                className={cn(
+                  baseInputClass,
+                  "appearance-none pr-10",
+                  !selectProps.value && "text-gray-400",
+                )}
+                {...selectProps}
+              >
+                <option value="">-- เลือก --</option>
+                {options?.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            </div>
           );
 
         case INPUT_TYPES.TEXT:

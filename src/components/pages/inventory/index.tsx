@@ -2,14 +2,17 @@
 
 import { useState, useCallback } from "react";
 import { Sidebar } from "@/components/sidebar";
-import { Package, AlertTriangle, TrendingDown, History } from "lucide-react";
+import { Package, AlertTriangle, TrendingDown, History, ArrowRightLeft, EyeOff } from "lucide-react";
 import { useInventoryManager } from "./helper";
 import { Button } from "@/components/ui/button";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { StockAdjustmentModal } from "./stock-adjustment-modal";
 import { StockHistoryModal } from "./stock-history-modal";
+import { TransferModal } from "./transfer-modal";
 import { Pagination } from "@/components/ui/pagination";
 import { useTranslations } from "next-intl";
+import { usePermission } from "@/hooks/usePermission";
 import type { Product } from "./helper";
 
 interface SelectedProduct {
@@ -25,18 +28,24 @@ export default function InventoryContent() {
   const {
     products,
     loading,
+    warehouses,
+    warehousesLoading,
     filters,
     pagination,
     refetch,
     getStockStatus,
     locale,
+    handleHideFromWarehouse,
+    ConfirmDialog,
   } = useInventoryManager();
 
   const t = useTranslations("inventory");
   const tCommon = useTranslations("common");
+  const canTransfer = usePermission("inventory.transfer");
 
   const [selectedProduct, setSelectedProduct] = useState<SelectedProduct | null>(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   const handleAdjustStock = useCallback((product: Product) => {
@@ -69,48 +78,93 @@ export default function InventoryContent() {
 
       <div className="flex-1 px-4 pt-20 pb-8 md:py-8 overflow-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            {t("title")}
-          </h1>
-          <p className="text-gray-600">{tCommon("manageYourData")}</p>
+        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              {t("title")}
+            </h1>
+            <p className="text-gray-600">{tCommon("manageYourData")}</p>
+          </div>
+          {canTransfer && (
+            <Button
+              onClick={() => setIsTransferModalOpen(true)}
+              disabled={!filters.warehouseId}
+              className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-light hover:from-[#1a2a47] hover:to-primary text-white"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              {t("transfer.transferStock")}
+            </Button>
+          )}
+        </div>
+
+        {!warehousesLoading && warehouses.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm flex flex-col items-center justify-center py-20">
+            <Package className="w-16 h-16 text-gray-400 mb-4" />
+            <p className="text-gray-600 text-lg text-center px-4">
+              {t("noWarehouseAssigned")}
+            </p>
+          </div>
+        ) : (
+          <>
+        {/* Warehouse (context, not a filter — switches which branch's stock is shown) */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-4 max-w-xs">
+          <Input
+            inputType={INPUT_TYPES.SELECT}
+            value={filters.warehouseId}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => filters.setWarehouseId(e.target.value)}
+            options={warehouses.map((w) => ({
+              value: w.id,
+              label: `${w.code} - ${w.name_i18n[locale as "th" | "en"]}`,
+            }))}
+          />
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <Input
-              inputType={INPUT_TYPES.TEXT}
-              placeholder={tCommon("search")}
-              value={filters.search}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => filters.setSearch(e.target.value)}
-            />
+          {(() => {
+            const filterFields: FilterFieldConfig[] = [
+              {
+                name: "search",
+                type: "text",
+                placeholder: tCommon("search"),
+              },
+              {
+                name: "type",
+                type: "select",
+                placeholder: t("filterByType"),
+                options: [
+                  { value: "ingredient", label: t("rawMaterial") },
+                  { value: "finished_good", label: t("finishedGood") },
+                  { value: "semi_finished", label: t("semiFinished") },
+                ],
+              },
+              {
+                name: "stockStatus",
+                type: "select",
+                placeholder: t("filterByStatus"),
+                options: [
+                  { value: "low", label: t("lowStock") },
+                  { value: "out", label: t("outOfStock") },
+                  { value: "normal", label: t("normal") },
+                ],
+              },
+            ];
 
-            {/* Type Filter */}
-            <Input
-              inputType={INPUT_TYPES.SELECT}
-              value={filters.type}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => filters.setType(e.target.value)}
-              options={[
-                { value: "ingredient", label: t("rawMaterial") },
-                { value: "finished_good", label: t("finishedGood") },
-                { value: "semi_finished", label: t("semiFinished") },
-              ]}
-            />
-
-            {/* Status Filter */}
-            <Input
-              inputType={INPUT_TYPES.SELECT}
-              value={filters.status}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => filters.setStatus(e.target.value)}
-              options={[
-                { value: "low", label: t("lowStock") },
-                { value: "out", label: t("outOfStock") },
-                { value: "normal", label: t("normal") },
-              ]}
-            />
-          </div>
+            return (
+              <DynamicFilterBar
+                fields={filterFields}
+                values={{
+                  search: filters.search,
+                  type: filters.type,
+                  stockStatus: filters.status,
+                }}
+                onApply={filters.applyFilters}
+                onReset={filters.resetFilters}
+                searchLabel={tCommon("search")}
+                resetLabel={tCommon("reset")}
+              />
+            );
+          })()}
         </div>
 
         {/* Products Table */}
@@ -257,6 +311,16 @@ export default function InventoryContent() {
                               >
                                 <History className="w-4 h-4" />
                               </Button>
+                              <Button
+                                onClick={() => handleHideFromWarehouse(product)}
+                                disabled={Number(product.current_stock) !== 0}
+                                variant="ghost"
+                                size="sm"
+                                title={t("hideFromWarehouse")}
+                                className="flex items-center gap-2 text-red-600 hover:text-red-700 disabled:text-gray-300"
+                              >
+                                <EyeOff className="w-4 h-4" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -278,6 +342,8 @@ export default function InventoryContent() {
             </>
           )}
         </div>
+        </>
+        )}
       </div>
 
       {/* Stock Adjustment Modal */}
@@ -287,6 +353,7 @@ export default function InventoryContent() {
             isOpen={isStockModalOpen}
             onClose={() => setIsStockModalOpen(false)}
             product={selectedProduct}
+            warehouseId={filters.warehouseId}
             onSuccess={() => {
               refetch();
               setIsStockModalOpen(false);
@@ -299,6 +366,23 @@ export default function InventoryContent() {
           />
         </>
       )}
+
+      {/* Transfer Modal */}
+      {filters.warehouseId && (
+        <TransferModal
+          isOpen={isTransferModalOpen}
+          onClose={() => setIsTransferModalOpen(false)}
+          fromWarehouseId={filters.warehouseId}
+          warehouses={warehouses}
+          locale={locale}
+          onSuccess={() => {
+            refetch();
+            setIsTransferModalOpen(false);
+          }}
+        />
+      )}
+
+      <ConfirmDialog />
     </div>
   );
 }

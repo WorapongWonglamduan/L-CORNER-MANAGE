@@ -143,24 +143,47 @@ export async function DELETE(
       );
     }
 
+    const warehouseId = sale.warehouse_id;
+
     const cancelledSale = await prisma.$transaction(async (tx) => {
+      // Restores `amount` to a product's ProductStock row at this sale's
+      // warehouse (creating the row if it doesn't exist yet), mirroring
+      // deductProductStock() in sales/route.ts in reverse.
+      const restoreProductStock = async (productId: string, amount: number) => {
+        const existing = await tx.productStock.findUnique({
+          where: {
+            product_id_warehouse_id: { product_id: productId, warehouse_id: warehouseId },
+          },
+        });
+        const currentQty = Number(existing?.current_stock) || 0;
+        const newQty = currentQty + amount;
+
+        await tx.productStock.upsert({
+          where: {
+            product_id_warehouse_id: { product_id: productId, warehouse_id: warehouseId },
+          },
+          create: { product_id: productId, warehouse_id: warehouseId, current_stock: newQty },
+          update: { current_stock: newQty },
+        });
+
+        return { currentQty, newQty };
+      };
+
       // Restore stock for every item, mirroring deductStock() in reverse.
       for (const item of sale.items) {
         const quantity = Number(item.base_quantity ?? item.quantity);
         const productType = item.product.product_type.type;
 
         if (productType !== PRODUCTS_TYPES.SEMI_FINISHED) {
-          const currentQty = Number(item.product.current_stock) || 0;
-          const newQty = currentQty + quantity;
-
-          await tx.product.update({
-            where: { id: item.product_id },
-            data: { current_stock: newQty },
-          });
+          const { currentQty, newQty } = await restoreProductStock(
+            item.product_id,
+            quantity,
+          );
 
           await tx.stockMovement.create({
             data: {
               product_id: item.product_id,
+              warehouse_id: warehouseId,
               movement_type: "return",
               direction: "in",
               quantity_before: currentQty,
@@ -193,17 +216,15 @@ export async function DELETE(
 
           for (const ri of recipeIngredients) {
             const ingredientQty = Number(ri.quantity) * quantity;
-            const currentQty = Number(ri.ingredient.current_stock) || 0;
-            const newQty = currentQty + ingredientQty;
-
-            await tx.product.update({
-              where: { id: ri.ingredient_id },
-              data: { current_stock: newQty },
-            });
+            const { currentQty, newQty } = await restoreProductStock(
+              ri.ingredient_id,
+              ingredientQty,
+            );
 
             await tx.stockMovement.create({
               data: {
                 product_id: ri.ingredient_id,
+                warehouse_id: warehouseId,
                 movement_type: "return",
                 direction: "in",
                 quantity_before: currentQty,
@@ -224,22 +245,16 @@ export async function DELETE(
         for (const st of item.toppings) {
           const ingredientRequired =
             Number(st.topping.quantity_per_serving) * Number(st.quantity);
-          const ingredient = await tx.product.findUnique({
-            where: { id: st.topping.ingredient_id },
-          });
-          if (!ingredient) continue;
 
-          const currentQty = Number(ingredient.current_stock) || 0;
-          const newQty = currentQty + ingredientRequired;
-
-          await tx.product.update({
-            where: { id: st.topping.ingredient_id },
-            data: { current_stock: newQty },
-          });
+          const { currentQty, newQty } = await restoreProductStock(
+            st.topping.ingredient_id,
+            ingredientRequired,
+          );
 
           await tx.stockMovement.create({
             data: {
               product_id: st.topping.ingredient_id,
+              warehouse_id: warehouseId,
               movement_type: "return",
               direction: "in",
               quantity_before: currentQty,

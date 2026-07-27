@@ -4,6 +4,7 @@ import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 import { I18nText } from "@/types/i18n";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
 export interface RoleFormData {
   name: string;
@@ -44,14 +45,26 @@ export function useRolesManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
   } = useEntityList<AppRole, RolesFilterOptions>({
     endpoint: "/api/roles",
     initialFilters: {
       search: "",
+      isActive: undefined,
     },
   });
+
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<RolesFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<RolesFilterOptions>);
+  };
 
   const {
     control,
@@ -112,8 +125,11 @@ export function useRolesManager() {
       loading,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
     },
     pagination: {
       filterOptions,

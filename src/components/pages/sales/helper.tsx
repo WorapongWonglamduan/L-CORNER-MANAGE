@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { useLocale, useTranslations } from "next-intl";
 import { useConfirm } from "@/hooks/useConfirm";
 import { toast } from "@/lib/toast";
@@ -82,9 +83,28 @@ export function useSalesManager() {
   const { confirm, ConfirmDialog } = useConfirm();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const { control, watch, setValue, formState: { errors } } = useForm<{
+    searchQuery: string;
+    startDate: string;
+    endDate: string;
+  }>({
+    defaultValues: { searchQuery: "", startDate: "", endDate: "" },
+  });
+  const searchQuery = watch("searchQuery");
+  const setSearchQuery = useCallback(
+    (value: string) => setValue("searchQuery", value),
+    [setValue],
+  );
+  const startDate = watch("startDate");
+  const setStartDate = useCallback(
+    (value: string) => setValue("startDate", value),
+    [setValue],
+  );
+  const endDate = watch("endDate");
+  const setEndDate = useCallback(
+    (value: string) => setValue("endDate", value),
+    [setValue],
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
@@ -173,6 +193,8 @@ export function useSalesManager() {
       setStartDate,
       endDate,
       setEndDate,
+      control,
+      errors,
     },
     pagination: {
       page,

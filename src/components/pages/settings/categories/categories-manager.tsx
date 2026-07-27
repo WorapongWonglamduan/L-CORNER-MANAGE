@@ -1,9 +1,10 @@
 "use client";
 
 import { Plus, FolderTree } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useCategoriesManager } from "./helper";
@@ -12,9 +13,22 @@ import { getCategoryFormConfig } from "./form/config";
 export default function CategoriesManager() {
   const { t, table, filters, pagination, actions, modal, form, ConfirmDialog } =
     useCategoriesManager();
+  const tCommon = useTranslations("common");
   const { categories, allCategories, loading } = table;
-  const { searchQuery, setSearchQuery } = filters;
   const { handleCreate, handleEdit, handleDelete } = actions;
+
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
 
   const getParentName = (parentId?: string) => {
     if (!parentId) return "-";
@@ -24,15 +38,19 @@ export default function CategoriesManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t("searchPlaceholder")}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
         />
         <Button
           onClick={handleCreate}
-          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
+          className="w-full sm:w-auto shrink-0 bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
         >
           <Plus className="h-4 w-4 mr-2" />
           {t("addCategory")}

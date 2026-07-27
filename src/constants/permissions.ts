@@ -15,6 +15,7 @@ export const ALL_PERMISSIONS = [
   "products.delete",
   "inventory.view",
   "inventory.adjust",
+  "inventory.transfer",
   "sales.view",
   "sales.create",
   "sales.void",

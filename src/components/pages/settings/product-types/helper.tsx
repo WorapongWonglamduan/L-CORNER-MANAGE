@@ -5,6 +5,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 import { useLocale } from "next-intl";
 import type { Locale } from "@/types/i18n";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
 export interface ProductTypeFormData {
   code: string;
@@ -49,14 +50,26 @@ export function useProductTypesManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
   } = useEntityList<ProductType, TypesFilterOptions>({
     endpoint: "/api/product-types",
     initialFilters: {
       search: "",
+      isActive: undefined,
     },
   });
+
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<TypesFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<TypesFilterOptions>);
+  };
 
   const {
     control,
@@ -119,8 +132,11 @@ export function useProductTypesManager() {
       totalPages,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
       filterOptions,
     },
     pagination: {

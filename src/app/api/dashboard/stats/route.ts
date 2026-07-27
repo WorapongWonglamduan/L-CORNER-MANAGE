@@ -1,13 +1,38 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { requireWarehouseAccess } from "@/lib/permissions";
+import type { Prisma } from "@prisma/client";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const warehouseId = searchParams.get("warehouseId");
+
+    if (warehouseId) {
+      const denied = requireWarehouseAccess(session, warehouseId);
+      if (denied) return denied;
+    }
+
+    // A specific branch scopes every query to it; omitting it aggregates
+    // across every branch this user is assigned to (not literally every
+    // warehouse in the system). Same filter shape, typed per-model since
+    // Prisma's WhereInput types are nominally distinct despite being
+    // structurally identical here.
+    const warehouseIdFilter: Prisma.StringFilter | string = warehouseId
+      ? warehouseId
+      : { in: session.user.warehouse_ids };
+    const saleWarehouseFilter: Prisma.SaleWhereInput = {
+      warehouse_id: warehouseIdFilter,
+    };
+    const stockWarehouseFilter: Prisma.ProductStockWhereInput = {
+      warehouse_id: warehouseIdFilter,
+    };
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -22,6 +47,7 @@ export async function GET() {
           lt: tomorrow,
         },
         status: "completed",
+        ...saleWarehouseFilter,
       },
       _sum: {
         total_amount: true,
@@ -39,6 +65,7 @@ export async function GET() {
           lt: today,
         },
         status: "completed",
+        ...saleWarehouseFilter,
       },
       _sum: {
         total_amount: true,
@@ -48,11 +75,13 @@ export async function GET() {
     // Calculate sales trend
     const todayTotal = Number(todaySales._sum.total_amount || 0);
     const yesterdayTotal = Number(yesterdaySales._sum.total_amount || 0);
-    const salesTrend = yesterdayTotal > 0 
+    const salesTrend = yesterdayTotal > 0
       ? ((todayTotal - yesterdayTotal) / yesterdayTotal * 100).toFixed(1)
       : "0";
 
-    // Get total products (finished goods and semi-finished)
+    // Get total products (finished goods and semi-finished) — catalog-wide,
+    // not warehouse-scoped (a product exists regardless of which branches
+    // stock it).
     const totalProducts = await prisma.product.count({
       where: {
         is_active: true,
@@ -65,31 +94,31 @@ export async function GET() {
       },
     });
 
-    // Get low stock items
-    const lowStockItems = await prisma.product.count({
+    // Get low stock items — a product counts as low stock if any warehouse
+    // (within the current branch scope) it's stocked at is at or below that
+    // warehouse's low_stock_threshold.
+    const trackedProductsStock = await prisma.product.findMany({
       where: {
         is_active: true,
         deleted_at: null,
         track_stock: true,
-        OR: [
-          {
-            current_stock: {
-              lte: prisma.product.fields.low_stock_threshold,
-            },
-          },
-        ],
       },
+      select: { stock: { where: stockWarehouseFilter } },
     });
+    const lowStockItems = trackedProductsStock.filter((p) =>
+      p.stock.some((s) => Number(s.current_stock) <= Number(s.low_stock_threshold)),
+    ).length;
 
     // Get recent sales (last 7 days)
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     const recentSales = await prisma.sale.findMany({
       where: {
         sale_date: {
           gte: sevenDaysAgo,
         },
+        ...saleWarehouseFilter,
       },
       select: {
         id: true,
@@ -117,6 +146,7 @@ export async function GET() {
             gte: thirtyDaysAgo,
           },
           status: "completed",
+          ...saleWarehouseFilter,
         },
       },
       _sum: {
@@ -140,11 +170,16 @@ export async function GET() {
             id: true,
             name_i18n: true,
             code: true,
-            current_stock: true,
+            stock: { where: stockWarehouseFilter },
           },
         });
+        const current_stock =
+          product?.stock.reduce((sum, s) => sum + Number(s.current_stock), 0) ?? 0;
         return {
-          ...product,
+          id: product?.id,
+          name_i18n: product?.name_i18n,
+          code: product?.code,
+          current_stock,
           totalQuantity: Number(item._sum.quantity || 0),
           totalRevenue: Number(item._sum.total_amount || 0),
         };
@@ -166,6 +201,7 @@ export async function GET() {
               lt: nextDate,
             },
             status: "completed",
+            ...saleWarehouseFilter,
           },
           _sum: {
             total_amount: true,

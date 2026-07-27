@@ -18,7 +18,7 @@ export async function GET(
     const topping = await prisma.topping.findUnique({
       where: { id },
       include: {
-        ingredient: { select: { id: true, code: true, name_i18n: true, current_stock: true } },
+        ingredient: { select: { id: true, code: true, name_i18n: true, stock: true } },
         available_on: {
           include: {
             product: { select: { id: true, code: true, name_i18n: true } },
@@ -31,7 +31,17 @@ export async function GET(
       return NextResponse.json({ error: "Topping not found" }, { status: 404 });
     }
 
-    return NextResponse.json(topping);
+    // Master data (no warehouse selector here) — sum across all warehouses.
+    return NextResponse.json({
+      ...topping,
+      ingredient: {
+        ...topping.ingredient,
+        current_stock: topping.ingredient.stock.reduce(
+          (sum, s) => sum + Number(s.current_stock),
+          0,
+        ),
+      },
+    });
   } catch (error) {
     console.error("Error fetching topping:", error);
     return NextResponse.json(

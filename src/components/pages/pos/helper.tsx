@@ -1,4 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
@@ -60,6 +62,16 @@ interface Category {
   code: string;
 }
 
+export interface Warehouse {
+  id: string;
+  code: string;
+  name_i18n: {
+    th: string;
+    en: string;
+  };
+  is_default: boolean;
+}
+
 export interface SelectedTopping {
   id: string;
   name: string;
@@ -83,10 +95,15 @@ function makeLineId(productId: string, toppingIds: string[]) {
 export function usePOSManager() {
   const t = useTranslations("pos");
   const locale = useLocale() as Locale;
+  const { data: session } = useSession();
+  const sessionWarehouseIds = session?.user?.warehouse_ids;
+  const assignedWarehouseIds = useMemo(
+    () => sessionWarehouseIds ?? [],
+    [sessionWarehouseIds],
+  );
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -94,15 +111,32 @@ export function usePOSManager() {
   const [optionsData, setOptionsData] = useState<{
     productTypes: ProductType[];
     categories: Category[];
-    warehouseId: string | null;
   }>({
     productTypes: [],
     categories: [],
-    warehouseId: null,
   });
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+
+  const { control, watch, setValue, formState: { errors } } = useForm<{
+    searchQuery: string;
+    warehouseId: string;
+  }>({
+    defaultValues: { searchQuery: "", warehouseId: "" },
+  });
+  const searchQuery = watch("searchQuery");
+  const setSearchQuery = useCallback(
+    (value: string) => setValue("searchQuery", value),
+    [setValue],
+  );
+  const warehouseId = watch("warehouseId") || null;
+  const setWarehouseId = useCallback(
+    (value: string | null) => setValue("warehouseId", value ?? ""),
+    [setValue],
+  );
 
   // Fetch products function
   const fetchProducts = useCallback(async () => {
+    if (!warehouseId) return;
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -110,6 +144,7 @@ export function usePOSManager() {
         pageSize: pageSize.toString(),
         isActive: "true",
         type: `${PRODUCTS_TYPES.SEMI_FINISHED},${PRODUCTS_TYPES.FINISHED_GOOD}`,
+        warehouseId,
       });
 
       if (selectedCategory) {
@@ -128,27 +163,30 @@ export function usePOSManager() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, searchQuery, currentPage, pageSize]);
+  }, [selectedCategory, searchQuery, currentPage, pageSize, warehouseId]);
 
   // Fetch products on mount and when filters change
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Fetch product types, categories, and warehouse
+  // Fetch product types, categories, and warehouses
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [productTypesRes, categoriesRes, warehouseRes] =
+        const [productTypesRes, categoriesRes, warehousesRes] =
           await Promise.all([
             fetch(
               `/api/product-types?pageSize=100&isActive=true&type=${PRODUCTS_TYPES.FINISHED_GOOD},${PRODUCTS_TYPES.SEMI_FINISHED}`,
             ),
             fetch("/api/categories?pageSize=100&isActive=true"),
-            fetch("/api/warehouses?pageSize=1").catch(() => null),
+            fetch("/api/warehouses?pageSize=100&isActive=true").catch(() => null),
           ]);
 
-        const newOptionsData = { ...optionsData };
+        const newOptionsData = { productTypes: [], categories: [] } as {
+          productTypes: ProductType[];
+          categories: Category[];
+        };
 
         // Parse product types
         if (productTypesRes.ok) {
@@ -162,27 +200,35 @@ export function usePOSManager() {
           newOptionsData.categories = categoriesData.items || [];
         }
 
-        // Parse warehouse (optional)
-        if (warehouseRes && warehouseRes.ok) {
-          const warehouseData = await warehouseRes.json();
-          if (warehouseData.items && warehouseData.items.length > 0) {
-            newOptionsData.warehouseId = warehouseData.items[0].id;
+        setOptionsData(newOptionsData);
+
+        // Parse warehouses — scoped to only the branches this user is assigned to.
+        if (warehousesRes && warehousesRes.ok) {
+          const warehousesData = await warehousesRes.json();
+          const allItems: Warehouse[] = warehousesData.items || [];
+          const items = allItems.filter((w) =>
+            assignedWarehouseIds.includes(w.id),
+          );
+          setWarehouses(items);
+          if (items.length > 0) {
+            const defaultWarehouse = items.find((w) => w.is_default);
+            const sortedByCode = [...items].sort((a, b) =>
+              a.code.localeCompare(b.code),
+            );
+            setWarehouseId((defaultWarehouse ?? sortedByCode[0]).id);
           }
         } else {
           console.warn(
             "Warehouse API not available. Please create a warehouse first.",
           );
         }
-
-        setOptionsData(newOptionsData);
       } catch (error) {
         console.error("Error fetching initial data:", error);
       }
     };
 
     fetchInitialData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setWarehouseId, assignedWarehouseIds]);
 
   // Adds one unit of a product with no toppings selected (the "base" cart
   // line). Used by the plain +/- controls on the product grid.
@@ -343,7 +389,7 @@ export function usePOSManager() {
   const checkout = useCallback(
     async (paymentMethod: string, promotionCode?: string) => {
       try {
-        if (!optionsData.warehouseId) {
+        if (!warehouseId) {
           throw new Error("ไม่พบข้อมูลคลังสินค้า กรุณาติดต่อผู้ดูแลระบบ");
         }
 
@@ -363,7 +409,7 @@ export function usePOSManager() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            warehouse_id: optionsData.warehouseId,
+            warehouse_id: warehouseId,
             items,
             payment_method: paymentMethod,
             discount_amount: 0,
@@ -396,12 +442,13 @@ export function usePOSManager() {
         throw error;
       }
     },
-    [cart, optionsData.warehouseId, cartItemCount, t, clearCart, fetchProducts],
+    [cart, warehouseId, cartItemCount, t, clearCart, fetchProducts],
   );
 
   return {
     t,
     locale,
+    filterForm: { control, errors },
     catalog: {
       products,
       categories: optionsData.productTypes,
@@ -410,6 +457,11 @@ export function usePOSManager() {
       setSelectedCategory,
       searchQuery,
       setSearchQuery,
+    },
+    warehouse: {
+      warehouses,
+      warehouseId,
+      setWarehouseId,
     },
     cart: {
       items: cart,

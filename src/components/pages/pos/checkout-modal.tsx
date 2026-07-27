@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { X, CreditCard, Banknote, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { PAYMENT_METHODS, PaymentMethod } from "@/constants/payment";
 import { useTranslations } from "next-intl";
 
@@ -19,6 +21,12 @@ interface PromoValidation {
   discount_amount: number;
 }
 
+interface CheckoutFormValues {
+  paymentMethod: PaymentMethod;
+  amountPaid: string;
+  promoCodeInput: string;
+}
+
 export function CheckoutModal({
   isOpen,
   onClose,
@@ -28,13 +36,17 @@ export function CheckoutModal({
 }: CheckoutModalProps) {
   const t = useTranslations("pos");
   const tCommon = useTranslations("common");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHODS.CASH);
-  const [amountPaid, setAmountPaid] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [promoCodeInput, setPromoCodeInput] = useState("");
   const [promoValidation, setPromoValidation] = useState<PromoValidation | null>(null);
   const [promoError, setPromoError] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
+
+  const { control, watch, setValue } = useForm<CheckoutFormValues>({
+    defaultValues: { paymentMethod: PAYMENT_METHODS.CASH, amountPaid: "", promoCodeInput: "" },
+  });
+  const paymentMethod = watch("paymentMethod");
+  const amountPaid = watch("amountPaid");
+  const promoCodeInput = watch("promoCodeInput");
 
   const discountedTotal = cartTotal - (promoValidation?.discount_amount || 0);
   const change = Number(amountPaid) - discountedTotal;
@@ -43,7 +55,7 @@ export function CheckoutModal({
   // applied discount changes the amount due.
   useEffect(() => {
     if (isOpen && paymentMethod === PAYMENT_METHODS.CASH) {
-      setAmountPaid(discountedTotal.toFixed(2));
+      setValue("amountPaid", discountedTotal.toFixed(2));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, paymentMethod, discountedTotal]);
@@ -51,11 +63,11 @@ export function CheckoutModal({
   // Reset promo state whenever the modal is closed.
   useEffect(() => {
     if (!isOpen) {
-      setPromoCodeInput("");
+      setValue("promoCodeInput", "");
       setPromoValidation(null);
       setPromoError("");
     }
-  }, [isOpen]);
+  }, [isOpen, setValue]);
 
   if (!isOpen) return null;
 
@@ -86,7 +98,7 @@ export function CheckoutModal({
 
   const handleRemovePromo = () => {
     setPromoValidation(null);
-    setPromoCodeInput("");
+    setValue("promoCodeInput", "");
     setPromoError("");
   };
 
@@ -99,7 +111,7 @@ export function CheckoutModal({
     try {
       await onConfirm(paymentMethod, promoValidation?.code);
       onClose();
-      setAmountPaid("");
+      setValue("amountPaid", "");
     } catch (error) {
       console.error("Payment error:", error);
     } finally {
@@ -117,9 +129,9 @@ export function CheckoutModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
+        <div className="shrink-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
           <h2 className="text-2xl font-bold text-gray-900">{t("checkoutTitle")}</h2>
           <button
             onClick={onClose}
@@ -130,7 +142,7 @@ export function CheckoutModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
           {/* Summary */}
           <div className="bg-gray-50 rounded-xl p-4 space-y-2">
             <div className="flex justify-between text-gray-600">
@@ -177,12 +189,20 @@ export function CheckoutModal({
               </div>
             ) : (
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={promoCodeInput}
-                  onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
-                  placeholder={t("promoCodePlaceholder")}
-                  className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                <Controller
+                  name="promoCodeInput"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      inputType={INPUT_TYPES.TEXT}
+                      containerClassName="flex-1"
+                      value={field.value}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        field.onChange(e.target.value.toUpperCase())
+                      }
+                      placeholder={t("promoCodePlaceholder")}
+                    />
+                  )}
                 />
                 <Button
                   onClick={handleApplyPromo}
@@ -206,7 +226,7 @@ export function CheckoutModal({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setPaymentMethod(PAYMENT_METHODS.CASH)}
+                onClick={() => setValue("paymentMethod", PAYMENT_METHODS.CASH)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   paymentMethod === PAYMENT_METHODS.CASH
                     ? "border-primary bg-primary/5"
@@ -228,7 +248,7 @@ export function CheckoutModal({
               </button>
 
               <button
-                onClick={() => setPaymentMethod(PAYMENT_METHODS.CARD)}
+                onClick={() => setValue("paymentMethod", PAYMENT_METHODS.CARD)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   paymentMethod === PAYMENT_METHODS.CARD
                     ? "border-primary bg-primary/5"
@@ -257,12 +277,18 @@ export function CheckoutModal({
               <label className="block text-sm font-semibold text-gray-700 mb-3">
                 {t("amountReceived")}
               </label>
-              <input
-                type="number"
-                value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
-                placeholder="0.00"
-                className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              <Controller
+                name="amountPaid"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    inputType={INPUT_TYPES.NUMBER}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="0.00"
+                    className="text-lg"
+                  />
+                )}
               />
 
               {/* Quick Amount Buttons */}
@@ -270,7 +296,7 @@ export function CheckoutModal({
                 {quickAmounts.map((item, index) => (
                   <button
                     key={index}
-                    onClick={() => setAmountPaid(item.value.toString())}
+                    onClick={() => setValue("amountPaid", item.value.toString())}
                     className={`px-3 py-2 rounded-lg font-semibold text-sm transition-colors ${
                       index === 0
                         ? "bg-primary text-white hover:bg-primary-light"
@@ -311,7 +337,7 @@ export function CheckoutModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
+        <div className="shrink-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
           <div className="flex gap-3">
             <Button
               onClick={onClose}

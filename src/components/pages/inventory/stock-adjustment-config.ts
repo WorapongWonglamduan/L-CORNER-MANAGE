@@ -1,4 +1,4 @@
-import { FieldConfig } from "@/components/ui/FormBuilder";
+import type { FieldConfig } from "@/components/dynamic-form/types";
 import { INPUT_TYPES } from "@/constants/input-types";
 import { ADJUSTMENT_TYPES } from "@/constants/inventory";
 

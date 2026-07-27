@@ -4,20 +4,21 @@ import { Plus, Package } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
-import { useRawMaterialsManager } from "./helper";
-import { getRawMaterialFormConfig } from "./form/config";
-import { useLocale } from "next-intl";
+import { useIngredientsAndContainersManager } from "./helper";
+import { getIngredientContainerFormConfig } from "./form/config";
+import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 
-export default function RawMaterialsManager() {
+export default function IngredientsAndContainersManager() {
   const locale = useLocale() as Locale;
+  const tCommon = useTranslations("common");
   const {
     t,
-    table: { items: rawMaterials, loading },
-    filters: { searchQuery, setSearchQuery },
+    table: { items: ingredientsAndContainers, loading },
+    filters,
     pagination: {
       filterOptions,
       totalItems,
@@ -28,7 +29,7 @@ export default function RawMaterialsManager() {
     actions: { handleCreate, handleEdit, handleDelete },
     dialog: {
       open: dialogOpen,
-      editingItem: editingRawMaterial,
+      editingItem: editingIngredientContainer,
       onClose: handleDialogClose,
       ConfirmDialog,
     },
@@ -43,7 +44,20 @@ export default function RawMaterialsManager() {
       units,
       productTypes,
     },
-  } = useRawMaterialsManager();
+  } = useIngredientsAndContainersManager();
+
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
 
   const getTypeLabel = (
     type:
@@ -58,17 +72,21 @@ export default function RawMaterialsManager() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t("searchPlaceholder")}
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
         />
         <Button
           onClick={handleCreate}
           className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
         >
           <Plus className="h-4 w-4 mr-2" />
-          {t("addRawMaterial")}
+          {t("addIngredientContainer")}
         </Button>
       </div>
 
@@ -79,7 +97,7 @@ export default function RawMaterialsManager() {
             <p className="text-gray-600">{t("loading")}</p>
           </div>
         </div>
-      ) : rawMaterials.length === 0 ? (
+      ) : ingredientsAndContainers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
           <Package className="h-16 w-16 text-gray-400 mb-4" />
           <p className="text-gray-600 text-lg">{t("noData")}</p>
@@ -87,18 +105,18 @@ export default function RawMaterialsManager() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rawMaterials.map((rawMaterial) => (
+            {ingredientsAndContainers.map((ingredientContainer) => (
               <div
-                key={rawMaterial.id}
+                key={ingredientContainer.id}
                 className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-primary/10 group-hover:bg-primary/20 transition-colors shrink-0">
-                      {rawMaterial.primary_image_url && rawMaterial.primary_image_url.startsWith('/') ? (
+                      {ingredientContainer.primary_image_url && ingredientContainer.primary_image_url.startsWith('/') ? (
                         <Image
-                          src={rawMaterial.primary_image_url}
-                          alt={rawMaterial.name_i18n.th}
+                          src={ingredientContainer.primary_image_url}
+                          alt={ingredientContainer.name_i18n.th}
                           fill
                           className="object-contain p-1"
                           sizes="64px"
@@ -112,16 +130,16 @@ export default function RawMaterialsManager() {
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">
-                        {rawMaterial.name_i18n.th}
+                        {ingredientContainer.name_i18n.th}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {rawMaterial.code}
+                        {ingredientContainer.code}
                       </p>
                     </div>
                   </div>
                   <ActionButtons
-                    onEdit={() => handleEdit(rawMaterial)}
-                    onDelete={() => handleDelete(rawMaterial.id)}
+                    onEdit={() => handleEdit(ingredientContainer)}
+                    onDelete={() => handleDelete(ingredientContainer.id)}
                     editTitle={t("edit") || "แก้ไข"}
                     deleteTitle={t("delete") || "ลบ"}
                   />
@@ -131,13 +149,13 @@ export default function RawMaterialsManager() {
                   <div className="flex items-center justify-between py-2.5">
                     <span className="text-sm text-gray-600">{t("type")}:</span>
                     <span className="font-semibold text-gray-900">
-                      {getTypeLabel(rawMaterial.type)}
+                      {getTypeLabel(ingredientContainer.type)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
                     <span className="text-sm text-gray-600">{t("unit")}:</span>
                     <span className="font-semibold text-gray-900">
-                      {rawMaterial.unit?.abbreviation_i18n.th || "-"}
+                      {ingredientContainer.unit?.abbreviation_i18n.th || "-"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
@@ -145,8 +163,8 @@ export default function RawMaterialsManager() {
                       {t("costPrice")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {rawMaterial.cost_price
-                        ? `฿${Number(rawMaterial.cost_price).toLocaleString()}`
+                      {ingredientContainer.cost_price
+                        ? `฿${Number(ingredientContainer.cost_price).toLocaleString()}`
                         : "-"}
                     </span>
                   </div>
@@ -156,14 +174,14 @@ export default function RawMaterialsManager() {
                     </span>
                     <span
                       className={`font-semibold ${
-                        Number(rawMaterial.current_stock) <=
-                        Number(rawMaterial.min_stock)
+                        Number(ingredientContainer.current_stock) <=
+                        Number(ingredientContainer.min_stock)
                           ? "text-red-600"
                           : "text-gray-900"
                       }`}
                     >
-                      {Number(rawMaterial.current_stock).toLocaleString()}{" "}
-                      {rawMaterial.unit?.abbreviation_i18n.th}
+                      {Number(ingredientContainer.current_stock).toLocaleString()}{" "}
+                      {ingredientContainer.unit?.abbreviation_i18n.th}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
@@ -171,8 +189,8 @@ export default function RawMaterialsManager() {
                       {t("minStock")}:
                     </span>
                     <span className="font-semibold text-gray-900">
-                      {Number(rawMaterial.min_stock).toLocaleString()}{" "}
-                      {rawMaterial.unit?.abbreviation_i18n.th}
+                      {Number(ingredientContainer.min_stock).toLocaleString()}{" "}
+                      {ingredientContainer.unit?.abbreviation_i18n.th}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
@@ -181,12 +199,12 @@ export default function RawMaterialsManager() {
                     </span>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        rawMaterial.is_active
+                        ingredientContainer.is_active
                           ? "bg-green-100 text-green-800"
                           : "bg-gray-100 text-gray-800"
                       }`}
                     >
-                      {rawMaterial.is_active ? t("active") : t("inactive")}
+                      {ingredientContainer.is_active ? t("active") : t("inactive")}
                     </span>
                   </div>
                 </div>
@@ -194,7 +212,7 @@ export default function RawMaterialsManager() {
             ))}
           </div>
 
-          {rawMaterials.length > 0 && (
+          {ingredientsAndContainers.length > 0 && (
             <div className="mt-6">
               <Pagination
                 currentPage={filterOptions.page}
@@ -212,8 +230,8 @@ export default function RawMaterialsManager() {
       <EntityDialog
         open={dialogOpen}
         onClose={handleDialogClose}
-        title={editingRawMaterial ? t("editRawMaterial") : t("addRawMaterial")}
-        fields={getRawMaterialFormConfig(t, units, productTypes, locale)}
+        title={editingIngredientContainer ? t("editIngredientContainer") : t("addIngredientContainer")}
+        fields={getIngredientContainerFormConfig(t, units, productTypes, locale)}
         control={formControl}
         handleSubmit={formHandleSubmit}
         onSubmit={handleFormSubmit}

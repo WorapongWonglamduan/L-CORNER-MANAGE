@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users as UsersIcon, ShieldCheck } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { Plus, Users as UsersIcon, ShieldCheck, Warehouse as WarehouseIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import {
   Dialog,
   DialogContent,
@@ -16,16 +18,17 @@ import {
 } from "@/components/ui/dialog";
 import { useUsersManager, AppUser } from "./helper";
 import { getUserFormConfig } from "./form/config";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 import { toast } from "@/lib/toast";
 
 export default function UsersManager() {
   const locale = useLocale() as Locale;
+  const tCommon = useTranslations("common");
   const {
     t,
     table: { items: users, loading },
-    filters: { searchQuery, setSearchQuery },
+    filters,
     pagination: {
       filterOptions,
       totalItems,
@@ -50,29 +53,49 @@ export default function UsersManager() {
       dataLoading,
     },
     roles,
+    warehouses,
     refetch,
   } = useUsersManager();
 
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
+
   const [rolesDialogOpen, setRolesDialogOpen] = useState(false);
   const [rolesUser, setRolesUser] = useState<AppUser | null>(null);
-  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [savingRoles, setSavingRoles] = useState(false);
+  const { watch, setValue, reset } = useForm<{ selectedRoleIds: string[] }>({
+    defaultValues: { selectedRoleIds: [] },
+  });
+  const selectedRoleIds = watch("selectedRoleIds");
 
   const handleOpenRoles = (user: AppUser) => {
     setRolesUser(user);
-    setSelectedRoleIds(user.user_roles.map((ur) => ur.role_id));
+    reset({ selectedRoleIds: user.user_roles.map((ur) => ur.role_id) });
     setRolesDialogOpen(true);
   };
 
   const handleCloseRoles = () => {
     setRolesDialogOpen(false);
     setRolesUser(null);
-    setSelectedRoleIds([]);
+    reset({ selectedRoleIds: [] });
   };
 
   const toggleRoleId = (id: string) => {
-    setSelectedRoleIds((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
+    setValue(
+      "selectedRoleIds",
+      selectedRoleIds.includes(id)
+        ? selectedRoleIds.filter((r) => r !== id)
+        : [...selectedRoleIds, id],
     );
   };
 
@@ -102,13 +125,75 @@ export default function UsersManager() {
     }
   };
 
+  const [branchesDialogOpen, setBranchesDialogOpen] = useState(false);
+  const [branchesUser, setBranchesUser] = useState<AppUser | null>(null);
+  const [savingBranches, setSavingBranches] = useState(false);
+  const { watch: watchBranches, setValue: setBranchesValue, reset: resetBranches } =
+    useForm<{ selectedWarehouseIds: string[] }>({
+      defaultValues: { selectedWarehouseIds: [] },
+    });
+  const selectedWarehouseIds = watchBranches("selectedWarehouseIds");
+
+  const handleOpenBranches = (user: AppUser) => {
+    setBranchesUser(user);
+    resetBranches({
+      selectedWarehouseIds: user.user_warehouses.map((uw) => uw.warehouse_id),
+    });
+    setBranchesDialogOpen(true);
+  };
+
+  const handleCloseBranches = () => {
+    setBranchesDialogOpen(false);
+    setBranchesUser(null);
+    resetBranches({ selectedWarehouseIds: [] });
+  };
+
+  const toggleWarehouseId = (id: string) => {
+    setBranchesValue(
+      "selectedWarehouseIds",
+      selectedWarehouseIds.includes(id)
+        ? selectedWarehouseIds.filter((w) => w !== id)
+        : [...selectedWarehouseIds, id],
+    );
+  };
+
+  const handleSaveBranches = async () => {
+    if (!branchesUser) return;
+    try {
+      setSavingBranches(true);
+      const response = await fetch(`/api/users/${branchesUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ warehouse_ids: selectedWarehouseIds }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || t("saving"));
+      }
+
+      toast.success(t("save"));
+      handleCloseBranches();
+      refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("saving");
+      toast.error(message);
+    } finally {
+      setSavingBranches(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t("searchPlaceholder")}
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
         />
         <Button
           onClick={handleCreate}
@@ -161,6 +246,13 @@ export default function UsersManager() {
                     >
                       <ShieldCheck className="h-4 w-4 text-primary" />
                     </button>
+                    <button
+                      onClick={() => handleOpenBranches(user)}
+                      className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
+                      title={t("branches")}
+                    >
+                      <WarehouseIcon className="h-4 w-4 text-primary" />
+                    </button>
                     <ActionButtons
                       onEdit={() => handleEdit(user)}
                       onDelete={() => handleDelete(user.id)}
@@ -188,6 +280,16 @@ export default function UsersManager() {
                         ? user.user_roles
                             .map((ur) => ur.role.display_name_i18n[locale])
                             .join(", ")
+                        : "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">
+                      {t("branches")}:
+                    </span>
+                    <span className="font-semibold text-gray-900 text-right">
+                      {user.user_warehouses.length > 0
+                        ? user.user_warehouses.map((uw) => uw.warehouse.code).join(", ")
                         : "-"}
                     </span>
                   </div>
@@ -262,21 +364,23 @@ export default function UsersManager() {
               </p>
             ) : (
               roles.map((role) => (
-                <label
+                <div
                   key={role.id}
-                  className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50"
                 >
-                  <input
-                    type="checkbox"
+                  <Input
+                    inputType={INPUT_TYPES.CHECKBOX}
                     checked={selectedRoleIds.includes(role.id)}
-                    onChange={() => toggleRoleId(role.id)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    onCheckedChange={() => toggleRoleId(role.id)}
                   />
-                  <span className="text-sm text-gray-900">
+                  <span
+                    className="text-sm text-gray-900 cursor-pointer"
+                    onClick={() => toggleRoleId(role.id)}
+                  >
                     {role.display_name_i18n[locale]}{" "}
                     <span className="text-gray-500">({role.name})</span>
                   </span>
-                </label>
+                </div>
               ))
             )}
           </div>
@@ -297,6 +401,68 @@ export default function UsersManager() {
               className="bg-gradient-to-r from-primary to-primary-light text-white"
             >
               {savingRoles ? t("saving") : t("save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={branchesDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseBranches();
+        }}
+      >
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-primary text-xl font-bold">
+              {t("branches")}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+            {warehouses.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4 text-center">
+                {t("noData")}
+              </p>
+            ) : (
+              warehouses.map((warehouse) => (
+                <div
+                  key={warehouse.id}
+                  className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50"
+                >
+                  <Input
+                    inputType={INPUT_TYPES.CHECKBOX}
+                    checked={selectedWarehouseIds.includes(warehouse.id)}
+                    onCheckedChange={() => toggleWarehouseId(warehouse.id)}
+                  />
+                  <span
+                    className="text-sm text-gray-900 cursor-pointer"
+                    onClick={() => toggleWarehouseId(warehouse.id)}
+                  >
+                    {warehouse.name_i18n[locale]}{" "}
+                    <span className="text-gray-500">({warehouse.code})</span>
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseBranches}
+              disabled={savingBranches}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveBranches}
+              disabled={savingBranches}
+              className="bg-gradient-to-r from-primary to-primary-light text-white"
+            >
+              {savingBranches ? t("saving") : t("save")}
             </Button>
           </DialogFooter>
         </DialogContent>

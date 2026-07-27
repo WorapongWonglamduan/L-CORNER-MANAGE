@@ -16,8 +16,10 @@ model User {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  user_roles    UserRole[]
-  created_sales Sale[]     @relation("SaleCreatedBy")
+  user_roles        UserRole[]
+  user_warehouses   UserWarehouse[]
+  created_sales     Sale[]          @relation("SaleCreatedBy")
+  created_transfers StockTransfer[]
 
   @@map("users")
 }
@@ -50,6 +52,20 @@ model UserRole {
   @@unique([user_id, role_id])
   @@index([role_id])
   @@map("user_roles")
+}
+
+model UserWarehouse {
+  id           String   @id @default(uuid())
+  user_id      String
+  warehouse_id String
+  created_at   DateTime @default(now())
+
+  user      User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouse_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, warehouse_id])
+  @@index([warehouse_id])
+  @@map("user_warehouses")
 }
 
 // Language model removed - not used in the system
@@ -93,11 +109,66 @@ model Warehouse {
   name_i18n  Json
   address    String?  @db.Text
   is_active  Boolean  @default(true)
+  is_default Boolean  @default(false)
   created_at DateTime @default(now())
 
-  sales Sale[]
+  sales           Sale[]
+  stock           ProductStock[]
+  transfers_out   StockTransfer[] @relation("TransferFrom")
+  transfers_in    StockTransfer[] @relation("TransferTo")
+  user_warehouses UserWarehouse[]
 
   @@map("warehouses")
+}
+
+// Per-warehouse stock level for a product. Replaces the old single global
+// Product.current_stock — every product's actual quantity now depends on
+// which warehouse you're asking about. A product with no row here at a given
+// warehouse simply hasn't been stocked/produced/transferred there yet (treat
+// as 0, not an error).
+model ProductStock {
+  id                  String   @id @default(uuid())
+  product_id          String
+  warehouse_id        String
+  current_stock       Decimal  @default(0) @db.Decimal(15, 4)
+  min_stock_level     Decimal  @default(0) @db.Decimal(15, 4)
+  low_stock_threshold Decimal  @default(0) @db.Decimal(15, 4)
+  is_active           Boolean  @default(true)
+  updated_at          DateTime @updatedAt
+
+  product   Product   @relation(fields: [product_id], references: [id])
+  warehouse Warehouse @relation(fields: [warehouse_id], references: [id])
+
+  @@unique([product_id, warehouse_id])
+  @@index([warehouse_id])
+  @@map("product_stocks")
+}
+
+// A stock move from one warehouse to another. Modeled as an instant, atomic
+// operation (no in-transit status) — appropriate for a small business moving
+// stock between a handful of nearby branches, not enterprise logistics. Each
+// transfer also writes a paired "out"/"in" StockMovement at its two
+// warehouses for the audit trail (reference_type "transfer", reference_id =
+// this row's id).
+model StockTransfer {
+  id                String   @id @default(uuid())
+  from_warehouse_id String
+  to_warehouse_id   String
+  product_id        String
+  quantity          Decimal  @db.Decimal(15, 4)
+  note              String?  @db.Text
+  created_by        String?
+  created_at        DateTime @default(now())
+
+  from_warehouse  Warehouse @relation("TransferFrom", fields: [from_warehouse_id], references: [id])
+  to_warehouse    Warehouse @relation("TransferTo", fields: [to_warehouse_id], references: [id])
+  product         Product   @relation(fields: [product_id], references: [id])
+  created_by_user User?     @relation(fields: [created_by], references: [id])
+
+  @@index([from_warehouse_id])
+  @@index([to_warehouse_id])
+  @@index([product_id])
+  @@map("stock_transfers")
 }
 
 model Product {
@@ -112,11 +183,10 @@ model Product {
   has_serial       Boolean @default(false)
   has_expiry       Boolean @default(false)
 
-  // Stock management
-  min_stock_level     Decimal @default(0) @db.Decimal(15, 4)
-  low_stock_threshold Decimal @default(0) @db.Decimal(15, 4)
-  current_stock       Decimal @default(0) @db.Decimal(15, 4)
-  track_stock         Boolean @default(true)
+  // Stock management — actual quantities live in ProductStock (per
+  // warehouse); track_stock is a product-level policy flag, not a quantity,
+  // so it stays here.
+  track_stock Boolean @default(true)
 
   // Pricing (merged from ProductUnit for base unit)
   selling_price Decimal? @db.Decimal(15, 2)
@@ -135,6 +205,8 @@ model Product {
   media                  ProductMedia[]
   toppings_as_ingredient Topping[]          @relation("ToppingIngredientProduct")
   available_toppings     ProductTopping[]
+  stock                  ProductStock[]
+  transfers              StockTransfer[]
 
   @@index([product_type_id])
   @@index([category_id])
@@ -343,8 +415,9 @@ model ProductType {
 // Use product_type_id to distinguish between raw materials and finished products
 
 model StockMovement {
-  id         String @id @default(uuid())
-  product_id String
+  id           String @id @default(uuid())
+  product_id   String
+  warehouse_id String
 
   // Movement type: "manual_adjustment", "sale", "purchase", "production", "transfer", "return", "damage", "expired", "count"
   movement_type String
@@ -372,6 +445,7 @@ model StockMovement {
   transaction_date DateTime @default(now())
 
   @@index([product_id])
+  @@index([warehouse_id])
   @@index([movement_type])
   @@index([transaction_date])
   @@index([reference_type, reference_id])

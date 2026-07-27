@@ -1,6 +1,8 @@
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { useSession } from "next-auth/react";
 import {
   ShoppingCart,
   Package,
@@ -104,6 +106,12 @@ export const chartConfig = {
   },
 };
 
+export interface WarehouseOption {
+  id: string;
+  code: string;
+  name_i18n: { th: string; en: string };
+}
+
 interface DashboardData {
   todaySales: {
     total: number;
@@ -138,9 +146,47 @@ export const useDashboard = () => {
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations("dashboard");
+  const { data: session } = useSession();
+  const sessionWarehouseIds = session?.user?.warehouse_ids;
+  const assignedWarehouseIds = useMemo(
+    () => sessionWarehouseIds ?? [],
+    [sessionWarehouseIds],
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
+
+  // "all" = every branch this user is assigned to, combined. Deliberately
+  // not "" — the shared Input select control always injects its own blank
+  // placeholder option with value="", which would collide with an "all
+  // branches" option using the same value.
+  const { control, watch, setValue, formState: { errors } } = useForm<{
+    warehouseId: string;
+  }>({
+    defaultValues: { warehouseId: "all" },
+  });
+  const warehouseId = watch("warehouseId");
+  const setWarehouseId = useCallback(
+    (value: string) => setValue("warehouseId", value),
+    [setValue],
+  );
+
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const response = await fetch("/api/warehouses?pageSize=100&isActive=true");
+        const data = await response.json();
+        const allItems: WarehouseOption[] = data.items || [];
+        setWarehouses(
+          allItems.filter((w) => assignedWarehouseIds.includes(w.id)),
+        );
+      } catch (error) {
+        console.error("Error fetching warehouses:", error);
+      }
+    };
+    fetchWarehouses();
+  }, [assignedWarehouseIds]);
 
   const fetchDashboardData = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) {
@@ -148,9 +194,10 @@ export const useDashboard = () => {
     } else {
       setLoading(true);
     }
-    
+
     try {
-      const response = await fetch("/api/dashboard/stats");
+      const query = warehouseId !== "all" ? `?warehouseId=${warehouseId}` : "";
+      const response = await fetch(`/api/dashboard/stats${query}`);
       if (response.ok) {
         const data = await response.json();
         setDashboardData(data);
@@ -161,7 +208,7 @@ export const useDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [warehouseId]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -198,6 +245,15 @@ export const useDashboard = () => {
       quickActions,
       handleQuickAction,
       handleRefresh,
+    },
+    filterForm: {
+      control,
+      errors,
+    },
+    warehouse: {
+      warehouses,
+      warehouseId,
+      setWarehouseId,
     },
   };
 };

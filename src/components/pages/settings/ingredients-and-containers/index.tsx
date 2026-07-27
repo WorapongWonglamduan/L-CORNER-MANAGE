@@ -4,10 +4,10 @@ import { Sidebar } from "@/components/sidebar";
 import { useTranslations } from "next-intl";
 import { Package, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import RawMaterialsManager from "./raw-materials-manager";
+import IngredientsAndContainersManager from "./ingredients-and-containers-manager";
 
-export default function RawMaterialsContent() {
-  const t = useTranslations("settings.rawMaterials");
+export default function IngredientsAndContainersContent() {
+  const t = useTranslations("settings.ingredientsAndContainers");
   const router = useRouter();
 
   return (
@@ -34,7 +34,7 @@ export default function RawMaterialsContent() {
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6">
-          <RawMaterialsManager />
+          <IngredientsAndContainersManager />
         </div>
       </div>
     </div>

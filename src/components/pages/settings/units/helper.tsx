@@ -3,6 +3,7 @@ import { useEntityList } from "@/hooks/useEntityList";
 import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
 export interface UnitFormData {
   name_th: string;
@@ -47,14 +48,26 @@ export function useUnitsManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
   } = useEntityList<Unit, UnitsFilterOptions>({
     endpoint: "/api/units",
     initialFilters: {
       search: "",
+      isActive: undefined,
     },
   });
+
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<UnitsFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<UnitsFilterOptions>);
+  };
 
   const {
     control,
@@ -116,8 +129,11 @@ export function useUnitsManager() {
       loading,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
     },
     pagination: {
       filterOptions,

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
 
-// GET /api/raw-materials/[id] - ดึงข้อมูลวัตถุดิบตาม ID (จาก products table)
+// GET /api/ingredients-and-containers/[id] - ดึงข้อมูลวัตถุดิบ/ภาชนะตาม ID (จาก products table)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -28,6 +28,7 @@ export async function GET(
             sort_order: "asc" as const,
           },
         },
+        stock: true,
       },
     });
 
@@ -46,8 +47,17 @@ export async function GET(
       sortOrder: pm.sort_order,
     })) || [];
 
-    // Transform to match old raw_materials format
-    const rawMaterial = {
+    // Master data (no warehouse selector here) — sum across every warehouse.
+    const stockTotals = product.stock.reduce(
+      (acc, s) => ({
+        min_stock: acc.min_stock + Number(s.min_stock_level),
+        current_stock: acc.current_stock + Number(s.current_stock),
+      }),
+      { min_stock: 0, current_stock: 0 },
+    );
+
+    // Transform to match the ingredients-and-containers response shape
+    const ingredientContainer = {
       id: product.id,
       code: product.code,
       name_i18n: product.name_i18n,
@@ -55,8 +65,8 @@ export async function GET(
       type_id: product.product_type_id,
       unit_id: product.base_unit_id,
       cost_price: product.cost_price,
-      min_stock: product.min_stock_level,
-      current_stock: product.current_stock,
+      min_stock: stockTotals.min_stock,
+      current_stock: stockTotals.current_stock,
       is_active: product.is_active,
       created_at: product.created_at,
       updated_at: product.updated_at,
@@ -65,17 +75,17 @@ export async function GET(
       images: images,
     };
 
-    return NextResponse.json(rawMaterial);
+    return NextResponse.json(ingredientContainer);
   } catch (error) {
-    console.error("Error fetching raw material:", error);
+    console.error("Error fetching ingredient/container:", error);
     return NextResponse.json(
-      { error: "Failed to fetch raw material" },
+      { error: "Failed to fetch ingredient/container" },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/raw-materials/[id] - อัพเดทข้อมูลวัตถุดิบ (ใน products table)
+// PUT /api/ingredients-and-containers/[id] - อัพเดทข้อมูลวัตถุดิบ/ภาชนะ (ใน products table)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -94,8 +104,6 @@ export async function PUT(
       type_id,
       unit_id,
       cost_price,
-      min_stock,
-      current_stock,
       is_active,
       media_data,
     } = body;
@@ -135,13 +143,12 @@ export async function PUT(
         product_type_id: type_id !== undefined ? type_id : existing.product_type_id,
         base_unit_id: unit_id || existing.base_unit_id,
         cost_price: cost_price !== undefined ? cost_price : existing.cost_price,
-        min_stock_level: min_stock !== undefined ? min_stock : existing.min_stock_level,
-        current_stock: current_stock !== undefined ? current_stock : existing.current_stock,
         is_active: is_active !== undefined ? is_active : existing.is_active,
       },
       include: {
         base_unit: true,
         product_type: true,
+        stock: true,
       },
     });
 
@@ -177,8 +184,17 @@ export async function PUT(
       }
     }
 
-    // Transform to match old raw_materials format
-    const rawMaterial = {
+    // Transform to match the ingredients-and-containers response shape
+    // (master data, no warehouse selector here — sum across all warehouses)
+    const updatedStockTotals = product.stock.reduce(
+      (acc, s) => ({
+        min_stock: acc.min_stock + Number(s.min_stock_level),
+        current_stock: acc.current_stock + Number(s.current_stock),
+      }),
+      { min_stock: 0, current_stock: 0 },
+    );
+
+    const ingredientContainer = {
       id: product.id,
       code: product.code,
       name_i18n: product.name_i18n,
@@ -186,8 +202,8 @@ export async function PUT(
       type_id: product.product_type_id,
       unit_id: product.base_unit_id,
       cost_price: product.cost_price,
-      min_stock: product.min_stock_level,
-      current_stock: product.current_stock,
+      min_stock: updatedStockTotals.min_stock,
+      current_stock: updatedStockTotals.current_stock,
       is_active: product.is_active,
       created_at: product.created_at,
       updated_at: product.updated_at,
@@ -195,17 +211,17 @@ export async function PUT(
       type: product.product_type,
     };
 
-    return NextResponse.json(rawMaterial);
+    return NextResponse.json(ingredientContainer);
   } catch (error) {
-    console.error("Error updating raw material:", error);
+    console.error("Error updating ingredient/container:", error);
     return NextResponse.json(
-      { error: "Failed to update raw material" },
+      { error: "Failed to update ingredient/container" },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/raw-materials/[id] - ลบวัตถุดิบ (soft delete)
+// DELETE /api/ingredients-and-containers/[id] - ลบวัตถุดิบ/ภาชนะ (soft delete)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -238,11 +254,11 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ message: "Raw material deleted successfully" });
+    return NextResponse.json({ message: "Ingredient/container deleted successfully" });
   } catch (error) {
-    console.error("Error deleting raw material:", error);
+    console.error("Error deleting ingredient/container:", error);
     return NextResponse.json(
-      { error: "Failed to delete raw material" },
+      { error: "Failed to delete ingredient/container" },
       { status: 500 }
     );
   }

@@ -1,4 +1,4 @@
-import { FieldConfig } from "@/components/ui/FormBuilder";
+import type { FieldConfig } from "@/components/dynamic-form/types";
 import { WarehouseFormData } from "../helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 
@@ -34,5 +34,10 @@ export const getWarehouseFormConfig = (
     name: "is_active",
     type: INPUT_TYPES.CHECKBOX,
     label: t("isActive"),
+  },
+  {
+    name: "is_default",
+    type: INPUT_TYPES.CHECKBOX,
+    label: t("isDefault"),
   },
 ];

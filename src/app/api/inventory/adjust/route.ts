@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, assertWarehouseAccessLive } from "@/lib/permissions";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,39 +10,47 @@ export async function POST(request: NextRequest) {
     if (denied) return denied;
 
     const body = await request.json();
-    const { 
-      product_id, 
+    const {
+      product_id,
+      warehouse_id,
       adjustment_type,  // "in", "out", "adjustment" (legacy support)
-      quantity, 
-      reason, 
+      quantity,
+      reason,
       note,
       reason_code,
       reference_type,
       reference_id
     } = body;
 
-    if (!product_id || !adjustment_type || !quantity || !reason) {
+    if (!product_id || !warehouse_id || !adjustment_type || !quantity || !reason) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Get current product stock
+    const deniedWarehouse = await assertWarehouseAccessLive(session, warehouse_id);
+    if (deniedWarehouse) return deniedWarehouse;
+
+    // Get current product stock at this warehouse
     const product = await prisma.product.findUnique({
       where: { id: product_id },
-      select: { current_stock: true, code: true, name_i18n: true },
+      select: { code: true, name_i18n: true },
     });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
+    const productStock = await prisma.productStock.findUnique({
+      where: { product_id_warehouse_id: { product_id, warehouse_id } },
+    });
+
     // Calculate new stock and determine direction
     let newStock: number;
     let direction: string;
     let quantityChange: number;
-    const currentStock = Number(product.current_stock);
+    const currentStock = Number(productStock?.current_stock) || 0;
     const adjustmentQty = Number(quantity);
 
     if (adjustment_type === "in") {
@@ -79,6 +87,7 @@ export async function POST(request: NextRequest) {
       const stockMovement = await tx.stockMovement.create({
         data: {
           product_id,
+          warehouse_id,
           movement_type: "manual_adjustment",
           direction,
           quantity_before: currentStock,
@@ -94,13 +103,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Update product stock
-      const updatedProduct = await tx.product.update({
-        where: { id: product_id },
-        data: { current_stock: newStock },
+      // Update product stock at this warehouse
+      const updatedProductStock = await tx.productStock.upsert({
+        where: { product_id_warehouse_id: { product_id, warehouse_id } },
+        create: { product_id, warehouse_id, current_stock: newStock },
+        update: { current_stock: newStock },
       });
 
-      return { stockMovement, updatedProduct };
+      return { stockMovement, updatedProductStock };
     });
 
     return NextResponse.json({

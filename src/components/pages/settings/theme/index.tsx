@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { Sidebar } from "@/components/sidebar";
 import { useTranslations } from "next-intl";
 import { Palette, ArrowLeft, Check, AlertTriangle } from "lucide-react";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { useRouter } from "next/navigation";
 import { THEME_PRESETS } from "@/constants/theme-presets";
 import { toast } from "@/lib/toast";
@@ -24,20 +26,22 @@ export default function ThemeContent() {
   const [currentColor, setCurrentColor] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [customColorInput, setCustomColorInput] =
-    useState(DEFAULT_CUSTOM_COLOR);
   const [savingCustom, setSavingCustom] = useState(false);
+  const { control, watch, setValue } = useForm<{ customColorInput: string }>({
+    defaultValues: { customColorInput: DEFAULT_CUSTOM_COLOR },
+  });
+  const customColorInput = watch("customColorInput");
 
   useEffect(() => {
     fetch("/api/settings/theme")
       .then((res) => res.json())
       .then((data) => {
         setCurrentColor(data.theme_color);
-        setCustomColorInput(data.theme_color);
+        setValue("customColorInput", data.theme_color);
       })
       .catch((error) => console.error("Error fetching theme settings:", error))
       .finally(() => setLoading(false));
-  }, []);
+  }, [setValue]);
 
   const handleSelect = async (presetId: string, themeColor: string) => {
     setSavingId(presetId);
@@ -178,12 +182,21 @@ export default function ThemeContent() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <input
-              type="color"
-              value={customColorInput}
-              onChange={(e) => setCustomColorInput(e.target.value)}
-              className="w-16 h-16 rounded-lg border border-gray-200 cursor-pointer"
-              aria-label={t("pickColor")}
+            <Controller
+              name="customColorInput"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  inputType={INPUT_TYPES.COLOR}
+                  value={field.value}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    field.onChange(e.target.value)
+                  }
+                  className="w-16! h-16! p-1! rounded-lg! cursor-pointer"
+                  containerClassName="shrink-0"
+                  aria-label={t("pickColor")}
+                />
+              )}
             />
 
             <div

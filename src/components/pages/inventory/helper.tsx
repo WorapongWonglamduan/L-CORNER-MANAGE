@@ -1,7 +1,19 @@
-import { useLocale } from "next-intl";
+import { useState, useEffect, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { useEntityList } from "@/hooks/useEntityList";
+import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 import type { I18nText, Locale } from "@/types/i18n";
+import { toast } from "@/lib/toast";
+
+export interface Warehouse {
+  id: string;
+  code: string;
+  name_i18n: I18nText;
+  is_default: boolean;
+}
 
 export interface Product {
   id: string;
@@ -27,10 +39,40 @@ interface InventoryFilterOptions extends FilterOptions {
   search?: string;
   type?: string;
   stockStatus?: string;
+  warehouseId?: string;
 }
 
 export function useInventoryManager() {
   const locale = useLocale() as Locale;
+  const t = useTranslations("inventory");
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { data: session } = useSession();
+  const sessionWarehouseIds = session?.user?.warehouse_ids;
+  const assignedWarehouseIds = useMemo(
+    () => sessionWarehouseIds ?? [],
+    [sessionWarehouseIds],
+  );
+
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehousesLoading, setWarehousesLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const response = await fetch("/api/warehouses?pageSize=100&isActive=true");
+        const data = await response.json();
+        const allItems: Warehouse[] = data.items || [];
+        setWarehouses(
+          allItems.filter((w) => assignedWarehouseIds.includes(w.id)),
+        );
+      } catch (error) {
+        console.error("Error fetching warehouses:", error);
+      } finally {
+        setWarehousesLoading(false);
+      }
+    };
+    fetchWarehouses();
+  }, [assignedWarehouseIds]);
 
   const {
     items: products,
@@ -40,7 +82,6 @@ export function useInventoryManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
     updateFilter,
     refetch,
   } = useEntityList<Product, InventoryFilterOptions>({
@@ -49,8 +90,29 @@ export function useInventoryManager() {
       search: "",
       type: "",
       stockStatus: "",
+      warehouseId: "",
     },
   });
+
+  // Default to the is_default-flagged warehouse (falling back to the
+  // lowest `code` if none is flagged, or it isn't one this user is
+  // assigned to) once loaded, if none selected yet.
+  useEffect(() => {
+    if (!filterOptions.warehouseId && warehouses.length > 0) {
+      const defaultWarehouse = warehouses.find((w) => w.is_default);
+      const sortedByCode = [...warehouses].sort((a, b) =>
+        a.code.localeCompare(b.code),
+      );
+      updateFilter({
+        warehouseId: (defaultWarehouse ?? sortedByCode[0]).id,
+      } as Partial<InventoryFilterOptions>);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouses]);
+
+  const setWarehouseId = (warehouseId: string) => {
+    updateFilter({ warehouseId } as Partial<InventoryFilterOptions>);
+  };
 
   const getStockStatus = (product: Product) => {
     const currentStock = Number(product.current_stock);
@@ -82,24 +144,74 @@ export function useInventoryManager() {
     };
   };
 
-  const setTypeFilter = (type: string) => {
-    updateFilter({ type } as Partial<InventoryFilterOptions>);
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search,
+      type: values.type,
+      stockStatus: values.stockStatus,
+    } as Partial<InventoryFilterOptions>);
   };
 
-  const setStatusFilter = (stockStatus: string) => {
-    updateFilter({ stockStatus } as Partial<InventoryFilterOptions>);
+  const resetFilters = () => {
+    updateFilter({
+      search: "",
+      type: "",
+      stockStatus: "",
+    } as Partial<InventoryFilterOptions>);
+  };
+
+  const handleHideFromWarehouse = async (product: Product) => {
+    if (!filterOptions.warehouseId) return;
+
+    if (Number(product.current_stock) !== 0) {
+      toast.error(t("hideRequiresZeroStock"));
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: t("confirmHideTitle"),
+      description: t("confirmHideDescription"),
+      confirmText: t("hideFromWarehouse"),
+      cancelText: "ยกเลิก",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(
+        `/api/products/${product.id}/warehouses/${filterOptions.warehouseId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_active: false }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Failed to hide product");
+      }
+
+      refetch();
+    } catch (error) {
+      console.error("Error hiding product from warehouse:", error);
+      toast.error(t("hideError"));
+    }
   };
 
   return {
     products,
     loading,
+    warehouses,
+    warehousesLoading,
     filters: {
       search: filterOptions.search || "",
-      setSearch: handleSearchChange,
       type: filterOptions.type || "",
-      setType: setTypeFilter,
       status: filterOptions.stockStatus || "",
-      setStatus: setStatusFilter,
+      applyFilters,
+      resetFilters,
+      warehouseId: filterOptions.warehouseId || "",
+      setWarehouseId,
     },
     pagination: {
       page: filterOptions.page,
@@ -112,5 +224,7 @@ export function useInventoryManager() {
     locale,
     refetch,
     getStockStatus,
+    handleHideFromWarehouse,
+    ConfirmDialog,
   };
 }

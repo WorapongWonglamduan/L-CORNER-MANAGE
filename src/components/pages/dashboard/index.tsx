@@ -1,9 +1,14 @@
 'use client'
 
 import { ArrowUpRight, ArrowDownRight, TrendingUp, Clock, RefreshCw, Calendar, ChevronRight } from 'lucide-react'
+import { useLocale } from 'next-intl'
 import { Sidebar } from '@/components/sidebar'
+import { Button } from '@/components/ui/button'
+import { DynamicFormFields } from '@/components/dynamic-form/dynamic-form-fields'
+import { INPUT_TYPES } from '@/constants/input-types'
 import { useDashboard } from './helper'
 import { theme } from '@/lib/theme'
+import type { Locale } from '@/types/i18n'
 
 interface DashboardContentProps {
   userName?: string
@@ -11,13 +16,14 @@ interface DashboardContentProps {
   userPermissions?: string[]
 }
 
-export default function DashboardContent({ 
-  userName, 
-  userRoles, 
-  userPermissions 
+export default function DashboardContent({
+  userName,
+  userRoles,
+  userPermissions
 }: DashboardContentProps) {
-  const { t, status, stats, actions } = useDashboard()
-  
+  const { t, status, stats, actions, warehouse, filterForm } = useDashboard()
+  const locale = useLocale() as Locale
+
   const currentDate = new Date().toLocaleDateString('th-TH', {
     year: 'numeric',
     month: 'long',
@@ -43,14 +49,37 @@ export default function DashboardContent({
                 <span>{currentDate}</span>
               </div>
             </div>
-            <button
-              onClick={actions.handleRefresh}
-              disabled={status.refreshing}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 self-start sm:self-auto"
-            >
-              <RefreshCw className={`w-4 h-4 ${status.refreshing ? 'animate-spin' : ''}`} />
-              <span className="text-sm font-medium">รีเฟรช</span>
-            </button>
+            <div className="flex items-center gap-2 self-start">
+              {warehouse.warehouses.length > 0 && (
+                <DynamicFormFields<{ warehouseId: string }>
+                  fields={[
+                    {
+                      name: "warehouseId",
+                      type: INPUT_TYPES.SELECT,
+                      options: [
+                        { value: "all", label: t('allBranches') },
+                        ...warehouse.warehouses.map((w) => ({
+                          value: w.id,
+                          label: `${w.code} - ${w.name_i18n[locale]}`,
+                        })),
+                      ],
+                      className: "py-2!",
+                    },
+                  ]}
+                  control={filterForm.control}
+                  errors={filterForm.errors}
+                />
+              )}
+              <Button
+                onClick={actions.handleRefresh}
+                disabled={status.refreshing}
+                variant="outline"
+                className="shrink-0"
+              >
+                <RefreshCw className={`w-4 h-4 ${status.refreshing ? 'animate-spin' : ''}`} />
+                รีเฟรช
+              </Button>
+            </div>
           </div>
 
           {userRoles && userRoles.length > 0 && (

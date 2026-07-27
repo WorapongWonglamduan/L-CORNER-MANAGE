@@ -6,6 +6,7 @@ declare module 'next-auth' {
       id: string
       roles: string[]
       permissions: string[]
+      warehouse_ids: string[]
     } & DefaultSession['user']
   }
 
@@ -13,6 +14,7 @@ declare module 'next-auth' {
     id: string
     roles: string[]
     permissions: string[]
+    warehouse_ids: string[]
   }
 }
 
@@ -21,5 +23,6 @@ declare module 'next-auth/jwt' {
     id: string
     roles: string[]
     permissions: string[]
+    warehouse_ids: string[]
   }
 }

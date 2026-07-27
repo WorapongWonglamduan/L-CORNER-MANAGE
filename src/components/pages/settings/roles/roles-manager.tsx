@@ -4,8 +4,9 @@ import { Plus, ShieldCheck, Lock, Pencil, Trash2 } from "lucide-react";
 import { Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
-import { FormFields } from "@/components/ui/FormFields";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
+import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import {
   Dialog,
   DialogContent,
@@ -33,10 +34,11 @@ const GROUPED_PERMISSIONS = ALL_PERMISSIONS.reduce<Record<string, string[]>>(
 export default function RolesManager() {
   const locale = useLocale() as Locale;
   const tPermissions = useTranslations("permissions");
+  const tCommon = useTranslations("common");
   const {
     t,
     table: { items: roles, loading },
-    filters: { searchQuery, setSearchQuery },
+    filters,
     pagination: {
       filterOptions,
       totalItems,
@@ -63,6 +65,19 @@ export default function RolesManager() {
 
   const isSystem = !!editingRole?.is_system;
 
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
+
   const permissionLabel = (permission: string) => {
     const [resource, action] = permission.split(".");
     return `${tPermissions(`resources.${resource}`)} — ${tPermissions(`actions.${action}`)}`;
@@ -73,10 +88,14 @@ export default function RolesManager() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t("searchPlaceholder")}
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
         />
         <Button
           onClick={handleCreate}
@@ -220,7 +239,7 @@ export default function RolesManager() {
 
           <form onSubmit={formHandleSubmit(handleFormSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormFields
+              <DynamicFormFields
                 fields={getRoleFormConfig(t, isSystem)}
                 control={formControl}
                 errors={formErrors}
@@ -254,21 +273,23 @@ export default function RolesManager() {
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                               {permissions.map((permission) => (
-                                <label
+                                <div
                                   key={permission}
-                                  className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                                  className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-gray-50"
                                 >
-                                  <input
-                                    type="checkbox"
+                                  <Input
+                                    inputType={INPUT_TYPES.CHECKBOX}
                                     checked={selected.includes(permission)}
-                                    onChange={() => toggle(permission)}
+                                    onCheckedChange={() => toggle(permission)}
                                     disabled={formLoading}
-                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                                   />
-                                  <span className="text-sm text-gray-900">
+                                  <span
+                                    className="text-sm text-gray-900 cursor-pointer"
+                                    onClick={() => toggle(permission)}
+                                  >
                                     {permissionLabel(permission)}
                                   </span>
-                                </label>
+                                </div>
                               ))}
                             </div>
                           </div>

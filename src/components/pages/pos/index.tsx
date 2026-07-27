@@ -11,10 +11,17 @@ import { ToppingModal } from "./topping-modal";
 import { toast } from "@/lib/toast";
 import { useTranslations } from "next-intl";
 import { Pagination } from "@/components/ui/pagination";
-import { PRODUCTS_TYPES } from "@/constants/input-types";
+import { PRODUCTS_TYPES, INPUT_TYPES } from "@/constants/input-types";
+import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
+
+interface POSFilterValues {
+  searchQuery: string;
+  warehouseId: string;
+}
 
 export default function POSContent() {
-  const { catalog, cart, checkout, locale, pagination } = usePOSManager();
+  const { catalog, cart, checkout, locale, pagination, warehouse, filterForm } =
+    usePOSManager();
 
   const t = useTranslations("pos");
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
@@ -94,22 +101,52 @@ export default function POSContent() {
         {/* Main Content - Products */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 lg:p-6 pb-28 xl:pb-6">
-            {/* Search Bar */}
-            <div className="mb-4 sm:mb-6">
-              <div className="relative max-w-2xl">
-                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder={t("searchPlaceholder")}
-                  value={catalog.searchQuery}
-                  onChange={(e) => catalog.setSearchQuery(e.target.value)}
-                  className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 text-base sm:text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm"
+            {/* Search Bar + Warehouse Selector */}
+            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 max-w-2xl">
+                <DynamicFormFields<POSFilterValues>
+                  fields={[
+                    {
+                      name: "searchQuery",
+                      type: INPUT_TYPES.TEXT,
+                      icon: Search,
+                      placeholder: t("searchPlaceholder"),
+                    },
+                  ]}
+                  control={filterForm.control}
+                  errors={filterForm.errors}
                 />
               </div>
+
+              {warehouse.warehouses.length > 0 && (
+                <DynamicFormFields<POSFilterValues>
+                  fields={[
+                    {
+                      name: "warehouseId",
+                      type: INPUT_TYPES.SELECT,
+                      options: warehouse.warehouses.map((w) => ({
+                        value: w.id,
+                        label: `${w.code} - ${w.name_i18n[locale]}`,
+                      })),
+                    },
+                  ]}
+                  control={filterForm.control}
+                  errors={filterForm.errors}
+                />
+              )}
             </div>
 
             {/* Products Grid */}
-            {catalog.loading ? (
+            {warehouse.warehouses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                  <ShoppingCart className="h-12 w-12 text-gray-400" />
+                </div>
+                <p className="text-gray-600 text-lg text-center">
+                  {t("noWarehouseAssigned")}
+                </p>
+              </div>
+            ) : catalog.loading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4"></div>

@@ -34,7 +34,7 @@ try {
 } catch (error) {
   console.error('❌ Error during database reset:', error.message);
   console.error('\nTroubleshooting:');
-  console.error('   1. Make sure your .env file has correct DATABASE_URL');
+  console.error('   1. Make sure your .env file has correct DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD');
   console.error('   2. Ensure PostgreSQL is running');
   console.error('   3. Check if you have migrations in prisma/migrations folder\n');
   process.exit(1);

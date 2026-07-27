@@ -45,6 +45,8 @@ export function Sidebar({ userName }: SidebarProps) {
 
   const { data: session } = useSession();
   const permissions = session?.user?.permissions ?? [];
+  const displayName = userName ?? session?.user?.name ?? undefined;
+  const roles = session?.user?.roles ?? [];
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -163,8 +165,20 @@ export function Sidebar({ userName }: SidebarProps) {
         <div className={`p-4 border-b border-white/10 ${isCollapsed ? "md:hidden" : ""}`}>
           <p className="text-sm text-blue-100">
             {t("welcome")},{" "}
-            <span className="font-semibold text-white">{userName}</span>
+            <span className="font-semibold text-white">{displayName}</span>
           </p>
+          {roles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {roles.map((role) => (
+                <span
+                  key={role}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white"
+                >
+                  {role}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Navigation */}

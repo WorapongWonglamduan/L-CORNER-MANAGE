@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, requireWarehouseAccess } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import type { RecipeInput } from "@/types/product-request";
@@ -22,11 +22,26 @@ export async function GET(request: NextRequest) {
     const productType = searchParams.get("productType");
     const type = searchParams.get("type");
     const stockStatus = searchParams.get("stockStatus");
+    // Scopes stock figures to one warehouse (e.g. POS, Inventory). When
+    // omitted, stock is summed across every warehouse — used by master-data
+    // views (product list/detail, settings) that aren't warehouse-specific.
+    const warehouseId = searchParams.get("warehouseId");
+
+    if (warehouseId) {
+      const deniedWarehouse = requireWarehouseAccess(session, warehouseId);
+      if (deniedWarehouse) return deniedWarehouse;
+    }
 
     // Build where clause
     const where: Prisma.ProductWhereInput = {
       deleted_at: null,
     };
+
+    // Only include products explicitly assigned (active ProductStock row) to
+    // this warehouse — a product with no row here is invisible until added.
+    if (warehouseId) {
+      where.stock = { some: { warehouse_id: warehouseId, is_active: true } };
+    }
 
     if (searchQuery) {
       where.OR = [
@@ -89,7 +104,9 @@ export async function GET(request: NextRequest) {
                   select: {
                     id: true,
                     name_i18n: true,
-                    current_stock: true,
+                    stock: warehouseId
+                      ? { where: { warehouse_id: warehouseId } }
+                      : true,
                   },
                 },
                 unit: {
@@ -103,6 +120,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        stock: warehouseId ? { where: { warehouse_id: warehouseId } } : true,
         media: {
           include: {
             media: {
@@ -124,13 +142,28 @@ export async function GET(request: NextRequest) {
       orderBy: { created_at: "desc" },
     });
 
+    // Sums a product's ProductStock rows (already scoped to one warehouse if
+    // warehouseId was given) into the flat current_stock/min_stock_level/
+    // low_stock_threshold fields the rest of the API/UI still expects.
+    const sumStock = (stock: { current_stock: Prisma.Decimal; min_stock_level: Prisma.Decimal; low_stock_threshold: Prisma.Decimal }[]) =>
+      stock.reduce(
+        (acc, s) => ({
+          current_stock: acc.current_stock + Number(s.current_stock),
+          min_stock_level: acc.min_stock_level + Number(s.min_stock_level),
+          low_stock_threshold: acc.low_stock_threshold + Number(s.low_stock_threshold),
+        }),
+        { current_stock: 0, min_stock_level: 0, low_stock_threshold: 0 },
+      );
+
     // คำนวณ available_quantity สำหรับแต่ละสินค้า
     const productsWithAvailability = allProducts.map((product) => {
+      const { stock, ...productRest } = product;
+      const stockTotals = sumStock(stock);
       let available_quantity = 0;
 
       // FINISHED_GOOD: ใช้ current_stock ของตัวเอง
       if (product.product_type.type === PRODUCTS_TYPES.FINISHED_GOOD) {
-        available_quantity = Number(product.current_stock) || 0;
+        available_quantity = stockTotals.current_stock;
       }
       // SEMI_FINISHED: คำนวณจากวัตถุดิบในสูตร
       else if (product.product_type.type === PRODUCTS_TYPES.SEMI_FINISHED) {
@@ -139,8 +172,7 @@ export async function GET(request: NextRequest) {
         if (defaultRecipe && defaultRecipe.ingredients.length > 0) {
           // หาจำนวนที่ผลิตได้สูงสุดจากวัตถุดิบแต่ละตัว
           const maxQuantities = defaultRecipe.ingredients.map((ingredient) => {
-            const ingredientStock =
-              Number(ingredient.ingredient.current_stock) || 0;
+            const ingredientStock = sumStock(ingredient.ingredient.stock).current_stock;
             const requiredQuantity = Number(ingredient.quantity) || 1;
             return Math.floor(ingredientStock / requiredQuantity);
           });
@@ -162,7 +194,8 @@ export async function GET(request: NextRequest) {
       }
 
       return {
-        ...product,
+        ...productRest,
+        ...stockTotals,
         available_quantity,
         primary_image_url,
       };
@@ -230,14 +263,12 @@ export async function POST(request: NextRequest) {
       is_active,
       has_serial,
       has_expiry,
-      min_stock_level,
-      low_stock_threshold,
-      current_stock,
       track_stock,
       selling_price,
       cost_price,
       recipes,
       media_data,
+      warehouse_ids,
     } = body;
 
     // Validation
@@ -286,9 +317,6 @@ export async function POST(request: NextRequest) {
           is_active: is_active ?? true,
           has_serial: has_serial ?? false,
           has_expiry: has_expiry ?? false,
-          min_stock_level: min_stock_level || 0,
-          low_stock_threshold: low_stock_threshold || 0,
-          current_stock: current_stock || 0,
           track_stock: track_stock ?? true,
           selling_price: selling_price || null,
           cost_price: cost_price || null,
@@ -337,6 +365,26 @@ export async function POST(request: NextRequest) {
         },
       });
     });
+
+    // Assign the new product to whichever branches were selected — a
+    // product with no ProductStock row anywhere is invisible at every
+    // warehouse until explicitly added (allow-list, not deny-list).
+    // Filter to the caller's own assigned branches so a client can't post a
+    // warehouse it has no access to.
+    const validWarehouseIds = (
+      Array.isArray(warehouse_ids) ? warehouse_ids : []
+    ).filter((id: string) => session?.user?.warehouse_ids?.includes(id));
+
+    if (validWarehouseIds.length > 0) {
+      await prisma.productStock.createMany({
+        data: validWarehouseIds.map((warehouse_id: string) => ({
+          product_id: product.id,
+          warehouse_id,
+          current_stock: 0,
+          is_active: true,
+        })),
+      });
+    }
 
     // Create ProductMedia relations if media_data provided
     if (media_data !== undefined && Array.isArray(media_data) && media_data.length > 0) {

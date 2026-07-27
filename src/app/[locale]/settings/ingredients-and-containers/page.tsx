@@ -1,18 +1,18 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import RawMaterialsContent from '@/components/pages/settings/raw-materials'
+import IngredientsAndContainersContent from '@/components/pages/settings/ingredients-and-containers'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'settings.rawMaterials' })
-  
+  const t = await getTranslations({ locale, namespace: 'settings.ingredientsAndContainers' })
+
   return {
     title: t('title'),
   }
 }
 
-export default async function RawMaterialsPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function IngredientsAndContainersPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const session = await auth()
 
@@ -20,5 +20,5 @@ export default async function RawMaterialsPage({ params }: { params: Promise<{ l
     redirect(`/${locale}/login`)
   }
 
-  return <RawMaterialsContent />
+  return <IngredientsAndContainersContent />
 }

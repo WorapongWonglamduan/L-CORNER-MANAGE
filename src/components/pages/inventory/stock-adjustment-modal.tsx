@@ -10,8 +10,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { Button } from "@/components/ui/button";
+import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
 import { ADJUSTMENT_TYPES } from "@/constants/inventory";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { useStockAdjustment } from "./stock-adjustment-helper";
@@ -28,6 +28,7 @@ interface StockAdjustmentModalProps {
     unit: string;
     product_type: string;
   };
+  warehouseId: string;
   onSuccess?: () => void;
 }
 
@@ -35,6 +36,7 @@ export function StockAdjustmentModal({
   isOpen,
   onClose,
   product,
+  warehouseId,
   onSuccess,
 }: StockAdjustmentModalProps) {
   // Use custom hook - all logic is in helper
@@ -49,14 +51,13 @@ export function StockAdjustmentModal({
     handleFormSubmit,
     errors,
     formConfig,
-    Controller,
     newStock,
     calculatedIngredients,
     setAdjustmentType,
     handleProduction,
     handleSubmit,
     t,
-  } = useStockAdjustment({ isOpen, product, onSuccess, onClose });
+  } = useStockAdjustment({ isOpen, product, warehouseId, onSuccess, onClose });
 
   if (!isOpen) return null;
 
@@ -66,9 +67,9 @@ export function StockAdjustmentModal({
   if (product.product_type === PRODUCTS_TYPES.SEMI_FINISHED) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-primary to-primary-light text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <div className="shrink-0 bg-gradient-to-r from-primary to-primary-light text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-2 rounded-lg">
                 <ChefHat className="w-6 h-6" />
@@ -93,7 +94,7 @@ export function StockAdjustmentModal({
             onSubmit={handleFormSubmit(async (data) => {
               await handleProduction();
             })}
-            className="p-6 space-y-6"
+            className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0"
           >
             {loadingRecipe ? (
               <div className="flex items-center justify-center py-12">
@@ -221,39 +222,10 @@ export function StockAdjustmentModal({
                 </div>
 
                 {/* Quantity Input */}
-                <Controller
-                  name="quantity"
+                <DynamicFormFields
+                  fields={[formConfig[0]]}
                   control={control}
-                  rules={{
-                    required: t("pleaseEnterQuantity"),
-                    min: {
-                      value: 0,
-                      message: t("quantityMustBeGreaterThanZero"),
-                    },
-                  }}
-                  render={({ field: { onChange, onBlur, value, ref } }) => (
-                    <Input
-                      ref={ref}
-                      label={
-                        adjustmentType === ADJUSTMENT_TYPES.ADJUSTMENT
-                          ? t("newStockAmount")
-                          : adjustmentType === ADJUSTMENT_TYPES.IN
-                            ? t("quantityIncrease")
-                            : t("quantityDecrease")
-                      }
-                      inputType={INPUT_TYPES.NUMBER}
-                      placeholder="0"
-                      value={value}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange(e)
-                      }
-                      onBlur={onBlur}
-                      required={!!formConfig[0]?.rules?.required}
-                      error={errors.quantity}
-                      min="0"
-                      step="1"
-                    />
-                  )}
+                  errors={errors}
                 />
 
                 {/* Recipe Ingredients List */}
@@ -380,41 +352,17 @@ export function StockAdjustmentModal({
                 )}
 
                 {/* Reason */}
-                <Controller
-                  name="reason"
+                <DynamicFormFields
+                  fields={[formConfig[1]]}
                   control={control}
-                  rules={formConfig[1].rules}
-                  render={({ field: { onChange, onBlur, value, ref } }) => (
-                    <Input
-                      ref={ref}
-                      label={formConfig[1].label}
-                      inputType={formConfig[1].type}
-                      value={value}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      error={errors.reason}
-                      required={!!formConfig[1]?.rules?.required}
-                      options={[...(formConfig[1]?.options ?? [])]}
-                    />
-                  )}
+                  errors={errors}
                 />
 
                 {/* Note */}
-                <Controller
-                  name="note"
+                <DynamicFormFields
+                  fields={[formConfig[2]]}
                   control={control}
-                  render={({ field: { onChange, onBlur, value, ref } }) => (
-                    <Input
-                      ref={ref}
-                      label={formConfig[2].label}
-                      inputType={formConfig[2].type}
-                      value={value}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      placeholder={formConfig[2].placeholder}
-                      rows={formConfig[2].rows}
-                    />
-                  )}
+                  errors={errors}
                 />
 
                 {/* Actions */}
@@ -450,9 +398,9 @@ export function StockAdjustmentModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-primary to-primary-light text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
+        <div className="shrink-0 bg-gradient-to-r from-primary to-primary-light text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 p-2 rounded-lg">
               <Package className="w-6 h-6" />
@@ -474,7 +422,7 @@ export function StockAdjustmentModal({
 
         <form
           onSubmit={handleFormSubmit(handleSubmit)}
-          className="p-6 space-y-6"
+          className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0"
         >
           {/* Current Stock Display */}
           <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
@@ -598,26 +546,11 @@ export function StockAdjustmentModal({
           </div>
 
           {/* Form Fields */}
-          {getStockAdjustmentFormConfig(t, adjustmentType).map((field) => (
-            <Controller
-              key={field.name}
-              name={field.name}
-              control={control}
-              rules={field.rules}
-              render={({ field: { onChange, onBlur, value, ref } }) => (
-                <Input
-                  {...field}
-                  ref={ref}
-                  inputType={field.type}
-                  value={value}
-                  onChange={onChange}
-                  onBlur={onBlur}
-                  error={errors[field.name]}
-                  required={!!field.rules?.required}
-                />
-              )}
-            />
-          ))}
+          <DynamicFormFields
+            fields={getStockAdjustmentFormConfig(t, adjustmentType)}
+            control={control}
+            errors={errors}
+          />
 
           {/* Warning */}
           {newStock < 0 && (

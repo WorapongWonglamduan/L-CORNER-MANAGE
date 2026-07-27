@@ -3,21 +3,22 @@
 import { Plus, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { usePromotionsManager } from "./helper";
 import { getPromotionFormConfig } from "./form/config";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 import type { Promotion } from "./helper";
 
 export default function PromotionsManager() {
   const locale = useLocale() as Locale;
+  const tCommon = useTranslations("common");
   const {
     t,
     table: { items: promotions, loading },
-    filters: { searchQuery, setSearchQuery },
+    filters,
     pagination: {
       filterOptions,
       totalItems,
@@ -42,6 +43,19 @@ export default function PromotionsManager() {
     },
   } = usePromotionsManager();
 
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
+
   const formatDiscount = (promotion: Promotion) => {
     return promotion.discount_type === "percentage"
       ? `${Number(promotion.discount_value)}%`
@@ -63,10 +77,14 @@ export default function PromotionsManager() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t("searchPlaceholder")}
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
         />
         <Button
           onClick={handleCreate}

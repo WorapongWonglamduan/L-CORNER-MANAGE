@@ -21,6 +21,13 @@ const USER_SAFE_SELECT = {
       },
     },
   },
+  user_warehouses: {
+    include: {
+      warehouse: {
+        select: { id: true, code: true, name_i18n: true },
+      },
+    },
+  },
 } as const;
 
 // GET /api/users/[id] - fetch a single user
@@ -66,8 +73,15 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { username, email, password, full_name, is_active, role_ids } =
-      body;
+    const {
+      username,
+      email,
+      password,
+      full_name,
+      is_active,
+      role_ids,
+      warehouse_ids,
+    } = body;
 
     const existing = await prisma.user.findUnique({ where: { id } });
     if (!existing) {
@@ -110,6 +124,18 @@ export async function PUT(
             data: role_ids.map((role_id: string) => ({
               user_id: id,
               role_id,
+            })),
+          });
+        }
+      }
+
+      if (warehouse_ids !== undefined) {
+        await tx.userWarehouse.deleteMany({ where: { user_id: id } });
+        if (Array.isArray(warehouse_ids) && warehouse_ids.length > 0) {
+          await tx.userWarehouse.createMany({
+            data: warehouse_ids.map((warehouse_id: string) => ({
+              user_id: id,
+              warehouse_id,
             })),
           });
         }

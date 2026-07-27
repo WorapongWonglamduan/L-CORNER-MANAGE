@@ -3,6 +3,7 @@ import { useEntityList } from "@/hooks/useEntityList";
 import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
 export interface WarehouseFormData {
   code: string;
@@ -10,6 +11,7 @@ export interface WarehouseFormData {
   name_en: string;
   address: string;
   is_active: boolean;
+  is_default: boolean;
 }
 
 export interface Warehouse {
@@ -21,6 +23,7 @@ export interface Warehouse {
   };
   address: string | null;
   is_active: boolean;
+  is_default: boolean;
   created_at: string;
 }
 
@@ -41,14 +44,26 @@ export function useWarehousesManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
   } = useEntityList<Warehouse, WarehousesFilterOptions>({
     endpoint: "/api/warehouses",
     initialFilters: {
       search: "",
+      isActive: undefined,
     },
   });
+
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<WarehousesFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<WarehousesFilterOptions>);
+  };
 
   const {
     control,
@@ -71,6 +86,7 @@ export function useWarehousesManager() {
         name_en: "",
         address: "",
         is_active: true,
+        is_default: false,
       },
     },
     endpoint: "/api/warehouses",
@@ -83,6 +99,7 @@ export function useWarehousesManager() {
         },
         address: data.address || null,
         is_active: data.is_active,
+        is_default: data.is_default,
       };
     },
     transformToForm: (warehouse) => {
@@ -92,6 +109,7 @@ export function useWarehousesManager() {
         name_en: warehouse.name_i18n.en,
         address: warehouse.address || "",
         is_active: warehouse.is_active,
+        is_default: warehouse.is_default,
       };
     },
     onSuccess: refetch,
@@ -105,8 +123,11 @@ export function useWarehousesManager() {
       loading,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
     },
     pagination: {
       filterOptions,

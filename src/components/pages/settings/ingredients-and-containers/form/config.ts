@@ -1,9 +1,9 @@
-import { FieldConfig } from "@/components/ui/FormBuilder";
-import { RawMaterialFormData } from "../helper";
+import type { FieldConfig } from "@/components/dynamic-form/types";
+import { IngredientContainerFormData } from "../helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 import { I18nText, Locale } from "@/types/i18n";
 
-export const getRawMaterialFormConfig = (
+export const getIngredientContainerFormConfig = (
   t: (key: string) => string,
   units: Array<{
     id: string;
@@ -12,7 +12,7 @@ export const getRawMaterialFormConfig = (
   }>,
   productTypes: Array<{ id: string; name_i18n: I18nText }>,
   locale: Locale = "th",
-): FieldConfig<RawMaterialFormData>[] => [
+): FieldConfig<IngredientContainerFormData>[] => [
   {
     name: "code",
     type: INPUT_TYPES.TEXT,
@@ -76,24 +76,6 @@ export const getRawMaterialFormConfig = (
     rules: { min: { value: 0, message: t("costPriceMin") } },
     min: "0",
     step: "0.01",
-  },
-  {
-    name: "min_stock",
-    type: INPUT_TYPES.NUMBER,
-    label: t("minStock"),
-    placeholder: t("minStockPlaceholder"),
-    rules: { min: { value: 0, message: t("minStockMin") } },
-    min: "0",
-    step: "1",
-  },
-  {
-    name: "current_stock",
-    type: INPUT_TYPES.NUMBER,
-    label: t("currentStock"),
-    placeholder: t("currentStockPlaceholder"),
-    rules: { min: { value: 0, message: t("currentStockMin") } },
-    min: "0",
-    step: "1",
   },
   {
     name: "images",

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         ingredient: {
-          select: { id: true, code: true, name_i18n: true, current_stock: true },
+          select: { id: true, code: true, name_i18n: true, stock: true },
         },
         available_on: {
           include: {
@@ -54,8 +54,20 @@ export async function GET(request: NextRequest) {
       take: pageSize,
     });
 
+    // Master data (no warehouse selector here) — sum across all warehouses.
+    const items = toppings.map((topping) => ({
+      ...topping,
+      ingredient: {
+        ...topping.ingredient,
+        current_stock: topping.ingredient.stock.reduce(
+          (sum, s) => sum + Number(s.current_stock),
+          0,
+        ),
+      },
+    }));
+
     return NextResponse.json({
-      items: toppings,
+      items,
       total,
       page,
       pageSize,

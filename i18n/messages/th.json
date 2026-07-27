@@ -40,6 +40,7 @@
     "welcome": "ยินดีต้อนรับ",
     "role": "บทบาท",
     "permissions": "สิทธิ์การใช้งาน",
+    "allBranches": "ทุกสาขา",
     "stats": {
       "todaySales": "ยอดขายวันนี้",
       "totalProducts": "สินค้าทั้งหมด",
@@ -89,6 +90,10 @@
     "edit": "แก้ไข",
     "search": "ค้นหา",
     "filter": "กรอง",
+    "reset": "ล้างค่า",
+    "allStatus": "-- สถานะทั้งหมด --",
+    "active": "ใช้งาน",
+    "inactive": "ไม่ใช้งาน",
     "export": "ส่งออก",
     "import": "นำเข้า",
     "noData": "ไม่มีข้อมูล",
@@ -123,9 +128,16 @@
     "filterByStatus": "กรองตามสถานะ",
     "allTypes": "ทุกประเภท",
     "allStatus": "ทุกสถานะ",
+    "noWarehouseAssigned": "ยังไม่ได้รับมอบหมายสาขา กรุณาติดต่อผู้ดูแลระบบ",
     "rawMaterial": "วัตถุดิบ",
     "finishedGood": "สินค้าสำเร็จรูป",
     "semiFinished": "สินค้ากึ่งสำเร็จรูป",
+    "hideFromWarehouse": "ซ่อนออกจากคลังนี้",
+    "confirmHideTitle": "ยืนยันการซ่อนสินค้า",
+    "confirmHideDescription": "สินค้านี้จะถูกซ่อนออกจากรายการของคลังนี้ทันที คุณสามารถนำกลับเข้าคลังได้ภายหลังผ่านหน้ารายการสินค้า",
+    "hideRequiresZeroStock": "ต้องปรับสต็อกให้เป็น 0 ก่อนจึงจะซ่อนสินค้าออกจากคลังนี้ได้",
+    "hideSuccess": "ซ่อนสินค้าออกจากคลังนี้แล้ว",
+    "hideError": "เกิดข้อผิดพลาดในการซ่อนสินค้า",
     "adjustment": {
       "title": "ปรับสต็อก",
       "currentStock": "สต็อกปัจจุบัน",
@@ -199,6 +211,32 @@
         "expired": "หมดอายุ",
         "count": "นับสต็อก"
       }
+    },
+    "transfer": {
+      "title": "ย้ายสินค้าระหว่างสาขา",
+      "transferStock": "ย้ายสินค้า",
+      "fromWarehouse": "จากสาขา",
+      "toWarehouse": "ไปยังสาขา",
+      "product": "สินค้า",
+      "selectProduct": "-- เลือกสินค้า --",
+      "quantity": "จำนวน",
+      "available": "คงเหลือ",
+      "note": "หมายเหตุ",
+      "noteOptional": "หมายเหตุ (ไม่บังคับ)",
+      "notePlaceholder": "ระบุรายละเอียดเพิ่มเติม...",
+      "cancel": "ยกเลิก",
+      "confirm": "ยืนยันการย้าย",
+      "transferring": "กำลังย้าย...",
+      "successTransfer": "ย้ายสินค้าสำเร็จ",
+      "errorTransfer": "ย้ายสินค้าไม่สำเร็จ",
+      "errorRequireProduct": "กรุณาเลือกสินค้า",
+      "errorRequireQuantity": "กรุณาระบุจำนวน",
+      "errorInsufficientStock": "สต็อกที่สาขาต้นทางไม่เพียงพอ",
+      "errorSameWarehouse": "สาขาต้นทางและปลายทางต้องไม่ใช่สาขาเดียวกัน",
+      "history": "ประวัติการย้ายสินค้า",
+      "date": "วันที่",
+      "from": "จาก",
+      "to": "ไปยัง"
     }
   },
   "notFound": {
@@ -259,11 +297,11 @@
       "abbreviationThRequired": "กรุณากรอกตัวย่อภาษาไทย",
       "abbreviationEnRequired": "กรุณากรอกตัวย่อภาษาอังกฤษ"
     },
-    "rawMaterials": {
+    "ingredientsAndContainers": {
       "title": "จัดการวัตถุดิบ / ภาชนะ",
       "description": "จัดการวัตถุดิบภาชนะและสต็อกวัตถุดิบ",
-      "addRawMaterial": "เพิ่มวัตถุดิบ",
-      "editRawMaterial": "แก้ไขวัตถุดิบ",
+      "addIngredientContainer": "เพิ่มวัตถุดิบ",
+      "editIngredientContainer": "แก้ไขวัตถุดิบ",
       "searchPlaceholder": "ค้นหาวัตถุดิบ...",
       "code": "รหัสวัตถุดิบ",
       "codePlaceholder": "เช่น RM001",
@@ -457,6 +495,19 @@
         "loadError": "ไม่สามารถโหลดข้อมูลสินค้าได้",
         "deleteSuccess": "ลบสินค้าสำเร็จ",
         "deleteError": "เกิดข้อผิดพลาดในการลบสินค้า"
+      },
+      "manageWarehouses": "จัดการคลัง",
+      "branchesTitle": "สาขาที่วางขาย",
+      "warehouses": {
+        "title": "จัดการคลังของสินค้านี้",
+        "noWarehouseAssigned": "ยังไม่ได้รับมอบหมายสาขา กรุณาติดต่อผู้ดูแลระบบ",
+        "currentStock": "สต็อกปัจจุบัน",
+        "visible": "แสดงอยู่",
+        "hidden": "ซ่อนอยู่",
+        "hide": "ซ่อน",
+        "restore": "เพิ่มกลับเข้าคลัง",
+        "hideRequiresZeroStock": "ต้องปรับสต็อกให้เป็น 0 ก่อน",
+        "updateError": "เกิดข้อผิดพลาดในการอัปเดตสถานะสินค้า"
       }
     },
     "productTypes": {
@@ -512,6 +563,7 @@
     "searchPlaceholder": "ค้นหาสินค้า...",
     "loading": "กำลังโหลดสินค้า...",
     "noProducts": "ไม่พบสินค้า",
+    "noWarehouseAssigned": "ยังไม่ได้รับมอบหมายสาขา กรุณาติดต่อผู้ดูแลระบบ",
     "cart": "ตะกร้าสินค้า",
     "clearCart": "ล้างตะกร้า",
     "items": "รายการ",
@@ -691,6 +743,7 @@
     "roles": "บทบาท",
     "rolesPlaceholder": "-- เลือกบทบาท --",
     "rolesRequired": "กรุณาเลือกอย่างน้อย 1 บทบาท",
+    "branches": "สาขา",
     "isActive": "เปิดใช้งาน",
     "status": "สถานะ",
     "active": "เปิดใช้งาน",
@@ -748,7 +801,8 @@
       "update": "แก้ไข",
       "delete": "ลบ",
       "adjust": "ปรับสต็อก",
-      "void": "ยกเลิกการขาย"
+      "void": "ยกเลิกการขาย",
+      "transfer": "โอนย้าย"
     }
   },
   "warehouses": {
@@ -765,6 +819,8 @@
     "address": "ที่อยู่",
     "addressPlaceholder": "ที่อยู่คลังสินค้า",
     "isActive": "เปิดใช้งาน",
+    "isDefault": "ตั้งเป็นคลังเริ่มต้น",
+    "default": "ค่าเริ่มต้น",
     "status": "สถานะ",
     "active": "เปิดใช้งาน",
     "inactive": "ปิดใช้งาน",

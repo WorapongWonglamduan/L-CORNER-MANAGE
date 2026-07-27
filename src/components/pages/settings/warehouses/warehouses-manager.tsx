@@ -3,20 +3,21 @@
 import { Plus, Warehouse as WarehouseIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useWarehousesManager } from "./helper";
 import { getWarehouseFormConfig } from "./form/config";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 
 export default function WarehousesManager() {
   const locale = useLocale() as Locale;
+  const tCommon = useTranslations("common");
   const {
     t,
     table: { items: warehouses, loading },
-    filters: { searchQuery, setSearchQuery },
+    filters,
     pagination: {
       filterOptions,
       totalItems,
@@ -41,13 +42,30 @@ export default function WarehousesManager() {
     },
   } = useWarehousesManager();
 
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t("searchPlaceholder")}
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
         />
         <Button
           onClick={handleCreate}
@@ -80,9 +98,16 @@ export default function WarehousesManager() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <span className="inline-block font-mono font-bold text-sm px-2 py-1 rounded-md bg-primary/10 text-primary tracking-wide">
-                      {warehouse.code}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block font-mono font-bold text-sm px-2 py-1 rounded-md bg-primary/10 text-primary tracking-wide">
+                        {warehouse.code}
+                      </span>
+                      {warehouse.is_default && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                          {t("default")}
+                        </span>
+                      )}
+                    </div>
                     <h3 className="font-bold text-gray-900 text-base mt-2">
                       {warehouse.name_i18n[locale]}
                     </h3>

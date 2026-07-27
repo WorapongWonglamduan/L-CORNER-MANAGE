@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Plus, IceCreamCone, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import {
   Dialog,
   DialogContent,
@@ -16,16 +18,17 @@ import {
 } from "@/components/ui/dialog";
 import { useToppingsManager, Topping } from "./helper";
 import { getToppingFormConfig } from "./form/config";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 import { toast } from "@/lib/toast";
 
 export default function ToppingsManager() {
   const locale = useLocale() as Locale;
+  const tCommon = useTranslations("common");
   const {
     t,
     table: { items: toppings, loading },
-    filters: { searchQuery, setSearchQuery },
+    filters,
     pagination: {
       filterOptions,
       totalItems,
@@ -54,27 +57,46 @@ export default function ToppingsManager() {
     refetch,
   } = useToppingsManager();
 
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
+
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
   const [availabilityTopping, setAvailabilityTopping] =
     useState<Topping | null>(null);
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [savingAvailability, setSavingAvailability] = useState(false);
+  const { watch, setValue, reset } = useForm<{ selectedProductIds: string[] }>({
+    defaultValues: { selectedProductIds: [] },
+  });
+  const selectedProductIds = watch("selectedProductIds");
 
   const handleOpenAvailability = (topping: Topping) => {
     setAvailabilityTopping(topping);
-    setSelectedProductIds(topping.available_on.map((a) => a.product_id));
+    reset({ selectedProductIds: topping.available_on.map((a) => a.product_id) });
     setAvailabilityDialogOpen(true);
   };
 
   const handleCloseAvailability = () => {
     setAvailabilityDialogOpen(false);
     setAvailabilityTopping(null);
-    setSelectedProductIds([]);
+    reset({ selectedProductIds: [] });
   };
 
   const toggleProductId = (id: string) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+    setValue(
+      "selectedProductIds",
+      selectedProductIds.includes(id)
+        ? selectedProductIds.filter((p) => p !== id)
+        : [...selectedProductIds, id],
     );
   };
 
@@ -106,11 +128,15 @@ export default function ToppingsManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={t("searchPlaceholder")}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
         />
         <Button
           onClick={handleCreate}
@@ -268,21 +294,23 @@ export default function ToppingsManager() {
               </p>
             ) : (
               availableProducts.map((product) => (
-                <label
+                <div
                   key={product.id}
-                  className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50"
                 >
-                  <input
-                    type="checkbox"
+                  <Input
+                    inputType={INPUT_TYPES.CHECKBOX}
                     checked={selectedProductIds.includes(product.id)}
-                    onChange={() => toggleProductId(product.id)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    onCheckedChange={() => toggleProductId(product.id)}
                   />
-                  <span className="text-sm text-gray-900">
+                  <span
+                    className="text-sm text-gray-900 cursor-pointer"
+                    onClick={() => toggleProductId(product.id)}
+                  >
                     {product.name_i18n[locale]}{" "}
                     <span className="text-gray-500">({product.code})</span>
                   </span>
-                </label>
+                </div>
               ))
             )}
           </div>

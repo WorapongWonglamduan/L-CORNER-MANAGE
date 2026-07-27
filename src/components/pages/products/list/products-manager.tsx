@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import {
   Plus,
@@ -9,21 +10,42 @@ import {
   Tag,
   Layers,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { SearchInput } from "@/components/ui/search-input";
+import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { ProductActionButtons } from "./product-action-buttons";
+import { WarehouseVisibilityModal } from "./warehouse-visibility-modal";
 import { useProductsManager } from "./helper";
 
 export default function ProductsManager() {
   const {
     t,
     table: { products, loading },
-    filters: { searchQuery, setSearchQuery, filterOptions },
+    filters,
     pagination: { totalItems, totalPages, handlePageChange, handlePageSizeChange },
     actions: { handleCreate, handleView, handleEdit, handleDelete },
     modal: { ConfirmDialog },
   } = useProductsManager();
+  const tCommon = useTranslations("common");
+  const { filterOptions } = filters;
+
+  const [warehouseModalProduct, setWarehouseModalProduct] = useState<
+    { id: string; name: string } | null
+  >(null);
+
+  const filterFields: FilterFieldConfig[] = [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
 
   const getCategoryLabel = (
     category:
@@ -46,14 +68,16 @@ export default function ProductsManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
-        <div className="flex-1 max-w-md">
-          <SearchInput
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder={t("searchPlaceholder")}
-          />
-        </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <DynamicFilterBar
+          fields={filterFields}
+          values={{ search: filters.search, isActive: filters.isActive }}
+          onApply={filters.applyFilters}
+          onReset={filters.resetFilters}
+          searchLabel={tCommon("search")}
+          resetLabel={tCommon("reset")}
+          className="w-full"
+        />
         <Button
           onClick={handleCreate}
           className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all px-6 py-2.5"
@@ -117,8 +141,15 @@ export default function ProductsManager() {
                         onView={() => handleView(product)}
                         onEdit={() => handleEdit(product)}
                         onDelete={() => handleDelete(product.id, true)}
+                        onManageWarehouses={() =>
+                          setWarehouseModalProduct({
+                            id: product.id,
+                            name: product.name_i18n.th,
+                          })
+                        }
                         editTitle={t("edit") || "แก้ไข"}
                         deleteTitle={t("delete") || "ลบ"}
+                        manageWarehousesTitle={t("manageWarehouses")}
                       />
                     </div>
                     <div className="flex items-center gap-3 pr-16">
@@ -237,6 +268,15 @@ export default function ProductsManager() {
       )}
 
       <ConfirmDialog />
+
+      {warehouseModalProduct && (
+        <WarehouseVisibilityModal
+          productId={warehouseModalProduct.id}
+          productName={warehouseModalProduct.name}
+          isOpen={!!warehouseModalProduct}
+          onClose={() => setWarehouseModalProduct(null)}
+        />
+      )}
     </div>
   );
 }

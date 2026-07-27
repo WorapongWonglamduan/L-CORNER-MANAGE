@@ -1,4 +1,4 @@
-import { FieldConfig } from "@/components/ui/FormBuilder";
+import type { FieldConfig } from "@/components/dynamic-form/types";
 import { CategoryFormData } from "../helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 

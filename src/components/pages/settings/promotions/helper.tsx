@@ -3,6 +3,7 @@ import { useEntityList } from "@/hooks/useEntityList";
 import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
 export interface PromotionFormData {
   code: string;
@@ -49,14 +50,26 @@ export function usePromotionsManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
   } = useEntityList<Promotion, PromotionsFilterOptions>({
     endpoint: "/api/promotions",
     initialFilters: {
       search: "",
+      isActive: undefined,
     },
   });
+
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<PromotionsFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<PromotionsFilterOptions>);
+  };
 
   const {
     control,
@@ -124,8 +137,11 @@ export function usePromotionsManager() {
       loading,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
     },
     pagination: {
       filterOptions,

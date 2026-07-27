@@ -5,6 +5,7 @@ import { FilterOptions } from "@/hooks/usePagination";
 import { useRouter, useParams } from "next/navigation";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { toast } from "@/lib/toast";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
 interface Product {
   id: string;
@@ -100,15 +101,27 @@ export function useProductsManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
   } = useEntityList<Product, ProductsFilterOptions>({
     endpoint: "/api/products",
     initialFilters: {
       search: "",
+      isActive: undefined,
       type: `${PRODUCTS_TYPES.FINISHED_GOOD},${PRODUCTS_TYPES.SEMI_FINISHED}`,
     },
   });
+
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<ProductsFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<ProductsFilterOptions>);
+  };
 
   const handleCreate = () => {
     router.push(`/${locale}/products/add`);
@@ -155,8 +168,11 @@ export function useProductsManager() {
       loading,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
       filterOptions,
     },
     pagination: {

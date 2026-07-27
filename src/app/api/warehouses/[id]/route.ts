@@ -10,8 +10,9 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    const denied = requirePermission(session, "settings.view");
-    if (denied) return denied;
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { id } = await params;
 
@@ -46,7 +47,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { code, name_i18n, address, is_active } = body;
+    const { code, name_i18n, address, is_active, is_default } = body;
 
     const existing = await prisma.warehouse.findUnique({ where: { id } });
     if (!existing) {
@@ -68,14 +69,23 @@ export async function PUT(
       }
     }
 
-    const warehouse = await prisma.warehouse.update({
-      where: { id },
-      data: {
-        code: code ?? existing.code,
-        name_i18n: name_i18n ?? existing.name_i18n,
-        address: address !== undefined ? address : existing.address,
-        is_active: is_active !== undefined ? is_active : existing.is_active,
-      },
+    const warehouse = await prisma.$transaction(async (tx) => {
+      if (is_default === true) {
+        await tx.warehouse.updateMany({
+          where: { is_default: true, id: { not: id } },
+          data: { is_default: false },
+        });
+      }
+      return tx.warehouse.update({
+        where: { id },
+        data: {
+          code: code ?? existing.code,
+          name_i18n: name_i18n ?? existing.name_i18n,
+          address: address !== undefined ? address : existing.address,
+          is_active: is_active !== undefined ? is_active : existing.is_active,
+          is_default: is_default !== undefined ? is_default : existing.is_default,
+        },
+      });
     });
 
     return NextResponse.json(warehouse);

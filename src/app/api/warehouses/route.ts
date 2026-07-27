@@ -8,8 +8,9 @@ import { Prisma } from "@prisma/client";
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    const denied = requirePermission(session, "settings.view");
-    if (denied) return denied;
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     const [warehouses, total] = await Promise.all([
       prisma.warehouse.findMany({
         where,
-        orderBy: { created_at: "desc" },
+        orderBy: [{ is_default: "desc" }, { code: "asc" }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     if (denied) return denied;
 
     const body = await request.json();
-    const { code, name_i18n, address, is_active = true } = body;
+    const { code, name_i18n, address, is_active = true, is_default = false } = body;
 
     if (!code || !name_i18n) {
       return NextResponse.json(
@@ -82,13 +83,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const warehouse = await prisma.warehouse.create({
-      data: {
-        code,
-        name_i18n,
-        address,
-        is_active,
-      },
+    const warehouse = await prisma.$transaction(async (tx) => {
+      if (is_default) {
+        await tx.warehouse.updateMany({
+          where: { is_default: true },
+          data: { is_default: false },
+        });
+      }
+      return tx.warehouse.create({
+        data: {
+          code,
+          name_i18n,
+          address,
+          is_active,
+          is_default,
+        },
+      });
     });
 
     return NextResponse.json(warehouse, { status: 201 });

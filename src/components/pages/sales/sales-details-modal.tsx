@@ -65,9 +65,9 @@ export function SalesDetailsModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
+        <div className="shrink-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{t("orderDetails")}</h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -83,7 +83,7 @@ export function SalesDetailsModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
           {/* Order Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-lg p-4">
@@ -243,7 +243,7 @@ export function SalesDetailsModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
+        <div className="shrink-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
           <Button
             onClick={onClose}
             className="w-full bg-primary hover:bg-primary-light text-white py-3 text-lg font-semibold"

@@ -133,10 +133,14 @@ docker-compose up -d postgres
 CREATE DATABASE l_corner_pos;
 ```
 
-2. แก้ไข `DATABASE_URL` ใน `.env`:
+2. แก้ไขค่า DB ใน `.env`:
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/l_corner_pos?schema=public"
+DB_HOST=localhost
+DB_PORT=5432
+DB_DATABASE=l_corner_pos
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
 ```
 
 ### Initialize Database
@@ -307,7 +311,11 @@ cp env.template .env
 
 ```env
 # Database (ถ้าใช้ Docker ใช้ค่า default ได้เลย)
-DATABASE_URL="postgresql://postgres:postgres@localhost:5436/l_corner_pos?schema=public"
+DB_HOST=localhost
+DB_PORT=5436
+DB_DATABASE=l_corner_pos
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
 
 # NextAuth (⚠️ ต้องเปลี่ยนใน production)
 NEXTAUTH_SECRET="your-secret-key-here-change-in-production"
@@ -393,7 +401,7 @@ docker-compose ps postgres
 # ดู logs
 docker-compose logs postgres
 
-# ตรวจสอบ DATABASE_URL ใน .env
+# ตรวจสอบ DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD ใน .env
 ```
 
 ### Prisma Client Not Generated

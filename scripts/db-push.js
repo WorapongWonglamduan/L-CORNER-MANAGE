@@ -4,12 +4,14 @@ const fs = require('fs')
 const path = require('path')
 
 async function pushSchema() {
-  const connectionString = process.env.DATABASE_URL
-  
-  if (!connectionString) {
-    console.error('❌ DATABASE_URL environment variable is not set')
+  const { DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD } = process.env
+
+  if (!DB_HOST || !DB_PORT || !DB_DATABASE || !DB_USERNAME || !DB_PASSWORD) {
+    console.error('❌ DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD environment variables must be set')
     process.exit(1)
   }
+
+  const connectionString = `postgresql://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?schema=public`
 
   const pool = new Pool({ connectionString })
 

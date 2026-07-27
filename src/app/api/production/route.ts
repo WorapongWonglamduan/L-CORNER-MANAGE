@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, assertWarehouseAccessLive } from "@/lib/permissions";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { MOVEMENT_DIRECTIONS } from "@/constants/inventory";
 import type { I18nText } from "@/types/i18n";
@@ -14,14 +14,17 @@ export async function POST(request: NextRequest) {
     if (denied) return denied;
 
     const body = await request.json();
-    const { product_id, quantity, reason, note } = body;
+    const { product_id, warehouse_id, quantity, reason, note } = body;
 
-    if (!product_id || !quantity || quantity <= 0) {
+    if (!product_id || !warehouse_id || !quantity || quantity <= 0) {
       return NextResponse.json(
         { error: "Missing required fields or invalid quantity" },
         { status: 400 }
       );
     }
+
+    const deniedWarehouse = await assertWarehouseAccessLive(session, warehouse_id);
+    if (deniedWarehouse) return deniedWarehouse;
 
     // ตรวจสอบว่าเป็นสินค้า semi_finished
     const product = await prisma.product.findUnique({
@@ -52,7 +55,11 @@ export async function POST(request: NextRequest) {
       include: {
         ingredients: {
           include: {
-            ingredient: true,
+            ingredient: {
+              include: {
+                stock: { where: { warehouse_id } },
+              },
+            },
             unit: true,
           },
         },
@@ -71,11 +78,11 @@ export async function POST(request: NextRequest) {
     const baseUnitAbbr = product.base_unit.abbreviation_i18n as unknown as I18nText;
     const recipeName = recipe.name_i18n as unknown as I18nText;
 
-    // คำนวณวัตถุดิบที่ต้องใช้
+    // คำนวณวัตถุดิบที่ต้องใช้ (สต็อกที่คลังที่เลือกผลิต)
     const requiredIngredients = recipe.ingredients.map((ing) => ({
       ingredient_id: ing.ingredient_id,
       required: Number(ing.quantity) * quantity,
-      current_stock: Number(ing.ingredient.current_stock),
+      current_stock: Number(ing.ingredient.stock[0]?.current_stock) || 0,
       name: ing.ingredient.name_i18n,
     }));
 
@@ -105,27 +112,32 @@ export async function POST(request: NextRequest) {
       // 1. หักวัตถุดิบ
       for (const recipeIng of recipe.ingredients) {
         const requiredQty = Number(recipeIng.quantity) * quantity;
-        const ingredientBefore = Number(recipeIng.ingredient.current_stock);
+        const ingredientBefore = Number(recipeIng.ingredient.stock[0]?.current_stock) || 0;
+        const ingredientAfter = ingredientBefore - requiredQty;
 
-        // อัปเดตสต็อกวัตถุดิบ
-        await tx.product.update({
-          where: { id: recipeIng.ingredient_id },
-          data: {
-            current_stock: {
-              decrement: requiredQty,
-            },
+        // อัปเดตสต็อกวัตถุดิบที่คลังนี้
+        await tx.productStock.upsert({
+          where: {
+            product_id_warehouse_id: { product_id: recipeIng.ingredient_id, warehouse_id },
           },
+          create: {
+            product_id: recipeIng.ingredient_id,
+            warehouse_id,
+            current_stock: ingredientAfter,
+          },
+          update: { current_stock: ingredientAfter },
         });
 
         // บันทึก StockMovement สำหรับวัตถุดิบ (ลด)
         const movement = await tx.stockMovement.create({
           data: {
             product_id: recipeIng.ingredient_id,
+            warehouse_id,
             movement_type: "production",
             direction: MOVEMENT_DIRECTIONS.OUT,
             quantity_before: ingredientBefore,
             quantity_change: requiredQty,
-            quantity_after: ingredientBefore - requiredQty,
+            quantity_after: ingredientAfter,
             reason_text: reason || "ใช้ในการผลิต",
             note: note
               ? `${note} (ผลิต ${productName.th || productName.en} ${quantity} ${baseUnitAbbr.th || baseUnitAbbr.en})`
@@ -139,26 +151,29 @@ export async function POST(request: NextRequest) {
         stockMovements.push(movement);
       }
 
-      // 2. เพิ่มสินค้า semi_finished
-      const productBefore = Number(product.current_stock);
-      const updatedProduct = await tx.product.update({
-        where: { id: product_id },
-        data: {
-          current_stock: {
-            increment: quantity,
-          },
-        },
+      // 2. เพิ่มสินค้า semi_finished ที่คลังนี้
+      const existingProductStock = await tx.productStock.findUnique({
+        where: { product_id_warehouse_id: { product_id, warehouse_id } },
+      });
+      const productBefore = Number(existingProductStock?.current_stock) || 0;
+      const productAfter = productBefore + Number(quantity);
+
+      const updatedProductStock = await tx.productStock.upsert({
+        where: { product_id_warehouse_id: { product_id, warehouse_id } },
+        create: { product_id, warehouse_id, current_stock: productAfter },
+        update: { current_stock: productAfter },
       });
 
       // 3. บันทึก StockMovement สำหรับสินค้า semi_finished (เพิ่ม)
       const productMovement = await tx.stockMovement.create({
         data: {
           product_id,
+          warehouse_id,
           movement_type: "production",
           direction: MOVEMENT_DIRECTIONS.IN,
           quantity_before: productBefore,
           quantity_change: quantity,
-          quantity_after: productBefore + quantity,
+          quantity_after: productAfter,
           reason_text: reason || "ผลิตสินค้า",
           note: note || `ผลิตจากสูตร ${recipeName.th || recipeName.en}`,
           reference_type: "production",
@@ -170,7 +185,7 @@ export async function POST(request: NextRequest) {
       stockMovements.push(productMovement);
 
       return {
-        product: updatedProduct,
+        productStock: updatedProductStock,
         movements: stockMovements,
       };
     });

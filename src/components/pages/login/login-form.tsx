@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { FormBuilder } from '@/components/ui/FormBuilder'
+import { DynamicForm } from '@/components/dynamic-form/dynamic-form'
 import { useLoginForm } from './helper'
 import { theme } from '@/lib/theme'
 
@@ -31,8 +31,8 @@ export function LoginForm() {
         <p className="mt-2 text-sm text-gray-600">{t('subtitle')}</p>
       </div>
 
-      <FormBuilder 
-        config={formConfig} 
+      <DynamicForm
+        config={formConfig}
         control={control}
         handleSubmit={handleSubmit}
         onSubmit={onSubmit}

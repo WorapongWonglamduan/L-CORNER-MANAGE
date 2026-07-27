@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { toast } from "@/lib/toast";
 import { ADJUSTMENT_TYPES } from "@/constants/inventory";
@@ -47,6 +47,7 @@ interface InsufficientIngredient {
 interface UseStockAdjustmentProps {
   isOpen: boolean;
   product: Product;
+  warehouseId: string;
   onSuccess?: () => void;
   onClose: () => void;
 }
@@ -54,6 +55,7 @@ interface UseStockAdjustmentProps {
 export const useStockAdjustment = ({
   isOpen,
   product,
+  warehouseId,
   onSuccess,
   onClose,
 }: UseStockAdjustmentProps) => {
@@ -90,7 +92,7 @@ export const useStockAdjustment = ({
         try {
           setLoadingRecipe(true);
           const response = await fetch(
-            `/api/recipes?product_id=${product.id}&include_ingredients=true`,
+            `/api/recipes?product_id=${product.id}&include_ingredients=true&warehouseId=${warehouseId}`,
           );
           const data = await response.json();
           if (data.items && data.items.length > 0) {
@@ -104,7 +106,7 @@ export const useStockAdjustment = ({
       };
       fetchRecipe();
     }
-  }, [isOpen, product.id, product.product_type]);
+  }, [isOpen, product.id, product.product_type, warehouseId]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -159,6 +161,7 @@ export const useStockAdjustment = ({
           },
           body: JSON.stringify({
             product_id: product.id,
+            warehouse_id: warehouseId,
             quantity: qty,
             reason,
             note: formData.note,
@@ -192,6 +195,7 @@ export const useStockAdjustment = ({
           },
           body: JSON.stringify({
             product_id: product.id,
+            warehouse_id: warehouseId,
             adjustment_type: adjustmentType,
             quantity: qty,
             reason,
@@ -214,7 +218,7 @@ export const useStockAdjustment = ({
     } finally {
       setLoading(false);
     }
-  }, [quantity, reason, adjustmentType, getNewStock, product.id, watch, t, onSuccess, onClose]);
+  }, [quantity, reason, adjustmentType, getNewStock, product.id, warehouseId, watch, t, onSuccess, onClose]);
 
   const handleSubmit = useCallback(async (data: StockAdjustmentFormData) => {
     const qty = parseFloat(data.quantity);
@@ -243,6 +247,7 @@ export const useStockAdjustment = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           product_id: product.id,
+          warehouse_id: warehouseId,
           adjustment_type: adjustmentType,
           quantity: qty,
           reason: data.reason,
@@ -263,7 +268,7 @@ export const useStockAdjustment = ({
     } finally {
       setLoading(false);
     }
-  }, [adjustmentType, getNewStock, product.id, t, onSuccess, onClose]);
+  }, [adjustmentType, getNewStock, product.id, warehouseId, t, onSuccess, onClose]);
 
   const formConfig = useMemo(
     () => getStockAdjustmentFormConfig(t, adjustmentType),
@@ -295,8 +300,7 @@ export const useStockAdjustment = ({
     handleFormSubmit,
     errors,
     formConfig,
-    Controller,
-    
+
     // Computed
     newStock,
     calculatedIngredients,

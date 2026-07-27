@@ -11,6 +11,13 @@ import { Pagination } from "@/components/ui/pagination";
 import { usePermission } from "@/hooks/usePermission";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
+import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
+
+interface SalesFilterValues {
+  searchQuery: string;
+  startDate: string;
+  endDate: string;
+}
 
 export default function SalesContent() {
   const { table, filters, pagination, actions, modal } = useSalesManager();
@@ -22,6 +29,8 @@ export default function SalesContent() {
     setStartDate,
     endDate,
     setEndDate,
+    control,
+    errors,
   } = filters;
   const { page, pageSize, totalPages, totalItems, setPage, setPageSize } =
     pagination;
@@ -105,16 +114,18 @@ export default function SalesContent() {
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder={t("search")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
+            <DynamicFormFields<SalesFilterValues>
+              fields={[
+                {
+                  name: "searchQuery",
+                  type: INPUT_TYPES.TEXT,
+                  icon: Search,
+                  placeholder: t("search"),
+                },
+              ]}
+              control={control}
+              errors={errors}
+            />
 
             {/* Date Range Picker */}
             <Input

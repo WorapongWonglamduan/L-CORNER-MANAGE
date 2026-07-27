@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 import type { SelectedTopping } from "./helper";
+
+interface ToppingSelectionValues {
+  selectedIds: string[];
+}
 
 interface ToppingOption {
   id: string;
@@ -34,25 +39,31 @@ export function ToppingModal({
   const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<ToppingOption[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { watch, setValue, reset } = useForm<ToppingSelectionValues>({
+    defaultValues: { selectedIds: [] },
+  });
+  const selectedIds = watch("selectedIds");
 
   useEffect(() => {
     if (!isOpen || !productId) return;
 
-    setSelectedIds([]);
+    reset({ selectedIds: [] });
     setLoading(true);
     fetch(`/api/toppings?product_id=${productId}&isActive=true&pageSize=50`)
       .then((res) => res.json())
       .then((data) => setOptions(data.items || []))
       .catch((error) => console.error("Error fetching toppings:", error))
       .finally(() => setLoading(false));
-  }, [isOpen, productId]);
+  }, [isOpen, productId, reset]);
 
   if (!isOpen) return null;
 
   const toggleTopping = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    setValue(
+      "selectedIds",
+      selectedIds.includes(id)
+        ? selectedIds.filter((x) => x !== id)
+        : [...selectedIds, id],
     );
   };
 
@@ -70,8 +81,8 @@ export function ToppingModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="shrink-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
           <h2 className="text-xl font-bold text-gray-900">
             {t("customizeTitle", { productName })}
           </h2>
@@ -83,7 +94,7 @@ export function ToppingModal({
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           <label className="block text-sm font-semibold text-gray-700">
             {t("selectToppings")}
           </label>
@@ -136,7 +147,7 @@ export function ToppingModal({
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
+        <div className="shrink-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
           <div className="flex gap-3">
             <Button
               onClick={onClose}

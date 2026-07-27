@@ -3,6 +3,7 @@ import { useEntityList } from "@/hooks/useEntityList";
 import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 import { useEffect, useState, useCallback } from "react";
 import { I18nText } from "@/types/i18n";
 
@@ -26,6 +27,18 @@ export interface UserRoleAssignment {
   role: RoleOption;
 }
 
+export interface WarehouseOption {
+  id: string;
+  code: string;
+  name_i18n: I18nText;
+}
+
+export interface UserWarehouseAssignment {
+  id: string;
+  warehouse_id: string;
+  warehouse: WarehouseOption;
+}
+
 export interface AppUser {
   id: string;
   username: string;
@@ -33,6 +46,7 @@ export interface AppUser {
   full_name: string;
   is_active: boolean;
   user_roles: UserRoleAssignment[];
+  user_warehouses: UserWarehouseAssignment[];
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +60,7 @@ export function useUsersManager() {
   const t = useTranslations("users");
   const { confirm, ConfirmDialog } = useConfirm();
   const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   const {
@@ -56,31 +71,52 @@ export function useUsersManager() {
     filterOptions,
     handlePageChange,
     handlePageSizeChange,
-    handleSearchChange,
+    updateFilter,
     refetch,
   } = useEntityList<AppUser, UsersFilterOptions>({
     endpoint: "/api/users",
     initialFilters: {
       search: "",
+      isActive: undefined,
     },
   });
 
+  const applyFilters = (values: FilterValues) => {
+    updateFilter({
+      search: values.search as string,
+      isActive: values.isActive === "" ? undefined : values.isActive === "true",
+    } as Partial<UsersFilterOptions>);
+  };
+
+  const resetFilters = () => {
+    updateFilter({ search: "", isActive: undefined } as Partial<UsersFilterOptions>);
+  };
+
   const fetchRoles = useCallback(async () => {
     try {
-      setDataLoading(true);
       const response = await fetch("/api/roles?pageSize=100&isActive=true");
       const data = await response.json();
       setRoles(data.items || []);
     } catch (error) {
       console.error("Error fetching roles:", error);
-    } finally {
-      setDataLoading(false);
+    }
+  }, []);
+
+  const fetchWarehouses = useCallback(async () => {
+    try {
+      const response = await fetch("/api/warehouses?pageSize=100&isActive=true");
+      const data = await response.json();
+      setWarehouses(data.items || []);
+    } catch (error) {
+      console.error("Error fetching warehouses:", error);
     }
   }, []);
 
   useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
+    Promise.all([fetchRoles(), fetchWarehouses()]).finally(() =>
+      setDataLoading(false),
+    );
+  }, [fetchRoles, fetchWarehouses]);
 
   const {
     control,
@@ -136,8 +172,11 @@ export function useUsersManager() {
       loading,
     },
     filters: {
-      searchQuery: filterOptions.search || "",
-      setSearchQuery: handleSearchChange,
+      search: filterOptions.search || "",
+      isActive:
+        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+      applyFilters,
+      resetFilters,
     },
     pagination: {
       filterOptions,
@@ -167,6 +206,7 @@ export function useUsersManager() {
       dataLoading,
     },
     roles,
+    warehouses,
     refetch,
   };
 }

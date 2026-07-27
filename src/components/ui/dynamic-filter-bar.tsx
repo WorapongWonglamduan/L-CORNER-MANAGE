@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Search, RotateCcw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
@@ -76,20 +77,19 @@ export function DynamicFilterBar({
   const basicFields = fields.filter((field) => !field.advanced);
   const advancedFields = fields.filter((field) => field.advanced);
 
-  const [draft, setDraft] = useState<FilterValues>({
-    ...emptyValues(fields),
-    ...values,
+  const { watch, setValue, reset } = useForm<FilterValues>({
+    defaultValues: { ...emptyValues(fields), ...values },
   });
+  const draft = watch();
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const setField = (name: string, value: string) =>
-    setDraft((prev) => ({ ...prev, [name]: value }));
+  const setField = (name: string, value: string) => setValue(name, value);
 
   const handleSearch = () => onApply(draft);
 
   const handleReset = () => {
     const cleared = emptyValues(fields);
-    setDraft(cleared);
+    reset(cleared);
     if (onReset) onReset();
     else onApply(cleared);
   };
@@ -133,11 +133,8 @@ export function DynamicFilterBar({
               endDate: draft[`${field.name}To`] ?? "",
             }}
             onDateRangeChange={({ startDate, endDate }) => {
-              setDraft((prev) => ({
-                ...prev,
-                [`${field.name}From`]: startDate,
-                [`${field.name}To`]: endDate,
-              }));
+              setValue(`${field.name}From`, startDate);
+              setValue(`${field.name}To`, endDate);
             }}
           />
         );

@@ -15,7 +15,7 @@ interface ProductType {
   name_i18n: I18nText;
 }
 
-import { FieldConfig } from "@/components/ui/FormBuilder";
+import type { FieldConfig } from "@/components/dynamic-form/types";
 import { RegisterOptions } from "react-hook-form";
 import { ProductFormData } from "./helper";
 import { INPUT_TYPES } from "@/constants/input-types";
@@ -70,7 +70,7 @@ export const getProductFormConfig = (
   {
     name: "category_id",
     label: t("category"),
-    type: INPUT_TYPES.SELECT,
+    type: INPUT_TYPES.COMBOBOX,
     rules: { required: t("categoryRequired") },
     options: [
       ...categories.map((cat) => ({
@@ -82,7 +82,7 @@ export const getProductFormConfig = (
   {
     name: "base_unit_id",
     label: t("baseUnit"),
-    type: INPUT_TYPES.SELECT,
+    type: INPUT_TYPES.COMBOBOX,
     rules: { required: t("baseUnitRequired") },
     options: [
       ...units.map((unit) => ({
@@ -130,28 +130,6 @@ export const getPriceStockConfig = (
     min: "0",
     step: "0.01",
   },
-  {
-    name: "min_stock_level",
-    label: t("minStock"),
-    type: INPUT_TYPES.NUMBER,
-    placeholder: "0",
-    min: "0",
-    step: "1",
-  },
-  {
-    name: "current_stock",
-    label: t("currentStock"),
-    type: INPUT_TYPES.NUMBER,
-    placeholder: "0",
-    min: "0",
-    step: "1",
-  },
-  // {
-  //   name: "low_stock_threshold",
-  //   label: t("lowStockAlert"),
-  //   type: INPUT_TYPES.NUMBER,
-  //   placeholder: "0",
-  // },
 ];
 
 export const getSettingsConfig = (
