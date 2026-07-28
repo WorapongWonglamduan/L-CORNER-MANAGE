@@ -21,30 +21,66 @@ interface DeductStockContext {
   t: Awaited<ReturnType<typeof getTranslations>>;
 }
 
-// Reads a product's current stock at the given warehouse (0 if no
-// ProductStock row exists yet — it simply hasn't been stocked there) and
-// deducts `amount` from it, creating the row if needed. Returns the
-// before/after quantities for the StockMovement audit row.
+// Deducts `amount` from a product's current stock at the given warehouse,
+// creating the ProductStock row (at 0) first if it doesn't exist yet.
+//
+// The decrement itself is one atomic `UPDATE ... WHERE current_stock >=
+// amount` statement (via updateMany), not a read-then-write — two
+// concurrent sales against the same row can never both read the same
+// "enough stock" snapshot and both succeed, oversold, because the loser's
+// WHERE simply stops matching once the winner's UPDATE commits first.
+// Returns null (instead of throwing) when the guard fails, so the caller —
+// which already has the product/ingredient name in scope — can throw its
+// own localized message; pass enforceAvailability=false to skip the guard
+// entirely for products with track_stock disabled (stock is allowed to go
+// negative there, same as before).
 async function deductProductStock(
   tx: TransactionClient,
   productId: string,
   warehouseId: string,
   amount: number,
+  enforceAvailability: boolean,
 ) {
-  const existing = await tx.productStock.findUnique({
-    where: { product_id_warehouse_id: { product_id: productId, warehouse_id: warehouseId } },
-  });
-
-  const currentQty = Number(existing?.current_stock) || 0;
-  const newQty = currentQty - amount;
-
   await tx.productStock.upsert({
-    where: { product_id_warehouse_id: { product_id: productId, warehouse_id: warehouseId } },
-    create: { product_id: productId, warehouse_id: warehouseId, current_stock: newQty },
-    update: { current_stock: newQty },
+    where: {
+      product_id_warehouse_id: {
+        product_id: productId,
+        warehouse_id: warehouseId,
+      },
+    },
+    create: {
+      product_id: productId,
+      warehouse_id: warehouseId,
+      current_stock: 0,
+    },
+    update: {},
   });
 
-  return { currentQty, newQty };
+  const result = await tx.productStock.updateMany({
+    where: enforceAvailability
+      ? {
+          product_id: productId,
+          warehouse_id: warehouseId,
+          current_stock: { gte: amount },
+        }
+      : { product_id: productId, warehouse_id: warehouseId },
+    data: { current_stock: { decrement: amount } },
+  });
+
+  if (result.count === 0) {
+    return null;
+  }
+
+  const updated = await tx.productStock.findUniqueOrThrow({
+    where: {
+      product_id_warehouse_id: {
+        product_id: productId,
+        warehouse_id: warehouseId,
+      },
+    },
+  });
+  const newQty = Number(updated.current_stock);
+  return { currentQty: newQty + amount, newQty };
 }
 
 // Deducts stock for one sale item, based on product type, inside the caller's
@@ -87,7 +123,12 @@ async function deductStock(
   if (productType !== PRODUCTS_TYPES.SEMI_FINISHED) {
     if (product.track_stock) {
       const existing = await tx.productStock.findUnique({
-        where: { product_id_warehouse_id: { product_id: productId, warehouse_id: warehouseId } },
+        where: {
+          product_id_warehouse_id: {
+            product_id: productId,
+            warehouse_id: warehouseId,
+          },
+        },
       });
       const available = Number(existing?.current_stock) || 0;
       if (available - quantity < 0) {
@@ -102,12 +143,27 @@ async function deductStock(
       }
     }
 
-    const { currentQty, newQty } = await deductProductStock(
+    const deducted = await deductProductStock(
       tx,
       productId,
       warehouseId,
       quantity,
+      product.track_stock,
     );
+    if (!deducted) {
+      // The check above passed, but a concurrent sale took the remaining
+      // stock before this one's decrement ran — same message, since to the
+      // cashier it's the same "not enough left" situation either way.
+      const productName = (product.name_i18n as unknown as I18nText)[locale];
+      throw new Error(
+        t("insufficientStock", {
+          productName,
+          available: 0,
+          required: quantity,
+        }),
+      );
+    }
+    const { currentQty, newQty } = deducted;
 
     await tx.stockMovement.create({
       data: {
@@ -152,7 +208,10 @@ async function deductStock(
       const required = Number(ri.quantity) * quantity;
       const existing = await tx.productStock.findUnique({
         where: {
-          product_id_warehouse_id: { product_id: ri.ingredient_id, warehouse_id: warehouseId },
+          product_id_warehouse_id: {
+            product_id: ri.ingredient_id,
+            warehouse_id: warehouseId,
+          },
         },
       });
       const available = Number(existing?.current_stock) || 0;
@@ -168,12 +227,26 @@ async function deductStock(
 
     for (const recipeIngredient of recipeIngredients) {
       const ingredientQty = Number(recipeIngredient.quantity) * quantity;
-      const { currentQty, newQty } = await deductProductStock(
+      const deducted = await deductProductStock(
         tx,
         recipeIngredient.ingredient_id,
         warehouseId,
         ingredientQty,
+        recipeIngredient.ingredient.track_stock,
       );
+      if (!deducted) {
+        const ingredientName = (
+          recipeIngredient.ingredient.name_i18n as unknown as I18nText
+        )[locale];
+        throw new Error(
+          t("insufficientIngredient", {
+            ingredientName,
+            available: 0,
+            required: ingredientQty,
+          }),
+        );
+      }
+      const { currentQty, newQty } = deducted;
 
       await tx.stockMovement.create({
         data: {
@@ -221,15 +294,18 @@ async function deductToppingStock(
 
   const existing = await tx.productStock.findUnique({
     where: {
-      product_id_warehouse_id: { product_id: topping.ingredient_id, warehouse_id: warehouseId },
+      product_id_warehouse_id: {
+        product_id: topping.ingredient_id,
+        warehouse_id: warehouseId,
+      },
     },
   });
   const available = Number(existing?.current_stock) || 0;
 
   if (available - required < 0) {
-    const ingredientName = (topping.ingredient.name_i18n as unknown as I18nText)[
-      locale
-    ];
+    const ingredientName = (
+      topping.ingredient.name_i18n as unknown as I18nText
+    )[locale];
     throw new Error(
       t("insufficientIngredient", {
         ingredientName,
@@ -239,12 +315,22 @@ async function deductToppingStock(
     );
   }
 
-  const { currentQty, newQty } = await deductProductStock(
+  const deducted = await deductProductStock(
     tx,
     topping.ingredient_id,
     warehouseId,
     required,
+    true,
   );
+  if (!deducted) {
+    const ingredientName = (
+      topping.ingredient.name_i18n as unknown as I18nText
+    )[locale];
+    throw new Error(
+      t("insufficientIngredient", { ingredientName, available: 0, required }),
+    );
+  }
+  const { currentQty, newQty } = deducted;
 
   await tx.stockMovement.create({
     data: {
@@ -262,6 +348,27 @@ async function deductToppingStock(
       created_by: createdBy || "",
     },
   });
+}
+
+// Computes the next SAL-YYYYMMDD-NNNN number from today's highest existing
+// one. Not race-safe by itself — two concurrent calls can read the same
+// "last" row and compute the same next number — so callers must retry on a
+// sale_number unique-constraint conflict rather than treat it as fatal.
+async function generateSaleNumber(): Promise<string> {
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
+  const lastSale = await prisma.sale.findFirst({
+    where: {
+      sale_number: {
+        startsWith: `SAL-${dateStr}`,
+      },
+    },
+    orderBy: { sale_number: "desc" },
+  });
+
+  if (!lastSale) return `SAL-${dateStr}-0001`;
+  const lastNumber = parseInt(lastSale.sale_number.split("-")[2]);
+  return `SAL-${dateStr}-${(lastNumber + 1).toString().padStart(4, "0")}`;
 }
 
 // GET /api/sales - Get all sales with pagination and filters
@@ -405,7 +512,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const deniedWarehouse = await assertWarehouseAccessLive(session, warehouse_id);
+    const deniedWarehouse = await assertWarehouseAccessLive(
+      session,
+      warehouse_id,
+    );
     if (deniedWarehouse) return deniedWarehouse;
 
     // Calculate totals, resolving each item's product + any selected toppings
@@ -481,7 +591,9 @@ export async function POST(request: NextRequest) {
           );
           if (!isOffered) {
             return NextResponse.json(
-              { error: "This topping is not available for the selected product" },
+              {
+                error: "This topping is not available for the selected product",
+              },
               { status: 400 },
             );
           }
@@ -528,12 +640,18 @@ export async function POST(request: NextRequest) {
       });
 
       if (!promotion || !promotion.is_active) {
-        return NextResponse.json({ error: tPromo("notFound") }, { status: 400 });
+        return NextResponse.json(
+          { error: tPromo("notFound") },
+          { status: 400 },
+        );
       }
       if (promotion.expires_at && promotion.expires_at < new Date()) {
         return NextResponse.json({ error: tPromo("expired") }, { status: 400 });
       }
-      if (promotion.max_uses !== null && promotion.used_count >= promotion.max_uses) {
+      if (
+        promotion.max_uses !== null &&
+        promotion.used_count >= promotion.max_uses
+      ) {
         return NextResponse.json(
           { error: tPromo("usageLimitReached") },
           { status: 400 },
@@ -552,115 +670,133 @@ export async function POST(request: NextRequest) {
     const taxAmount = 0; // No tax calculation
     const finalTotal = totalAmount;
 
-    // Generate sale number
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
-    const lastSale = await prisma.sale.findFirst({
-      where: {
-        sale_number: {
-          startsWith: `SAL-${dateStr}`,
-        },
-      },
-      orderBy: { sale_number: "desc" },
-    });
-
-    let saleNumber = `SAL-${dateStr}-0001`;
-    if (lastSale) {
-      const lastNumber = parseInt(lastSale.sale_number.split("-")[2]);
-      const newNumber = (lastNumber + 1).toString().padStart(4, "0");
-      saleNumber = `SAL-${dateStr}-${newNumber}`;
+    // Create sale in transaction. sale_number is (re)computed fresh on every
+    // attempt and the whole transaction is retried on a unique-constraint
+    // conflict on it: two checkouts racing at the same instant can both read
+    // the same "last sale today" and compute the same next number, so the
+    // loser here just needs to recompute against the winner's now-committed
+    // row, not fail outright. Bounded so a genuine unrelated error still
+    // surfaces instead of looping forever.
+    const MAX_SALE_NUMBER_ATTEMPTS = 5;
+    let newSale!: Awaited<ReturnType<typeof runSaleTransaction>>;
+    for (let attempt = 1; ; attempt++) {
+      const saleNumber = await generateSaleNumber();
+      try {
+        newSale = await runSaleTransaction(saleNumber);
+        break;
+      } catch (error) {
+        const isSaleNumberConflict =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002" &&
+          String(error.meta?.target ?? error.message).includes("sale_number");
+        if (isSaleNumberConflict && attempt < MAX_SALE_NUMBER_ATTEMPTS)
+          continue;
+        throw error;
+      }
     }
 
-    // Create sale in transaction
-    const newSale = await prisma.$transaction(async (tx) => {
-      // Re-validate the promotion's usage limit inside the transaction and
-      // claim it atomically, so it can't be over-redeemed by a race.
-      if (promotionId) {
-        const promotion = await tx.promotion.findUnique({
-          where: { id: promotionId },
-        });
-        if (
-          !promotion ||
-          !promotion.is_active ||
-          (promotion.expires_at && promotion.expires_at < new Date()) ||
-          (promotion.max_uses !== null && promotion.used_count >= promotion.max_uses)
-        ) {
-          throw new Error(tPromo("usageLimitReached"));
+    async function runSaleTransaction(saleNumber: string) {
+      return prisma.$transaction(async (tx) => {
+        // Re-validate the promotion's usage limit inside the transaction and
+        // claim it atomically, so it can't be over-redeemed by a race.
+        if (promotionId) {
+          const promotion = await tx.promotion.findUnique({
+            where: { id: promotionId },
+          });
+          if (
+            !promotion ||
+            !promotion.is_active ||
+            (promotion.expires_at && promotion.expires_at < new Date()) ||
+            (promotion.max_uses !== null &&
+              promotion.used_count >= promotion.max_uses)
+          ) {
+            throw new Error(tPromo("usageLimitReached"));
+          }
+          await tx.promotion.update({
+            where: { id: promotionId },
+            data: { used_count: { increment: 1 } },
+          });
         }
-        await tx.promotion.update({
-          where: { id: promotionId },
-          data: { used_count: { increment: 1 } },
-        });
-      }
 
-      const sale = await tx.sale.create({
-        data: {
-          sale_number: saleNumber,
-          sale_date: new Date(),
-          warehouse_id,
-          subtotal,
-          discount_amount: totalDiscount,
-          tax_rate,
-          tax_amount: taxAmount,
-          total_amount: finalTotal,
-          payment_method,
-          payment_status: "paid",
-          status: "completed",
-          created_by: session?.user?.id || null,
-          promotion_id: promotionId,
-          promotion_code: promotionCodeNormalized,
-          note,
-          items: {
-            create: processedItems.map((item) => ({
-              product_id: item.product_id,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              discount_percent: item.discount_percent,
-              discount_amount: item.discount_amount,
-              total_amount: item.total_amount,
-              cost_price: item.cost_price,
-              base_quantity: item.base_quantity,
-              note: item.note,
-              toppings: {
-                create: item.toppings,
-              },
-            })),
+        const sale = await tx.sale.create({
+          data: {
+            sale_number: saleNumber,
+            sale_date: new Date(),
+            warehouse_id,
+            subtotal,
+            discount_amount: totalDiscount,
+            tax_rate,
+            tax_amount: taxAmount,
+            total_amount: finalTotal,
+            payment_method,
+            payment_status: "paid",
+            status: "completed",
+            created_by: session?.user?.id || null,
+            promotion_id: promotionId,
+            promotion_code: promotionCodeNormalized,
+            note,
+            items: {
+              create: processedItems.map((item) => ({
+                product_id: item.product_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                discount_percent: item.discount_percent,
+                discount_amount: item.discount_amount,
+                total_amount: item.total_amount,
+                cost_price: item.cost_price,
+                base_quantity: item.base_quantity,
+                note: item.note,
+                toppings: {
+                  create: item.toppings,
+                },
+              })),
+            },
           },
-        },
-        include: {
-          items: {
-            include: {
-              product: {
-                include: {
-                  product_type: true,
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    product_type: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      // Deduct stock for each item (and any toppings on it), inside this same
-      // transaction so a shortage anywhere rolls back the whole sale (no
-      // partial writes, no half-claimed promotion).
-      const deductCtx: DeductStockContext = {
-        saleId: sale.id,
-        warehouseId: warehouse_id,
-        createdBy: session?.user?.id || null,
-        locale,
-        t,
-      };
-      for (let i = 0; i < sale.items.length; i++) {
-        const saleItem = sale.items[i];
-        const processed = processedItems[i];
-        await deductStock(tx, saleItem.product_id, Number(saleItem.base_quantity), deductCtx);
-        for (const topping of processed.toppings) {
-          await deductToppingStock(tx, topping.topping_id, topping.quantity, deductCtx);
+        // Deduct stock for each item (and any toppings on it), inside this same
+        // transaction so a shortage anywhere rolls back the whole sale (no
+        // partial writes, no half-claimed promotion).
+        const deductCtx: DeductStockContext = {
+          saleId: sale.id,
+          warehouseId: warehouse_id,
+          createdBy: session?.user?.id || null,
+          locale,
+          t,
+        };
+        for (let i = 0; i < sale.items.length; i++) {
+          const saleItem = sale.items[i];
+          const processed = processedItems[i];
+          await deductStock(
+            tx,
+            saleItem.product_id,
+            Number(saleItem.base_quantity),
+            deductCtx,
+          );
+          for (const topping of processed.toppings) {
+            await deductToppingStock(
+              tx,
+              topping.topping_id,
+              topping.quantity,
+              deductCtx,
+            );
+          }
         }
-      }
 
-      return sale;
-    });
+        return sale;
+      });
+    }
 
     // Fetch complete sale data
     const completeSale = await prisma.sale.findUnique({

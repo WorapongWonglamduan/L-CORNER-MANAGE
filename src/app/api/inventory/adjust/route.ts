@@ -42,48 +42,77 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const productStock = await prisma.productStock.findUnique({
-      where: { product_id_warehouse_id: { product_id, warehouse_id } },
-    });
-
-    // Calculate new stock and determine direction
-    let newStock: number;
-    let direction: string;
-    let quantityChange: number;
-    const currentStock = Number(productStock?.current_stock) || 0;
     const adjustmentQty = Number(quantity);
 
-    if (adjustment_type === "in") {
-      newStock = currentStock + adjustmentQty;
-      direction = "in";
-      quantityChange = adjustmentQty;
-    } else if (adjustment_type === "out") {
-      newStock = currentStock - adjustmentQty;
-      direction = "out";
-      quantityChange = adjustmentQty;
-    } else if (adjustment_type === "adjustment") {
-      // Direct stock count/adjustment
-      newStock = adjustmentQty;
-      direction = adjustmentQty > currentStock ? "in" : "out";
-      quantityChange = Math.abs(adjustmentQty - currentStock);
-    } else {
+    if (
+      adjustment_type !== "in" &&
+      adjustment_type !== "out" &&
+      adjustment_type !== "adjustment"
+    ) {
       return NextResponse.json(
         { error: "Invalid adjustment type" },
         { status: 400 }
       );
     }
 
-    // Validate new stock
-    if (newStock < 0) {
-      return NextResponse.json(
-        { error: "Stock cannot be negative" },
-        { status: 400 }
-      );
-    }
-
-    // Create stock movement record and update product stock in a transaction
+    // Create stock movement record and update product stock in a transaction.
+    // "in"/"out" use an atomic increment/decrement (a single UPDATE ...
+    // [WHERE current_stock >= amount] statement) instead of read-then-write,
+    // so two concurrent adjustments on the same row can't both read the same
+    // snapshot and silently lose one of the changes (or, for "out", both
+    // pass a negative-stock check that's already stale by the time either
+    // writes). "adjustment" sets an absolute count, so it has no such race
+    // to guard against — last write wins by design.
     const result = await prisma.$transaction(async (tx) => {
-      // Create stock movement record
+      const ensured = await tx.productStock.upsert({
+        where: { product_id_warehouse_id: { product_id, warehouse_id } },
+        create: { product_id, warehouse_id, current_stock: 0 },
+        update: {},
+      });
+      const currentStock = Number(ensured.current_stock);
+
+      let updatedProductStock;
+      let direction: string;
+      let quantityChange: number;
+      let newStock: number;
+
+      if (adjustment_type === "in") {
+        direction = "in";
+        quantityChange = adjustmentQty;
+        updatedProductStock = await tx.productStock.update({
+          where: { product_id_warehouse_id: { product_id, warehouse_id } },
+          data: { current_stock: { increment: adjustmentQty } },
+        });
+        newStock = Number(updatedProductStock.current_stock);
+      } else if (adjustment_type === "out") {
+        direction = "out";
+        quantityChange = adjustmentQty;
+        const decremented = await tx.productStock.updateMany({
+          where: {
+            product_id,
+            warehouse_id,
+            current_stock: { gte: adjustmentQty },
+          },
+          data: { current_stock: { decrement: adjustmentQty } },
+        });
+        if (decremented.count === 0) {
+          throw new Error("INSUFFICIENT_STOCK");
+        }
+        updatedProductStock = await tx.productStock.findUniqueOrThrow({
+          where: { product_id_warehouse_id: { product_id, warehouse_id } },
+        });
+        newStock = Number(updatedProductStock.current_stock);
+      } else {
+        // "adjustment" — direct stock count, an absolute value.
+        newStock = adjustmentQty;
+        direction = adjustmentQty > currentStock ? "in" : "out";
+        quantityChange = Math.abs(adjustmentQty - currentStock);
+        updatedProductStock = await tx.productStock.update({
+          where: { product_id_warehouse_id: { product_id, warehouse_id } },
+          data: { current_stock: newStock },
+        });
+      }
+
       const stockMovement = await tx.stockMovement.create({
         data: {
           product_id,
@@ -103,13 +132,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Update product stock at this warehouse
-      const updatedProductStock = await tx.productStock.upsert({
-        where: { product_id_warehouse_id: { product_id, warehouse_id } },
-        create: { product_id, warehouse_id, current_stock: newStock },
-        update: { current_stock: newStock },
-      });
-
       return { stockMovement, updatedProductStock };
     });
 
@@ -119,6 +141,12 @@ export async function POST(request: NextRequest) {
       message: "Stock adjusted successfully",
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "INSUFFICIENT_STOCK") {
+      return NextResponse.json(
+        { error: "Stock cannot be negative" },
+        { status: 400 },
+      );
+    }
     console.error("Error adjusting stock:", error);
     return NextResponse.json(
       { error: "Failed to adjust stock" },
