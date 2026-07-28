@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { CreditCard, Banknote, Tag } from "lucide-react";
+import { CreditCard, Banknote, Tag, QrCode } from "lucide-react";
+import generatePayload from "promptpay-qr";
+import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import {
@@ -15,12 +17,15 @@ import {
 import { PAYMENT_METHODS, PaymentMethod } from "@/constants/payment";
 import { useTranslations } from "next-intl";
 import { toast } from "@/lib/toast";
+import type { DisplayPaymentState } from "./helper";
 
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   cartTotal: number;
   cartItemCount: number;
+  promptpayId?: string | null;
+  onDisplayStateChange?: (state: DisplayPaymentState) => void;
   onConfirm: (paymentMethod: string, promotionCode?: string) => Promise<void>;
 }
 
@@ -40,6 +45,8 @@ export function CheckoutModal({
   onClose,
   cartTotal,
   cartItemCount,
+  promptpayId,
+  onDisplayStateChange,
   onConfirm,
 }: CheckoutModalProps) {
   const t = useTranslations("pos");
@@ -58,6 +65,61 @@ export function CheckoutModal({
 
   const discountedTotal = cartTotal - (promoValidation?.discount_amount || 0);
   const change = Number(amountPaid) - discountedTotal;
+
+  const qrPayload = useMemo(() => {
+    if (paymentMethod !== PAYMENT_METHODS.QR || !promptpayId) return null;
+    return generatePayload(promptpayId, { amount: discountedTotal });
+  }, [paymentMethod, promptpayId, discountedTotal]);
+
+  // Mirrors the QR (or lack thereof) onto the customer-facing display while
+  // this modal is open. Guarded by `isProcessing`: once confirm is clicked,
+  // `onConfirm` clears the cart on success, which zeroes the `cartTotal`
+  // prop this effect depends on (via qrPayload/discountedTotal) *before*
+  // the modal has actually closed — without the guard that re-fires this
+  // effect mid-confirm with a bogus "awaiting ฿0" push, stomping on the
+  // "payment succeeded" state the parent sets moments earlier. Deliberately
+  // does NOT reset to null on close either — the same success screen must
+  // survive the close. Cancelling instead resets explicitly, see
+  // handleClose below.
+  useEffect(() => {
+    if (!onDisplayStateChange || !isOpen || isProcessing) return;
+    if (paymentMethod === PAYMENT_METHODS.QR && qrPayload) {
+      onDisplayStateChange({
+        status: "awaiting_qr",
+        qrPayload,
+        amount: discountedTotal,
+      });
+    } else {
+      onDisplayStateChange(null);
+    }
+  }, [
+    isOpen,
+    isProcessing,
+    paymentMethod,
+    qrPayload,
+    discountedTotal,
+    onDisplayStateChange,
+  ]);
+
+  // Radix's onOpenChange fires again once `isOpen` flips false after a
+  // successful confirm (not just for user-driven dismissal), so a plain
+  // "reset to null on close" here would race the success screen the parent
+  // just set. This ref, set synchronously right before the success path's
+  // onClose(), lets handleClose tell the two apart.
+  const justSucceededRef = useRef(false);
+
+  // User-initiated dismissal (Cancel / backdrop / Esc) — as opposed to
+  // onClose() called after a successful confirm, which must leave the
+  // display's success screen alone.
+  const handleClose = () => {
+    if (justSucceededRef.current) {
+      justSucceededRef.current = false;
+      onClose();
+      return;
+    }
+    onDisplayStateChange?.(null);
+    onClose();
+  };
 
   // Auto-fill amount when modal opens, payment method changes to cash, or the
   // applied discount changes the amount due.
@@ -116,6 +178,7 @@ export function CheckoutModal({
     setIsProcessing(true);
     try {
       await onConfirm(paymentMethod, promoValidation?.code);
+      justSucceededRef.current = true;
       onClose();
       setValue("amountPaid", "");
     } catch (error) {
@@ -145,7 +208,7 @@ export function CheckoutModal({
         // Blocks accidental close (outside click / Escape) while a payment
         // is actually being submitted — everything else behaves like every
         // other dialog in the app.
-        if (!open && !isProcessing) onClose();
+        if (!open && !isProcessing) handleClose();
       }}
     >
       <DialogContent className="max-w-md max-h-[90vh]! overflow-hidden! p-0! flex! flex-col! gap-0! rounded-2xl!">
@@ -238,7 +301,7 @@ export function CheckoutModal({
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               {t("paymentMethod")}
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => setValue("paymentMethod", PAYMENT_METHODS.CASH)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
@@ -282,8 +345,47 @@ export function CheckoutModal({
                   {t("card")}
                 </span>
               </button>
+
+              <button
+                onClick={() => setValue("paymentMethod", PAYMENT_METHODS.QR)}
+                disabled={!promptpayId}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  paymentMethod === PAYMENT_METHODS.QR
+                    ? "border-primary bg-primary/5"
+                    : "border-gray-200 hover:border-gray-300"
+                } ${!promptpayId ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <QrCode
+                  className={`w-8 h-8 ${
+                    paymentMethod === PAYMENT_METHODS.QR ? "text-primary" : "text-gray-400"
+                  }`}
+                />
+                <span
+                  className={`font-semibold ${
+                    paymentMethod === PAYMENT_METHODS.QR ? "text-primary" : "text-gray-600"
+                  }`}
+                >
+                  {t("qr")}
+                </span>
+              </button>
             </div>
+            {paymentMethod === PAYMENT_METHODS.QR && !promptpayId && (
+              <p className="mt-2 text-sm text-red-600">{t("qrNotConfigured")}</p>
+            )}
           </div>
+
+          {/* QR PromptPay */}
+          {paymentMethod === PAYMENT_METHODS.QR && qrPayload && (
+            <div className="flex flex-col items-center gap-3 p-4 bg-gray-50 rounded-xl">
+              <div className="bg-white p-4 rounded-xl">
+                <QRCode value={qrPayload} size={200} />
+              </div>
+              <p className="text-sm text-gray-600">{t("qrScanInstruction")}</p>
+              <p className="text-2xl font-bold text-primary">
+                ฿{discountedTotal.toLocaleString()}
+              </p>
+            </div>
+          )}
 
           {/* Amount Paid (Cash only) */}
           {paymentMethod === PAYMENT_METHODS.CASH && (
@@ -353,7 +455,7 @@ export function CheckoutModal({
         <DialogFooter className="shrink-0 border-t border-gray-200 p-6 sm:justify-stretch">
           <div className="flex gap-3 w-full">
             <Button
-              onClick={() => onClose()}
+              onClick={() => handleClose()}
               variant="outline"
               className="flex-1 py-6 text-lg font-semibold"
               disabled={isProcessing}

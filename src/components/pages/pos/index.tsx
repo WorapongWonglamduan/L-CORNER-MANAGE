@@ -21,8 +21,12 @@ interface POSFilterValues {
 }
 
 export default function POSContent() {
-  const { catalog, cart, checkout, locale, pagination, warehouse, filterForm } =
+  const { catalog, cart, checkout, display, locale, pagination, warehouse, filterForm } =
     usePOSManager();
+
+  const currentWarehouse = warehouse.warehouses.find(
+    (w) => w.id === warehouse.warehouseId,
+  );
 
   const t = useTranslations("pos");
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
@@ -364,6 +368,8 @@ export default function POSContent() {
         onClose={() => setIsCheckoutModalOpen(false)}
         cartTotal={cart.total}
         cartItemCount={cart.itemCount}
+        promptpayId={currentWarehouse?.promptpay_id}
+        onDisplayStateChange={display.setPaymentState}
         onConfirm={handleCheckout}
       />
 
