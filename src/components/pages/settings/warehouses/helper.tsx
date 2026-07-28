@@ -16,6 +16,7 @@ export interface WarehouseFormData {
   // latitude/longitude via `onValueChange` in form/config.ts) — never sent
   // to the API, stripped in transformToPayload.
   mapLink: string;
+  promptpay_id: string;
   is_active: boolean;
   is_default: boolean;
 }
@@ -30,6 +31,7 @@ export interface Warehouse {
   address: string | null;
   latitude: number | null;
   longitude: number | null;
+  promptpay_id: string | null;
   is_active: boolean;
   is_default: boolean;
   created_at: string;
@@ -70,7 +72,10 @@ export function useWarehousesManager() {
   };
 
   const resetFilters = () => {
-    updateFilter({ search: "", isActive: undefined } as Partial<WarehousesFilterOptions>);
+    updateFilter({
+      search: "",
+      isActive: undefined,
+    } as Partial<WarehousesFilterOptions>);
   };
 
   const {
@@ -98,6 +103,7 @@ export function useWarehousesManager() {
         latitude: "",
         longitude: "",
         mapLink: "",
+        promptpay_id: "",
         is_active: true,
         is_default: false,
       },
@@ -113,6 +119,7 @@ export function useWarehousesManager() {
         address: data.address || null,
         latitude: data.latitude !== "" ? Number(data.latitude) : null,
         longitude: data.longitude !== "" ? Number(data.longitude) : null,
+        promptpay_id: data.promptpay_id.trim() || null,
         is_active: data.is_active,
         is_default: data.is_default,
       };
@@ -124,8 +131,10 @@ export function useWarehousesManager() {
         name_en: warehouse.name_i18n.en,
         address: warehouse.address || "",
         latitude: warehouse.latitude !== null ? String(warehouse.latitude) : "",
-        longitude: warehouse.longitude !== null ? String(warehouse.longitude) : "",
+        longitude:
+          warehouse.longitude !== null ? String(warehouse.longitude) : "",
         mapLink: "",
+        promptpay_id: warehouse.promptpay_id || "",
         is_active: warehouse.is_active,
         is_default: warehouse.is_default,
       };
@@ -143,7 +152,9 @@ export function useWarehousesManager() {
     filters: {
       search: filterOptions.search || "",
       isActive:
-        filterOptions.isActive === undefined ? "" : String(filterOptions.isActive),
+        filterOptions.isActive === undefined
+          ? ""
+          : String(filterOptions.isActive),
       applyFilters,
       resetFilters,
     },

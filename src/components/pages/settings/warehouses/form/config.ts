@@ -57,7 +57,9 @@ export const getWarehouseFormConfig = (
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: value }),
         })
-          .then(async (res) => (res.ok ? res.json() : Promise.reject(await res.json())))
+          .then(async (res) =>
+            res.ok ? res.json() : Promise.reject(await res.json()),
+          )
           .then((coords) => {
             setValue("latitude", String(coords.latitude));
             setValue("longitude", String(coords.longitude));
@@ -87,6 +89,23 @@ export const getWarehouseFormConfig = (
     label: t("longitude"),
     placeholder: "100.5018",
     step: "any",
+  },
+  {
+    name: "promptpay_id",
+    type: INPUT_TYPES.TEXT,
+    label: t("promptpayId"),
+    placeholder: t("promptpayIdPlaceholder"),
+    helperText: t("promptpayIdHelper"),
+    rules: {
+      // Optional field — only validate the format once something's typed,
+      // rather than a plain `pattern` rule (which react-hook-form still
+      // runs against an empty string and would wrongly flag a blank,
+      // untouched field as invalid).
+      validate: (value: unknown) => {
+        const str = typeof value === "string" ? value : "";
+        return !str || /^(\d{10}|\d{13})$/.test(str) || t("promptpayIdInvalid");
+      },
+    },
   },
   {
     name: "is_active",

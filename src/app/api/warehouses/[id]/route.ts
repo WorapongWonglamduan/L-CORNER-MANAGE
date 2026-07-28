@@ -47,7 +47,16 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { code, name_i18n, address, latitude, longitude, is_active, is_default } = body;
+    const {
+      code,
+      name_i18n,
+      address,
+      latitude,
+      longitude,
+      promptpay_id,
+      is_active,
+      is_default,
+    } = body;
 
     const existing = await prisma.warehouse.findUnique({ where: { id } });
     if (!existing) {
@@ -84,8 +93,11 @@ export async function PUT(
           address: address !== undefined ? address : existing.address,
           latitude: latitude !== undefined ? latitude : existing.latitude,
           longitude: longitude !== undefined ? longitude : existing.longitude,
+          promptpay_id:
+            promptpay_id !== undefined ? promptpay_id : existing.promptpay_id,
           is_active: is_active !== undefined ? is_active : existing.is_active,
-          is_default: is_default !== undefined ? is_default : existing.is_default,
+          is_default:
+            is_default !== undefined ? is_default : existing.is_default,
         },
       });
     });

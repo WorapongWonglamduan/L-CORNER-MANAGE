@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching warehouses:", error);
     return NextResponse.json(
       { error: "Failed to fetch warehouses" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       address,
       latitude = null,
       longitude = null,
+      promptpay_id = null,
       is_active = true,
       is_default = false,
     } = body;
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     if (!code || !name_i18n) {
       return NextResponse.json(
         { error: "Code and name are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
     if (existing) {
       return NextResponse.json(
         { error: "Warehouse code already exists" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
           address,
           latitude,
           longitude,
+          promptpay_id,
           is_active,
           is_default,
         },
@@ -114,10 +116,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(warehouse, { status: 201 });
   } catch (error) {
     console.error("Error creating warehouse:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to create warehouse";
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to create warehouse";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

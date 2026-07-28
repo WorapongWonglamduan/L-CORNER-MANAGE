@@ -70,6 +70,7 @@ export interface Warehouse {
     en: string;
   };
   is_default: boolean;
+  promptpay_id: string | null;
 }
 
 export interface SelectedTopping {
