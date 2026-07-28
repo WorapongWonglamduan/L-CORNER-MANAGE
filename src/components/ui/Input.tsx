@@ -32,6 +32,10 @@ export interface BaseInputProps {
   containerClassName?: string;
   inputType?: InputType;
   required?: boolean;
+  /** Text for a SELECT's blank/unselected option. Defaults to "-- เลือก --". */
+  emptyOptionLabel?: string;
+  /** Omits the blank option entirely — for a SELECT that must always hold a real value (e.g. a required branch context switcher). */
+  hideEmptyOption?: boolean;
   startPlaceholder?: string;
   endPlaceholder?: string;
   dateRangeValue?: DateRangeValue;
@@ -73,6 +77,8 @@ export const Input = forwardRef<
       className,
       inputType = INPUT_TYPES.TEXT,
       required,
+      emptyOptionLabel = "-- เลือก --",
+      hideEmptyOption = false,
       ...props
     },
     ref,
@@ -205,7 +211,7 @@ export const Input = forwardRef<
                 )}
                 {...selectProps}
               >
-                <option value="">-- เลือก --</option>
+                {!hideEmptyOption && <option value="">{emptyOptionLabel}</option>}
                 {options?.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}

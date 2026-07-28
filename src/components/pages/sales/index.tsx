@@ -135,18 +135,18 @@ export default function SalesContent() {
                 setStartDate(newStart);
                 setEndDate(newEnd);
               }}
-              startPlaceholder="วันที่เริ่มต้น"
-              endPlaceholder="วันที่สิ้นสุด"
+              startPlaceholder={t("startDate")}
+              endPlaceholder={t("endDate")}
             />
           </div>
 
           {/* Active Filters Display */}
           {(searchQuery || startDate || endDate) && (
             <div className="mt-3 flex flex-wrap gap-2 items-center">
-              <span className="text-sm text-gray-600">กรองโดย:</span>
+              <span className="text-sm text-gray-600">{t("filteredBy")}</span>
               {searchQuery && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                  ค้นหา: {searchQuery}
+                  {t("searchLabel")}: {searchQuery}
                   <button
                     onClick={() => setSearchQuery("")}
                     className="hover:text-blue-900"
@@ -157,7 +157,7 @@ export default function SalesContent() {
               )}
               {startDate && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                  ตั้งแต่: {format(new Date(startDate), "dd/MM/yyyy")}
+                  {t("fromDate")}: {format(new Date(startDate), "dd/MM/yyyy")}
                   <button
                     onClick={() => setStartDate("")}
                     className="hover:text-green-900"
@@ -168,7 +168,7 @@ export default function SalesContent() {
               )}
               {endDate && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                  ถึง: {format(new Date(endDate), "dd/MM/yyyy")}
+                  {t("toDate")}: {format(new Date(endDate), "dd/MM/yyyy")}
                   <button
                     onClick={() => setEndDate("")}
                     className="hover:text-green-900"
@@ -185,7 +185,7 @@ export default function SalesContent() {
                 }}
                 className="text-sm text-red-600 hover:text-red-800 underline"
               >
-                ล้างทั้งหมด
+                {t("clearAll")}
               </button>
             </div>
           )}
@@ -193,7 +193,7 @@ export default function SalesContent() {
 
         {/* Sales Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          {loading ? (
+          {loading && sales.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>

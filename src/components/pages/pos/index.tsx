@@ -6,6 +6,7 @@ import { Search, ShoppingCart, X, Trash2, Grid3x3 } from "lucide-react";
 import { ProductCard } from "./product-card";
 import { usePOSManager } from "./helper";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
 import { CheckoutModal } from "./checkout-modal";
 import { ToppingModal } from "./topping-modal";
 import { toast } from "@/lib/toast";
@@ -119,19 +120,17 @@ export default function POSContent() {
               </div>
 
               {warehouse.warehouses.length > 0 && (
-                <DynamicFormFields<POSFilterValues>
-                  fields={[
-                    {
-                      name: "warehouseId",
-                      type: INPUT_TYPES.SELECT,
-                      options: warehouse.warehouses.map((w) => ({
-                        value: w.id,
-                        label: `${w.code} - ${w.name_i18n[locale]}`,
-                      })),
-                    },
-                  ]}
-                  control={filterForm.control}
-                  errors={filterForm.errors}
+                <Input
+                  inputType={INPUT_TYPES.SELECT}
+                  value={warehouse.warehouseId ?? ""}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    warehouse.setWarehouseId(e.target.value)
+                  }
+                  hideEmptyOption
+                  options={warehouse.warehouses.map((w) => ({
+                    value: w.id,
+                    label: `${w.code} - ${w.name_i18n[locale]}`,
+                  }))}
                 />
               )}
             </div>
