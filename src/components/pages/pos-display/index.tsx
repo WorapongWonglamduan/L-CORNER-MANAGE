@@ -99,7 +99,7 @@ export default function POSDisplayContent() {
 
   if (!warehouseId) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-8">
+      <div className="h-screen flex flex-col items-center justify-center bg-primary-dark text-white p-8">
         <h1 className="text-3xl font-bold mb-8">{t("selectBranch")}</h1>
         {loadingWarehouses ? (
           <p className="text-gray-400">{t("loading")}</p>
@@ -113,7 +113,7 @@ export default function POSDisplayContent() {
                 onClick={() =>
                   router.push(`${pathname}?warehouseId=${w.id}`)
                 }
-                className="p-6 rounded-2xl bg-gray-800 hover:bg-gray-700 transition-colors text-left"
+                className="p-6 rounded-2xl bg-black/20 hover:bg-black/10 transition-colors text-left"
               >
                 <p className="text-sm text-gray-400">{w.code}</p>
                 <p className="text-xl font-bold">{w.name_i18n[locale]}</p>
@@ -129,7 +129,7 @@ export default function POSDisplayContent() {
 
   if (payment?.status === "awaiting_qr") {
     return (
-      <div className="h-screen flex flex-col bg-gray-900 text-white p-8">
+      <div className="h-screen flex flex-col bg-primary-dark text-white p-8">
         <div className="flex items-center justify-between">
           <p className="text-lg text-gray-400">{t("paying")}</p>
           <p className="text-lg text-gray-400">
@@ -142,12 +142,12 @@ export default function POSDisplayContent() {
           </div>
           <div className="text-left max-w-xs">
             <p className="text-xl text-gray-400 mb-2">{t("amountDue")}</p>
-            <p className="text-6xl font-bold text-primary mb-6">
+            <p className="text-6xl font-bold text-primary-light mb-6">
               ฿{payment.amount.toLocaleString()}
             </p>
             <p className="text-lg text-gray-300 mb-6">{t("scanInstruction")}</p>
-            <div className="inline-flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-primary motion-safe:animate-pulse" />
+            <div className="inline-flex items-center gap-2 bg-black/20 px-4 py-2 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-primary-light motion-safe:animate-pulse" />
               <span className="text-sm text-gray-400">{t("waitingConfirm")}</span>
             </div>
           </div>
@@ -158,13 +158,13 @@ export default function POSDisplayContent() {
 
   if (payment?.status === "success") {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white gap-3">
+      <div className="h-screen flex flex-col items-center justify-center bg-primary-dark text-white gap-3">
         <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center mb-2">
           <Check className="w-10 h-10 text-gray-900" strokeWidth={3} />
         </div>
         <p className="text-4xl font-bold">{t("successTitle")}</p>
         <p className="text-xl text-gray-400">{t("successSubtitle")}</p>
-        <p className="text-lg text-primary font-semibold mt-2">
+        <p className="text-lg text-primary-light font-semibold mt-2">
           ฿{payment.amount.toLocaleString()}
           {payment.saleNumber ? ` · ${payment.saleNumber}` : ""}
         </p>
@@ -176,7 +176,7 @@ export default function POSDisplayContent() {
 
   if (items.length === 0) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
+      <div className="h-screen flex flex-col items-center justify-center bg-primary-dark text-white">
         <ShoppingBag className="w-24 h-24 text-gray-600 mb-6" />
         <p className="text-4xl font-bold text-gray-300">{t("idleTitle")}</p>
         <p className="text-xl text-gray-500 mt-2">{t("idleSubtitle")}</p>
@@ -185,14 +185,14 @@ export default function POSDisplayContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900 text-white p-8">
+    <div className="h-screen flex flex-col bg-primary-dark text-white p-8">
       <h1 className="text-3xl font-bold mb-6">{t("currentOrder")}</h1>
 
       <div className="flex-1 overflow-y-auto space-y-4">
         {items.map((item) => (
           <div
             key={item.lineId}
-            className="flex items-center justify-between bg-gray-800 rounded-2xl p-5"
+            className="flex items-center justify-between bg-black/20 rounded-2xl p-5"
           >
             <div>
               <p className="text-2xl font-semibold">
@@ -205,18 +205,18 @@ export default function POSDisplayContent() {
                 </p>
               )}
             </div>
-            <p className="text-2xl font-bold text-primary">
+            <p className="text-2xl font-bold text-primary-light">
               ฿{lineTotal(item).toLocaleString()}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="border-t border-gray-700 mt-6 pt-6 flex items-center justify-between">
+      <div className="border-t border-white/10 mt-6 pt-6 flex items-center justify-between">
         <p className="text-2xl text-gray-300">
           {snapshot?.itemCount} {t("items")}
         </p>
-        <p className="text-5xl font-bold text-primary">
+        <p className="text-5xl font-bold text-primary-light">
           ฿{(snapshot?.total ?? 0).toLocaleString()}
         </p>
       </div>
