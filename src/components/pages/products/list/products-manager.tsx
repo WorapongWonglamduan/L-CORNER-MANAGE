@@ -12,27 +12,44 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/pagination";
-import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
+import {
+  DynamicFilterBar,
+  type FilterFieldConfig,
+} from "@/components/ui/dynamic-filter-bar";
 import { ProductActionButtons } from "./product-action-buttons";
 import { WarehouseVisibilityModal } from "./warehouse-visibility-modal";
-import { useProductsManager } from "./helper";
+import { useProductsManager, UNASSIGNED_WAREHOUSE_VALUE } from "./helper";
 
 export default function ProductsManager() {
   const {
     t,
     table: { products, loading },
     filters,
-    pagination: { totalItems, totalPages, handlePageChange, handlePageSizeChange },
-    actions: { handleCreate, handleView, handleEdit, handleDelete },
+    warehouses,
+    pagination: {
+      totalItems,
+      totalPages,
+      handlePageChange,
+      handlePageSizeChange,
+    },
+    actions: {
+      handleCreate,
+      handleView,
+      handleEdit,
+      handleDelete,
+      handleToggleActive,
+    },
     modal: { ConfirmDialog },
   } = useProductsManager();
   const tCommon = useTranslations("common");
   const { filterOptions } = filters;
 
-  const [warehouseModalProduct, setWarehouseModalProduct] = useState<
-    { id: string; name: string } | null
-  >(null);
+  const [warehouseModalProduct, setWarehouseModalProduct] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const filterFields: FilterFieldConfig[] = [
     { name: "search", type: "text", placeholder: t("searchPlaceholder") },
@@ -68,10 +85,33 @@ export default function ProductsManager() {
 
   return (
     <div className="space-y-4">
+      {warehouses.length > 0 && (
+        <div className=" max-w-xs">
+          <Input
+            inputType={INPUT_TYPES.SELECT}
+            value={filters.warehouseSelectValue}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              filters.setWarehouseId(e.target.value)
+            }
+            emptyOptionLabel={t("allBranches")}
+            options={[
+              ...warehouses.map((w) => ({
+                value: w.id,
+                label: `${w.code} - ${w.name_i18n.th}`,
+              })),
+              { value: UNASSIGNED_WAREHOUSE_VALUE, label: t("unassignedBranch") },
+            ]}
+          />
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <DynamicFilterBar
           fields={filterFields}
-          values={{ search: filters.search, isActive: filters.isActive }}
+          values={{
+            search: filters.search,
+            isActive: filters.isActive,
+          }}
           onApply={filters.applyFilters}
           onReset={filters.resetFilters}
           searchLabel={tCommon("search")}
@@ -87,7 +127,7 @@ export default function ProductsManager() {
         </Button>
       </div>
 
-      {loading ? (
+      {loading && products.length === 0 ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -140,7 +180,13 @@ export default function ProductsManager() {
                       <ProductActionButtons
                         onView={() => handleView(product)}
                         onEdit={() => handleEdit(product)}
-                        onDelete={() => handleDelete(product.id, true)}
+                        onDelete={
+                          product.can_delete
+                            ? () => handleDelete(product.id, true)
+                            : undefined
+                        }
+                        onToggleActive={() => handleToggleActive(product)}
+                        isActive={product.is_active}
                         onManageWarehouses={() =>
                           setWarehouseModalProduct({
                             id: product.id,
@@ -150,6 +196,8 @@ export default function ProductsManager() {
                         editTitle={t("edit") || "แก้ไข"}
                         deleteTitle={t("delete") || "ลบ"}
                         manageWarehousesTitle={t("manageWarehouses")}
+                        activateTitle={t("activate")}
+                        deactivateTitle={t("deactivate")}
                       />
                     </div>
                     <div className="flex items-center gap-3 pr-16">

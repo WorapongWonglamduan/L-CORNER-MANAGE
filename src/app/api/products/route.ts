@@ -26,6 +26,10 @@ export async function GET(request: NextRequest) {
     // omitted, stock is summed across every warehouse — used by master-data
     // views (product list/detail, settings) that aren't warehouse-specific.
     const warehouseId = searchParams.get("warehouseId");
+    // Products not genuinely sellable anywhere — either no ProductStock row
+    // at all, or rows exist but every one is inactive. Mutually exclusive
+    // with warehouseId (an admin audit view, not a branch scope).
+    const unassigned = searchParams.get("unassigned") === "true";
 
     if (warehouseId) {
       const deniedWarehouse = requireWarehouseAccess(session, warehouseId);
@@ -37,9 +41,11 @@ export async function GET(request: NextRequest) {
       deleted_at: null,
     };
 
-    // Only include products explicitly assigned (active ProductStock row) to
-    // this warehouse — a product with no row here is invisible until added.
-    if (warehouseId) {
+    if (unassigned) {
+      where.stock = { none: { is_active: true } };
+    } else if (warehouseId) {
+      // Only include products explicitly assigned (active ProductStock row)
+      // to this warehouse — a product with no row here is invisible until added.
       where.stock = { some: { warehouse_id: warehouseId, is_active: true } };
     }
 
@@ -121,6 +127,18 @@ export async function GET(request: NextRequest) {
           },
         },
         stock: warehouseId ? { where: { warehouse_id: warehouseId } } : true,
+        // Whether a hard delete would actually succeed — mirrors the FK
+        // checks the DELETE route itself still enforces (sales history /
+        // used as a recipe or topping ingredient / has a transfer record).
+        // ProductStock isn't counted since it now cascades on delete.
+        _count: {
+          select: {
+            sale_items: true,
+            recipe_ingredients: true,
+            toppings_as_ingredient: true,
+            transfers: true,
+          },
+        },
         media: {
           include: {
             media: {
@@ -157,8 +175,13 @@ export async function GET(request: NextRequest) {
 
     // คำนวณ available_quantity สำหรับแต่ละสินค้า
     const productsWithAvailability = allProducts.map((product) => {
-      const { stock, ...productRest } = product;
+      const { stock, _count, ...productRest } = product;
       const stockTotals = sumStock(stock);
+      const can_delete =
+        _count.sale_items === 0 &&
+        _count.recipe_ingredients === 0 &&
+        _count.toppings_as_ingredient === 0 &&
+        _count.transfers === 0;
       let available_quantity = 0;
 
       // FINISHED_GOOD: ใช้ current_stock ของตัวเอง
@@ -198,6 +221,7 @@ export async function GET(request: NextRequest) {
         ...stockTotals,
         available_quantity,
         primary_image_url,
+        can_delete,
       };
     });
 

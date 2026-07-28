@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
@@ -336,6 +337,25 @@ export async function DELETE(
     return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting product:", error);
+
+    // A hard delete only ever hits this on a real dependency Postgres still
+    // RESTRICTs on purpose: sale history, use as a recipe/topping ingredient,
+    // or a past stock transfer. Deleting those out from under it would
+    // silently corrupt other records, so surface why instead of a generic
+    // 500 — the caller should deactivate (soft delete) the product instead.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete this product — it has sales history or is used as an ingredient/topping elsewhere. Deactivate it instead.",
+        },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json(
       { error: "Failed to delete product" },
       { status: 500 },

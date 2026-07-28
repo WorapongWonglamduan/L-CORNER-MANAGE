@@ -138,7 +138,10 @@ model ProductStock {
   is_active           Boolean  @default(true)
   updated_at          DateTime @updatedAt
 
-  product   Product   @relation(fields: [product_id], references: [id])
+  // Cascades on product delete — a per-branch visibility/quantity row has no
+  // meaning independent of the product it belongs to (same blast radius as
+  // ProductMedia/ProductTopping below, which already cascade this way).
+  product   Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
   warehouse Warehouse @relation(fields: [warehouse_id], references: [id])
 
   @@unique([product_id, warehouse_id])
