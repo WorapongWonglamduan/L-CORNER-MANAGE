@@ -112,7 +112,7 @@ export default function InventoryContent() {
             inputType={INPUT_TYPES.SELECT}
             value={filters.warehouseId}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => filters.setWarehouseId(e.target.value)}
-            emptyOptionLabel={tCommon("allBranches")}
+            emptyOptionLabel={t("allBranches")}
             options={warehouses.map((w) => ({
               value: w.id,
               label: `${w.code} - ${w.name_i18n[locale as "th" | "en"]}`,
