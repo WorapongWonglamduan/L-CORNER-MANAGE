@@ -104,15 +104,16 @@ model Category {
 }
 
 model Warehouse {
-  id         String   @id @default(uuid())
-  code       String   @unique
-  name_i18n  Json
-  address    String?  @db.Text
-  latitude   Float?
-  longitude  Float?
-  is_active  Boolean  @default(true)
-  is_default Boolean  @default(false)
-  created_at DateTime @default(now())
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name_i18n    Json
+  address      String?  @db.Text
+  latitude     Float?
+  longitude    Float?
+  promptpay_id String?
+  is_active    Boolean  @default(true)
+  is_default   Boolean  @default(false)
+  created_at   DateTime @default(now())
 
   sales           Sale[]
   stock           ProductStock[]

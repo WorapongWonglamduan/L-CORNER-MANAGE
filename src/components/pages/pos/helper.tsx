@@ -70,6 +70,7 @@ export interface Warehouse {
     en: string;
   };
   is_default: boolean;
+  promptpay_id: string | null;
 }
 
 export interface SelectedTopping {
@@ -87,6 +88,17 @@ export interface CartItem {
   image?: string;
   toppings: SelectedTopping[];
 }
+
+// Mirrors what the customer-facing display (src/components/pages/pos-display)
+// renders on top of the plain cart snapshot: a full-screen QR while a QR
+// payment is pending, or a thank-you screen for a few seconds after any
+// payment method succeeds.
+export type DisplayPaymentState =
+  | { status: "awaiting_qr"; qrPayload: string; amount: number }
+  | { status: "success"; amount: number; saleNumber: string }
+  | null;
+
+const DISPLAY_SUCCESS_DURATION_MS = 5000;
 
 function makeLineId(productId: string, toppingIds: string[]) {
   return `${productId}::${[...toppingIds].sort().join(",")}`;
@@ -116,6 +128,11 @@ export function usePOSManager() {
     categories: [],
   });
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [displayPaymentState, setDisplayPaymentState] =
+    useState<DisplayPaymentState>(null);
+  const displaySuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const { control, watch, setValue, formState: { errors } } = useForm<{
     searchQuery: string;
@@ -407,6 +424,51 @@ export function usePOSManager() {
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Pushes the current cart (plus any in-progress QR/success overlay) to the
+  // customer-facing display screen (SSE) for this branch, debounced so rapid
+  // +/- clicks don't fire a request each. A cart cleared after checkout, or
+  // by the branch-switch guard above, flows through here too — no
+  // special-casing needed.
+  const displayPushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!warehouseId) return;
+    if (displayPushTimeoutRef.current) {
+      clearTimeout(displayPushTimeoutRef.current);
+    }
+    displayPushTimeoutRef.current = setTimeout(() => {
+      fetch("/api/pos/display", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          warehouse_id: warehouseId,
+          items: cart,
+          total: cartTotal,
+          itemCount: cartItemCount,
+          payment: displayPaymentState,
+        }),
+      }).catch((error) => {
+        console.error("Error publishing display snapshot:", error);
+      });
+    }, 300);
+    return () => {
+      if (displayPushTimeoutRef.current) {
+        clearTimeout(displayPushTimeoutRef.current);
+      }
+    };
+  }, [cart, warehouseId, cartTotal, cartItemCount, displayPaymentState]);
+
+  // The success timeout is only ever meant to outlive this one screen — no
+  // reason to keep it firing after the POS page itself unmounts.
+  useEffect(() => {
+    return () => {
+      if (displaySuccessTimeoutRef.current) {
+        clearTimeout(displaySuccessTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const checkout = useCallback(
     async (paymentMethod: string, promotionCode?: string) => {
       try {
@@ -452,18 +514,34 @@ export function usePOSManager() {
             saleNumber: result.sale_number || "N/A",
           }),
         );
+
+        // Flashes a thank-you screen on the customer display for every
+        // payment method (not just QR) so a cash/card sale doesn't jump
+        // straight from "here's your order" to a blank idle screen either.
+        if (displaySuccessTimeoutRef.current) {
+          clearTimeout(displaySuccessTimeoutRef.current);
+        }
+        setDisplayPaymentState({
+          status: "success",
+          amount: Number(result.total_amount) || cartTotal,
+          saleNumber: result.sale_number || "",
+        });
+        displaySuccessTimeoutRef.current = setTimeout(() => {
+          setDisplayPaymentState(null);
+        }, DISPLAY_SUCCESS_DURATION_MS);
+
         clearCart();
-        
+
         // Refetch products to update stock
         await fetchProducts();
-        
+
         return result;
       } catch (error) {
         console.error("Checkout error:", error);
         throw error;
       }
     },
-    [cart, warehouseId, cartItemCount, t, clearCart, fetchProducts],
+    [cart, warehouseId, cartTotal, cartItemCount, t, clearCart, fetchProducts],
   );
 
   return {
@@ -498,6 +576,10 @@ export function usePOSManager() {
       itemCount: cartItemCount,
     },
     checkout,
+    display: {
+      paymentState: displayPaymentState,
+      setPaymentState: setDisplayPaymentState,
+    },
     pagination: {
       currentPage,
       setCurrentPage,
