@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useEntityList } from "@/hooks/useEntityList";
-import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
 import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 import type { I18nText, Locale } from "@/types/i18n";
-import { toast } from "@/lib/toast";
 
 export interface Warehouse {
   id: string;
@@ -23,6 +21,7 @@ export interface Product {
   min_stock_level: string;
   low_stock_threshold: string;
   track_stock: boolean;
+  primary_image_url: string | null;
   base_unit: {
     id: string;
     name_i18n: I18nText;
@@ -44,8 +43,6 @@ interface InventoryFilterOptions extends FilterOptions {
 
 export function useInventoryManager() {
   const locale = useLocale() as Locale;
-  const t = useTranslations("inventory");
-  const { confirm, ConfirmDialog } = useConfirm();
   const { data: session } = useSession();
   const sessionWarehouseIds = session?.user?.warehouse_ids;
   const assignedWarehouseIds = useMemo(
@@ -160,45 +157,6 @@ export function useInventoryManager() {
     } as Partial<InventoryFilterOptions>);
   };
 
-  const handleHideFromWarehouse = async (product: Product) => {
-    if (!filterOptions.warehouseId) return;
-
-    if (Number(product.current_stock) !== 0) {
-      toast.error(t("hideRequiresZeroStock"));
-      return;
-    }
-
-    const confirmed = await confirm({
-      title: t("confirmHideTitle"),
-      description: t("confirmHideDescription"),
-      confirmText: t("hideFromWarehouse"),
-      cancelText: "ยกเลิก",
-      variant: "destructive",
-    });
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch(
-        `/api/products/${product.id}/warehouses/${filterOptions.warehouseId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ is_active: false }),
-        },
-      );
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error || "Failed to hide product");
-      }
-
-      refetch();
-    } catch (error) {
-      console.error("Error hiding product from warehouse:", error);
-      toast.error(t("hideError"));
-    }
-  };
-
   return {
     products,
     loading,
@@ -224,7 +182,5 @@ export function useInventoryManager() {
     locale,
     refetch,
     getStockStatus,
-    handleHideFromWarehouse,
-    ConfirmDialog,
   };
 }

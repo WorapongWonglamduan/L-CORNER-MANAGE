@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 import { Sidebar } from "@/components/sidebar";
-import { Package, AlertTriangle, TrendingDown, History, ArrowRightLeft, EyeOff } from "lucide-react";
+import { Package, AlertTriangle, TrendingDown, History, ArrowRightLeft } from "lucide-react";
 import { useInventoryManager } from "./helper";
 import { Button } from "@/components/ui/button";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
@@ -35,8 +36,6 @@ export default function InventoryContent() {
     refetch,
     getStockStatus,
     locale,
-    handleHideFromWarehouse,
-    ConfirmDialog,
   } = useInventoryManager();
 
   const t = useTranslations("inventory");
@@ -169,7 +168,7 @@ export default function InventoryContent() {
 
         {/* Products Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          {loading ? (
+          {loading && products.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -231,8 +230,21 @@ export default function InventoryContent() {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <Package className="w-4 h-4 text-gray-400" />
+                            <div className="flex items-center gap-3">
+                              <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                                {product.primary_image_url ? (
+                                  <Image
+                                    src={product.primary_image_url}
+                                    alt={product.name_i18n[locale as "th" | "en"]}
+                                    fill
+                                    className="object-contain p-1"
+                                    sizes="40px"
+                                    unoptimized
+                                  />
+                                ) : (
+                                  <Package className="w-4 h-4 text-gray-400" />
+                                )}
+                              </div>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
                                   {product.name_i18n[locale as "th" | "en"]}
@@ -311,16 +323,6 @@ export default function InventoryContent() {
                               >
                                 <History className="w-4 h-4" />
                               </Button>
-                              <Button
-                                onClick={() => handleHideFromWarehouse(product)}
-                                disabled={Number(product.current_stock) !== 0}
-                                variant="ghost"
-                                size="sm"
-                                title={t("hideFromWarehouse")}
-                                className="flex items-center gap-2 text-red-600 hover:text-red-700 disabled:text-gray-300"
-                              >
-                                <EyeOff className="w-4 h-4" />
-                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -381,8 +383,6 @@ export default function InventoryContent() {
           }}
         />
       )}
-
-      <ConfirmDialog />
     </div>
   );
 }
