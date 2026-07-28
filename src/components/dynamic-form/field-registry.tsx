@@ -1,6 +1,11 @@
 "use client";
 
-import type { ControllerRenderProps, FieldError, FieldValues, UseFormSetValue } from "react-hook-form";
+import type {
+  ControllerRenderProps,
+  FieldError,
+  FieldValues,
+  UseFormSetValue,
+} from "react-hook-form";
 import { Input } from "@/components/ui/Input";
 import { Combobox } from "@/components/ui/Combobox";
 import type { FieldConfig, FieldType } from "./types";
@@ -36,7 +41,19 @@ const inputLikeField: FieldRenderer = (field, rhf, opts) => (
     icon={field.icon}
     error={opts.error}
     value={(rhf.value as string | number) ?? ""}
-    onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    onChange={(
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >,
+    ) => {
+      // A number field's default value is often 0 ("0" displayed); typing
+      // without first clearing it appends after the leading digit instead of
+      // replacing it (e.g. typing "50" produces "050"). Strip leading zeros
+      // that precede another digit — "0.5" and a lone "0" are left alone.
+      if (field.type === "number") {
+        const normalized = e.target.value.replace(/^0+(?=\d)/, "");
+        if (normalized !== e.target.value) e.target.value = normalized;
+      }
       rhf.onChange(e);
       field.onValueChange?.(e.target.value, { setValue: opts.setValue });
     }}
@@ -101,7 +118,9 @@ const imageUploadField: FieldRenderer = (field, rhf, opts) => (
     helperText={field.helperText}
     error={opts.error}
     value={rhf.value as unknown as string[]}
-    onChange={rhf.onChange as unknown as React.ChangeEventHandler<HTMLInputElement>}
+    onChange={
+      rhf.onChange as unknown as React.ChangeEventHandler<HTMLInputElement>
+    }
     disabled={opts.disabled}
     required={!!field.rules?.required}
   />
@@ -128,5 +147,9 @@ export function renderDynamicFieldControl<T extends FieldValues>(
   rhf: RHFField,
   opts: RenderOptions = {},
 ): React.ReactElement {
-  return fieldRenderers[field.type](field as FieldConfig<FieldValues>, rhf, opts);
+  return fieldRenderers[field.type](
+    field as FieldConfig<FieldValues>,
+    rhf,
+    opts,
+  );
 }

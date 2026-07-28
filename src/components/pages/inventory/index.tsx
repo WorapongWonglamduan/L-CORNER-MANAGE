@@ -105,12 +105,14 @@ export default function InventoryContent() {
           </div>
         ) : (
           <>
-        {/* Warehouse (context, not a filter — switches which branch's stock is shown) */}
+        {/* Warehouse scope — defaults to all branches; pick one to scope stock
+            figures and enable per-branch actions (adjust stock, transfer). */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-4 max-w-xs">
           <Input
             inputType={INPUT_TYPES.SELECT}
             value={filters.warehouseId}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => filters.setWarehouseId(e.target.value)}
+            emptyOptionLabel={tCommon("allBranches")}
             options={warehouses.map((w) => ({
               value: w.id,
               label: `${w.code} - ${w.name_i18n[locale as "th" | "en"]}`,
@@ -312,6 +314,12 @@ export default function InventoryContent() {
                                 variant="outline"
                                 size="sm"
                                 className="flex items-center gap-2"
+                                disabled={!filters.warehouseId}
+                                title={
+                                  !filters.warehouseId
+                                    ? t("selectBranchFirst")
+                                    : undefined
+                                }
                               >
                                 {t("adjustStock")}
                               </Button>

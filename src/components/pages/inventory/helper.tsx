@@ -91,22 +91,6 @@ export function useInventoryManager() {
     },
   });
 
-  // Default to the is_default-flagged warehouse (falling back to the
-  // lowest `code` if none is flagged, or it isn't one this user is
-  // assigned to) once loaded, if none selected yet.
-  useEffect(() => {
-    if (!filterOptions.warehouseId && warehouses.length > 0) {
-      const defaultWarehouse = warehouses.find((w) => w.is_default);
-      const sortedByCode = [...warehouses].sort((a, b) =>
-        a.code.localeCompare(b.code),
-      );
-      updateFilter({
-        warehouseId: (defaultWarehouse ?? sortedByCode[0]).id,
-      } as Partial<InventoryFilterOptions>);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [warehouses]);
-
   const setWarehouseId = (warehouseId: string) => {
     updateFilter({ warehouseId } as Partial<InventoryFilterOptions>);
   };

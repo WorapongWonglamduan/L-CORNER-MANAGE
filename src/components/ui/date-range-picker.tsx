@@ -2,7 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useLocale } from "next-intl";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import {
   format,
   startOfMonth,
@@ -52,7 +57,7 @@ interface DateFieldProps {
 // native <input type="date">, whose displayed format follows the browser's
 // own locale rather than the app's next-intl one (always "mm/dd/yyyy" in
 // most setups regardless of the active language).
-function DateField({
+export function DateField({
   value,
   onChange,
   placeholder,
@@ -68,7 +73,10 @@ function DateField({
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -173,7 +181,8 @@ function DateField({
                     isSelected
                       ? "bg-primary text-white font-semibold hover:bg-primary"
                       : "hover:bg-gray-100 text-gray-700",
-                    disabled && "opacity-30 cursor-not-allowed hover:bg-transparent",
+                    disabled &&
+                      "opacity-30 cursor-not-allowed hover:bg-transparent",
                   )}
                 >
                   {format(day, "d")}

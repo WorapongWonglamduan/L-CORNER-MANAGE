@@ -6,6 +6,12 @@ import { Prisma } from "@prisma/client";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import type { RecipeInput } from "@/types/product-request";
 
+// A SEMI_FINISHED product whose recipe has no track_stock ingredient has no
+// real enforced ceiling (checkout never blocks on it) — stand-in for
+// "unlimited" since available_quantity is a plain number the rest of the
+// API/UI already does arithmetic on (JSON has no Infinity).
+const UNLIMITED_QUANTITY = 999999;
+
 // GET /api/products - ดึงรายการสินค้าทั้งหมด
 export async function GET(request: NextRequest) {
   try {
@@ -110,6 +116,7 @@ export async function GET(request: NextRequest) {
                   select: {
                     id: true,
                     name_i18n: true,
+                    track_stock: true,
                     stock: warehouseId
                       ? { where: { warehouse_id: warehouseId } }
                       : true,
@@ -163,12 +170,19 @@ export async function GET(request: NextRequest) {
     // Sums a product's ProductStock rows (already scoped to one warehouse if
     // warehouseId was given) into the flat current_stock/min_stock_level/
     // low_stock_threshold fields the rest of the API/UI still expects.
-    const sumStock = (stock: { current_stock: Prisma.Decimal; min_stock_level: Prisma.Decimal; low_stock_threshold: Prisma.Decimal }[]) =>
+    const sumStock = (
+      stock: {
+        current_stock: Prisma.Decimal;
+        min_stock_level: Prisma.Decimal;
+        low_stock_threshold: Prisma.Decimal;
+      }[],
+    ) =>
       stock.reduce(
         (acc, s) => ({
           current_stock: acc.current_stock + Number(s.current_stock),
           min_stock_level: acc.min_stock_level + Number(s.min_stock_level),
-          low_stock_threshold: acc.low_stock_threshold + Number(s.low_stock_threshold),
+          low_stock_threshold:
+            acc.low_stock_threshold + Number(s.low_stock_threshold),
         }),
         { current_stock: 0, min_stock_level: 0, low_stock_threshold: 0 },
       );
@@ -188,21 +202,32 @@ export async function GET(request: NextRequest) {
       if (product.product_type.type === PRODUCTS_TYPES.FINISHED_GOOD) {
         available_quantity = stockTotals.current_stock;
       }
-      // SEMI_FINISHED: คำนวณจากวัตถุดิบในสูตร
+      // SEMI_FINISHED: คำนวณจากวัตถุดิบในสูตร — เฉพาะวัตถุดิบที่ track_stock
+      // เท่านั้น ให้ตรงกับตอนตัดสต็อกจริง (sales/route.ts's deductProductStock)
+      // ซึ่งไม่บังคับเช็คสต็อกพอ/ไม่พอสำหรับวัตถุดิบที่ track_stock=false —
+      // ถ้าเอาวัตถุดิบนั้นมาคิดด้วย ตัวเลขที่โชว์จะดูเหมือนเป็นเพดานที่บังคับ
+      // ทั้งที่จริงระบบปล่อยให้ขายเกินเพดานนั้นได้
       else if (product.product_type.type === PRODUCTS_TYPES.SEMI_FINISHED) {
         const defaultRecipe = product.recipes[0];
 
         if (defaultRecipe && defaultRecipe.ingredients.length > 0) {
-          // หาจำนวนที่ผลิตได้สูงสุดจากวัตถุดิบแต่ละตัว
-          const maxQuantities = defaultRecipe.ingredients.map((ingredient) => {
-            const ingredientStock = sumStock(ingredient.ingredient.stock).current_stock;
-            const requiredQuantity = Number(ingredient.quantity) || 1;
-            return Math.floor(ingredientStock / requiredQuantity);
-          });
+          // หาจำนวนที่ผลิตได้สูงสุดจากวัตถุดิบที่บังคับเช็คสต็อกแต่ละตัว
+          const maxQuantities = defaultRecipe.ingredients
+            .filter((ingredient) => ingredient.ingredient.track_stock)
+            .map((ingredient) => {
+              const ingredientStock = sumStock(
+                ingredient.ingredient.stock,
+              ).current_stock;
+              const requiredQuantity = Number(ingredient.quantity) || 1;
+              return Math.floor(ingredientStock / requiredQuantity);
+            });
 
-          // ใช้ค่าต่ำสุดเป็น available_quantity
+          // ใช้ค่าต่ำสุดเป็น available_quantity — ถ้าไม่มีวัตถุดิบที่ track_stock
+          // เลยสักตัว แปลว่าไม่มีเพดานที่ระบบจะบังคับจริง (ไม่จำกัด)
           available_quantity =
-            maxQuantities.length > 0 ? Math.min(...maxQuantities) : 0;
+            maxQuantities.length > 0
+              ? Math.min(...maxQuantities)
+              : UNLIMITED_QUANTITY;
         }
       }
 
@@ -210,9 +235,9 @@ export async function GET(request: NextRequest) {
       let primary_image_url = product.media?.[0]?.media?.file_path || null;
       if (primary_image_url) {
         // Convert backslashes to forward slashes and ensure leading slash
-        primary_image_url = primary_image_url.replace(/\\/g, '/');
-        if (!primary_image_url.startsWith('/')) {
-          primary_image_url = '/' + primary_image_url;
+        primary_image_url = primary_image_url.replace(/\\/g, "/");
+        if (!primary_image_url.startsWith("/")) {
+          primary_image_url = "/" + primary_image_url;
         }
       }
 
@@ -250,7 +275,7 @@ export async function GET(request: NextRequest) {
     // Apply pagination to filtered products
     const paginatedProducts = filteredProducts.slice(
       (page - 1) * pageSize,
-      page * pageSize
+      page * pageSize,
     );
 
     return NextResponse.json({
@@ -411,14 +436,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Create ProductMedia relations if media_data provided
-    if (media_data !== undefined && Array.isArray(media_data) && media_data.length > 0) {
+    if (
+      media_data !== undefined &&
+      Array.isArray(media_data) &&
+      media_data.length > 0
+    ) {
       await prisma.productMedia.createMany({
-        data: media_data.map((media: { id: string; isPrimary: boolean; sortOrder: number }) => ({
-          product_id: product.id,
-          media_id: media.id,
-          is_primary: media.isPrimary,
-          sort_order: media.sortOrder,
-        })),
+        data: media_data.map(
+          (media: { id: string; isPrimary: boolean; sortOrder: number }) => ({
+            product_id: product.id,
+            media_id: media.id,
+            is_primary: media.isPrimary,
+            sort_order: media.sortOrder,
+          }),
+        ),
       });
 
       // Update Media records to set entity_type and entity_id

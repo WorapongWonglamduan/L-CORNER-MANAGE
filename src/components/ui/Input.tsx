@@ -10,9 +10,11 @@ import { FieldError, FieldErrors } from "react-hook-form";
 import { theme } from "@/lib/theme";
 import { LucideIcon } from "lucide-react";
 import { Check, ChevronDown } from "lucide-react";
+import { useLocale } from "next-intl";
+import { th, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { INPUT_TYPES, InputType } from "@/constants/input-types";
-import { DateRangePicker } from "./date-range-picker";
+import { DateRangePicker, DateField } from "./date-range-picker";
 import { ImageUpload } from "./image-upload";
 import { MultiImageUpload, ImageFile } from "./multi-image-upload";
 
@@ -83,15 +85,22 @@ export const Input = forwardRef<
     },
     ref,
   ) => {
-    const errorMessage: string | undefined = typeof error === "string" 
-      ? error 
-      : error && typeof error === "object" && "message" in error && typeof error.message === "string"
-        ? error.message 
-        : undefined;
+    const errorMessage: string | undefined =
+      typeof error === "string"
+        ? error
+        : error &&
+            typeof error === "object" &&
+            "message" in error &&
+            typeof error.message === "string"
+          ? error.message
+          : undefined;
 
     const baseInputClass = `${theme.inputs.default} ${Icon ? "pl-11" : ""} ${
       errorMessage ? "border-red-500 focus:border-red-500" : ""
     } ${className || ""}`;
+
+    const locale = useLocale();
+    const dateLocale = locale === "th" ? th : enUS;
 
     const renderInput = () => {
       switch (inputType) {
@@ -180,11 +189,14 @@ export const Input = forwardRef<
           );
 
         case INPUT_TYPES.TEXTAREA:
-          const { checked: _checkedTA, onCheckedChange: _onCheckedChangeTA, ...textareaProps } =
-            props as TextareaHTMLAttributes<HTMLTextAreaElement> & {
-              checked?: boolean;
-              onCheckedChange?: (checked: boolean) => void;
-            };
+          const {
+            checked: _checkedTA,
+            onCheckedChange: _onCheckedChangeTA,
+            ...textareaProps
+          } = props as TextareaHTMLAttributes<HTMLTextAreaElement> & {
+            checked?: boolean;
+            onCheckedChange?: (checked: boolean) => void;
+          };
           return (
             <textarea
               ref={ref as React.Ref<HTMLTextAreaElement>}
@@ -194,12 +206,16 @@ export const Input = forwardRef<
           );
 
         case INPUT_TYPES.SELECT:
-          const { checked: _checkedSel, onCheckedChange: _onCheckedChangeSel, options, ...selectProps } =
-            props as SelectHTMLAttributes<HTMLSelectElement> & {
-              options?: SelectOption[];
-              checked?: boolean;
-              onCheckedChange?: (checked: boolean) => void;
-            };
+          const {
+            checked: _checkedSel,
+            onCheckedChange: _onCheckedChangeSel,
+            options,
+            ...selectProps
+          } = props as SelectHTMLAttributes<HTMLSelectElement> & {
+            options?: SelectOption[];
+            checked?: boolean;
+            onCheckedChange?: (checked: boolean) => void;
+          };
           return (
             <div className="relative">
               <select
@@ -211,7 +227,9 @@ export const Input = forwardRef<
                 )}
                 {...selectProps}
               >
-                {!hideEmptyOption && <option value="">{emptyOptionLabel}</option>}
+                {!hideEmptyOption && (
+                  <option value="">{emptyOptionLabel}</option>
+                )}
                 {options?.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -222,24 +240,47 @@ export const Input = forwardRef<
             </div>
           );
 
+        case INPUT_TYPES.DATE: {
+          const {
+            value: dateValue,
+            onChange: onDateChange,
+            placeholder: datePlaceholder,
+          } = props as InputHTMLAttributes<HTMLInputElement>;
+          return (
+            <DateField
+              value={(dateValue as string) || ""}
+              onChange={(date) =>
+                onDateChange?.({
+                  target: { value: date },
+                } as unknown as React.ChangeEvent<HTMLInputElement>)
+              }
+              placeholder={(datePlaceholder as string) || ""}
+              baseInputClass={baseInputClass}
+              locale={dateLocale}
+            />
+          );
+        }
+
         case INPUT_TYPES.TEXT:
         case INPUT_TYPES.EMAIL:
         case INPUT_TYPES.PASSWORD:
         case INPUT_TYPES.NUMBER:
         case INPUT_TYPES.TEL:
         case INPUT_TYPES.URL:
-        case INPUT_TYPES.DATE:
         case INPUT_TYPES.TIME:
         case INPUT_TYPES.DATETIME_LOCAL:
         case INPUT_TYPES.FILE:
         case INPUT_TYPES.SEARCH:
         case INPUT_TYPES.COLOR:
         default:
-          const { checked: _checked, onCheckedChange: _onCheckedChange, ...inputProps } =
-            props as InputHTMLAttributes<HTMLInputElement> & {
-              checked?: boolean;
-              onCheckedChange?: (checked: boolean) => void;
-            };
+          const {
+            checked: _checked,
+            onCheckedChange: _onCheckedChange,
+            ...inputProps
+          } = props as InputHTMLAttributes<HTMLInputElement> & {
+            checked?: boolean;
+            onCheckedChange?: (checked: boolean) => void;
+          };
           return (
             <input
               ref={ref as React.Ref<HTMLInputElement>}
@@ -264,11 +305,15 @@ export const Input = forwardRef<
         )}
 
         <div className="relative">
-          {Icon && inputType !== "textarea" && inputType !== INPUT_TYPES.DATE_RANGE && inputType !== INPUT_TYPES.IMAGE_UPLOAD && inputType !== INPUT_TYPES.MULTI_IMAGE_UPLOAD && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
-              <Icon className="w-5 h-5" />
-            </div>
-          )}
+          {Icon &&
+            inputType !== "textarea" &&
+            inputType !== INPUT_TYPES.DATE_RANGE &&
+            inputType !== INPUT_TYPES.IMAGE_UPLOAD &&
+            inputType !== INPUT_TYPES.MULTI_IMAGE_UPLOAD && (
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
+                <Icon className="w-5 h-5" />
+              </div>
+            )}
 
           {renderInput()}
         </div>

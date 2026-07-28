@@ -498,7 +498,6 @@ export async function POST(request: NextRequest) {
     const {
       warehouse_id,
       items,
-      discount_amount = 0,
       tax_rate = 0,
       payment_method,
       promotion_code,
@@ -548,10 +547,17 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const unitPrice = item.unit_price || product.selling_price || 0;
+      // Always the server's current price, never the client-supplied one —
+      // otherwise a client could set item.unit_price to anything (e.g. 0) and
+      // buy at a price it made up itself.
+      const unitPrice = Number(product.selling_price) || 0;
       const quantity = item.quantity || 1;
       const itemSubtotal = unitPrice * quantity;
-      const itemDiscountAmount = item.discount_amount || 0;
+      // Per-item discounts aren't a feature anything in the app actually
+      // sets (the only real discount path is a server-validated promotion
+      // code, below) — trusting item.discount_amount/discount_percent from
+      // the request would let a client discount its own items to nothing.
+      const itemDiscountAmount = 0;
 
       // Toppings — only ever valid on SEMI_FINISHED products, and only if
       // actually offered on this specific product via ProductTopping.
@@ -617,7 +623,7 @@ export async function POST(request: NextRequest) {
         product_id: item.product_id,
         quantity,
         unit_price: unitPrice,
-        discount_percent: item.discount_percent || 0,
+        discount_percent: 0,
         discount_amount: itemDiscountAmount,
         total_amount: totalAmount,
         cost_price: Number(product.cost_price) || 0,
@@ -665,7 +671,10 @@ export async function POST(request: NextRequest) {
           : Math.min(Number(promotion.discount_value), subtotal);
     }
 
-    const totalDiscount = Number(discount_amount) + promotionDiscount;
+    // The only discount that's actually validated is a promotion code —
+    // there's no manual-discount feature, so nothing else should reduce
+    // the total (see the note on itemDiscountAmount above for why).
+    const totalDiscount = promotionDiscount;
     const totalAmount = subtotal - totalDiscount;
     const taxAmount = 0; // No tax calculation
     const finalTotal = totalAmount;

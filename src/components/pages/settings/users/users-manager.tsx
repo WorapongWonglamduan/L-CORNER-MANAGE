@@ -2,11 +2,27 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Users as UsersIcon, ShieldCheck, Warehouse as WarehouseIcon } from "lucide-react";
+import {
+  Plus,
+  Users as UsersIcon,
+  ShieldCheck,
+  Warehouse as WarehouseIcon,
+  MoreVertical,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
-import { ActionButtons } from "@/components/ui/action-buttons";
+import {
+  DynamicFilterBar,
+  type FilterFieldConfig,
+} from "@/components/ui/dynamic-filter-bar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import {
@@ -128,10 +144,13 @@ export default function UsersManager() {
   const [branchesDialogOpen, setBranchesDialogOpen] = useState(false);
   const [branchesUser, setBranchesUser] = useState<AppUser | null>(null);
   const [savingBranches, setSavingBranches] = useState(false);
-  const { watch: watchBranches, setValue: setBranchesValue, reset: resetBranches } =
-    useForm<{ selectedWarehouseIds: string[] }>({
-      defaultValues: { selectedWarehouseIds: [] },
-    });
+  const {
+    watch: watchBranches,
+    setValue: setBranchesValue,
+    reset: resetBranches,
+  } = useForm<{ selectedWarehouseIds: string[] }>({
+    defaultValues: { selectedWarehouseIds: [] },
+  });
   const selectedWarehouseIds = watchBranches("selectedWarehouseIds");
 
   const handleOpenBranches = (user: AppUser) => {
@@ -233,48 +252,55 @@ export default function UsersManager() {
                       <h3 className="font-bold text-gray-900 text-base">
                         {user.full_name}
                       </h3>
-                      <p className="text-sm text-gray-500">
-                        {user.username}
-                      </p>
+                      <p className="text-sm text-gray-500">{user.username}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleOpenRoles(user)}
-                      className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
-                      title={t("roles")}
-                    >
-                      <ShieldCheck className="h-4 w-4 text-primary" />
-                    </button>
-                    <button
-                      onClick={() => handleOpenBranches(user)}
-                      className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
-                      title={t("branches")}
-                    >
-                      <WarehouseIcon className="h-4 w-4 text-primary" />
-                    </button>
-                    <ActionButtons
-                      onEdit={() => handleEdit(user)}
-                      onDelete={() => handleDelete(user.id)}
-                      editTitle={t("edit")}
-                      deleteTitle={t("delete")}
-                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
+                          title={t("actions")}
+                        >
+                          <MoreVertical className="h-4 w-4 text-gray-500" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenRoles(user)}>
+                          <ShieldCheck className="h-4 w-4" />
+                          {t("roles")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenBranches(user)}
+                        >
+                          <WarehouseIcon className="h-4 w-4" />
+                          {t("branches")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(user)}>
+                          <Pencil className="h-4 w-4" />
+                          {t("edit")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(user.id)}
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {t("delete")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
-                    <span className="text-sm text-gray-600">
-                      {t("email")}:
-                    </span>
+                    <span className="text-sm text-gray-600">{t("email")}:</span>
                     <span className="font-semibold text-gray-900 truncate max-w-[60%] text-right">
                       {user.email}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
-                      {t("roles")}:
-                    </span>
+                    <span className="text-sm text-gray-600">{t("roles")}:</span>
                     <span className="font-semibold text-gray-900 text-right">
                       {user.user_roles.length > 0
                         ? user.user_roles
@@ -289,7 +315,9 @@ export default function UsersManager() {
                     </span>
                     <span className="font-semibold text-gray-900 text-right">
                       {user.user_warehouses.length > 0
-                        ? user.user_warehouses.map((uw) => uw.warehouse.code).join(", ")
+                        ? user.user_warehouses
+                            .map((uw) => uw.warehouse.code)
+                            .join(", ")
                         : "-"}
                     </span>
                   </div>
