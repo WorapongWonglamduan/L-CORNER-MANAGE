@@ -449,6 +449,7 @@
     "filterByStatus": "Filter by Status",
     "allTypes": "All Types",
     "allStatus": "All Status",
+    "allBranches": "All Branches",
     "noWarehouseAssigned": "You haven't been assigned to any branch yet. Please contact an administrator.",
     "selectBranchFirst": "Select a specific branch to adjust stock",
     "rawMaterial": "Raw Material",

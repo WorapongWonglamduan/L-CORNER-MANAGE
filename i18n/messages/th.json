@@ -132,6 +132,7 @@
     "filterByStatus": "กรองตามสถานะ",
     "allTypes": "ทุกประเภท",
     "allStatus": "ทุกสถานะ",
+    "allBranches": "ทุกสาขา",
     "noWarehouseAssigned": "ยังไม่ได้รับมอบหมายสาขา กรุณาติดต่อผู้ดูแลระบบ",
     "selectBranchFirst": "กรุณาเลือกสาขาที่ต้องการก่อนปรับสต็อก",
     "rawMaterial": "วัตถุดิบ",
