@@ -5,7 +5,12 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+# npm ci demands the lockfile list every optional platform-specific package
+# (native bindings for sharp/lightningcss/@next-swc, etc.) for the platform
+# it's running on — this lockfile was last generated on Windows, so it's
+# missing the Linux-alpine ones `npm ci` wants here. `npm install` re-resolves
+# those for the current platform instead of hard-failing on the mismatch.
+RUN npm install
 
 FROM base AS builder
 WORKDIR /app

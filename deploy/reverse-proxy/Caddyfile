@@ -1,0 +1,21 @@
+pos.yourdomain.com {
+	reverse_proxy l-corner-app:3000
+
+	encode gzip
+
+	# /api/pos/display and /api/pos/print-jobs are long-lived SSE streams
+	# (customer display screen, BLE receipt-printer job dispatch) — make
+	# sure they don't get buffered or closed early.
+	@sse path /api/pos/display /api/pos/print-jobs
+	handle @sse {
+		reverse_proxy l-corner-app:3000 {
+			flush_interval -1
+		}
+	}
+}
+
+# Second project goes here as its own block, once it exists — same shape:
+#
+# portal.yourdomain.com {
+# 	reverse_proxy <that project's container_name>:<its port>
+# }

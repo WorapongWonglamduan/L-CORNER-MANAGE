@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:17-alpine
@@ -22,31 +20,55 @@ services:
       timeout: 5s
       retries: 5
 
-  # app:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #     args:
-  #       NODE_ENV: development
-  #   container_name: l-corner-app
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3077:3000"
-  #   environment:
-  #     NODE_ENV: ${NODE_ENV:-development}
-  #     DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_DATABASE:-l_corner_pos}?schema=public
-  #     NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3077}
-  #     NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-  #   volumes:
-  #     - .:/app
-  #     - /app/node_modules
-  #     - /app/.next
-  #   networks:
-  #     - l-corner-network
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   command: npm run dev
+  # Production container built from the multi-stage Dockerfile (Next.js
+  # standalone output) — `docker compose up -d` runs the real app, not just
+  # Postgres. Was commented out before with `DATABASE_URL` + a dev-mode bind
+  # mount + `command: npm run dev`, none of which match how this app
+  # actually runs: src/lib/prisma.ts builds its pg.Pool from the individual
+  # DB_HOST/DB_PORT/... vars (there's no `url = env("DATABASE_URL")` in
+  # schema.prisma), and the Dockerfile already produces a standalone
+  # production build — bind-mounting host source over that would replace
+  # the compiled output with raw source and Windows-built node_modules.
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: l-corner-app
+    restart: unless-stopped
+    # No host port published here on purpose — the shared reverse-proxy
+    # stack (see deploy/reverse-proxy/) is the only thing that should be
+    # internet-facing. This service is reachable from it via shared-proxy.
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-l_corner_pos}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3077}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+    volumes:
+      # Uploaded product images are written at runtime under
+      # public/uploads/<year>/<month>/... (src/lib/image-upload.ts) — without
+      # this, every upload lives only inside the container's writable layer
+      # and vanishes the next time the image is rebuilt/recreated.
+      - uploads_data:/app/public/uploads
+    networks:
+      # l-corner-network: talks to this project's own postgres, invisible to
+      # anything outside this compose file.
+      # shared-proxy: the one network the reverse-proxy stack also joins, so
+      # it can route pos.yourdomain.com here. Created once on the host with
+      # `docker network create shared-proxy` (see deploy/reverse-proxy/) —
+      # `external: true` means this compose file expects it to already
+      # exist rather than trying to own/create it itself.
+      - l-corner-network
+      - shared-proxy
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   # Bumping to postgres:17-alpine left the previous postgres_data volume on
   # PG16 (incompatible file format) — pg_upgrade'd it into this volume rather
@@ -65,7 +87,14 @@ volumes:
     driver: local
   pgadmin_data:
     driver: local
+  uploads_data:
+    driver: local
 
 networks:
   l-corner-network:
     driver: bridge
+  # Owned by deploy/reverse-proxy/docker-compose.yml, not this file. Create
+  # it once, by hand, before starting either stack:
+  #   docker network create shared-proxy
+  shared-proxy:
+    external: true
