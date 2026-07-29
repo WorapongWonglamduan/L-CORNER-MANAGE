@@ -2,6 +2,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { setRequestLocale } from 'next-intl/server'
 import { ToastProvider } from '@/components/ui/toast-provider'
+import { OfflineBanner } from '@/components/ui/offline-banner'
 import { SessionProvider } from 'next-auth/react'
 import { auth } from '@/auth'
 
@@ -28,6 +29,7 @@ export default async function LocaleLayout({
       <SessionProvider session={session}>
         {children}
         <ToastProvider />
+        <OfflineBanner />
       </SessionProvider>
     </NextIntlClientProvider>
   )

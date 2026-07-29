@@ -100,6 +100,11 @@
     "previous": "Previous",
     "next": "Next"
   },
+  "connectivity": {
+    "offlineTitle": "No Internet Connection",
+    "offlineMessage": "Please check your network connection. The system will reconnect automatically once it's back.",
+    "retry": "Retry"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "pos": "Point of Sale",
