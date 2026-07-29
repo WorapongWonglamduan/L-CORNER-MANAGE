@@ -629,6 +629,7 @@
     "date": "วันที่",
     "customer": "ลูกค้า",
     "warehouse": "คลังสินค้า",
+    "allBranches": "ทุกสาขา",
     "total": "ยอดรวม",
     "paymentMethod": "วิธีชำระเงิน",
     "paymentStatus": "สถานะชำระเงิน",

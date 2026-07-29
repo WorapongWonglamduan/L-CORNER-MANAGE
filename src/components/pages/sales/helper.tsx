@@ -1,10 +1,19 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { useEntityList } from "@/hooks/useEntityList";
 import { FilterOptions } from "@/hooks/usePagination";
 import { useConfirm } from "@/hooks/useConfirm";
 import { toast } from "@/lib/toast";
 import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
+import type { I18nText } from "@/types/i18n";
+
+interface Warehouse {
+  id: string;
+  code: string;
+  name_i18n: I18nText;
+  is_default: boolean;
+}
 
 interface SaleRefund {
   id: string;
@@ -94,12 +103,40 @@ interface SalesFilterOptions extends FilterOptions {
   searchQuery?: string;
   startDate?: string;
   endDate?: string;
+  warehouseId?: string;
 }
 
 export function useSalesManager() {
   const locale = useLocale();
   const t = useTranslations("sales");
   const { confirm, ConfirmDialog } = useConfirm();
+  const { data: session } = useSession();
+  const sessionWarehouseIds = session?.user?.warehouse_ids;
+  const assignedWarehouseIds = useMemo(
+    () => sessionWarehouseIds ?? [],
+    [sessionWarehouseIds],
+  );
+
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehousesLoading, setWarehousesLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const response = await fetch("/api/warehouses?pageSize=100&isActive=true");
+        const data = await response.json();
+        const allItems: Warehouse[] = data.items || [];
+        setWarehouses(
+          allItems.filter((w) => assignedWarehouseIds.includes(w.id)),
+        );
+      } catch (error) {
+        console.error("Error fetching warehouses:", error);
+      } finally {
+        setWarehousesLoading(false);
+      }
+    };
+    fetchWarehouses();
+  }, [assignedWarehouseIds]);
 
   const {
     items: sales,
@@ -117,8 +154,13 @@ export function useSalesManager() {
       searchQuery: "",
       startDate: "",
       endDate: "",
+      warehouseId: "",
     },
   });
+
+  const setWarehouseId = (warehouseId: string) => {
+    updateFilter({ warehouseId } as Partial<SalesFilterOptions>);
+  };
 
   // DynamicFilterBar's date-range field reports values as `${name}From`/
   // `${name}To` (field is named "date" below), not startDate/endDate.
@@ -171,10 +213,14 @@ export function useSalesManager() {
       loading,
       locale,
     },
+    warehouses,
+    warehousesLoading,
     filters: {
       searchQuery: filterOptions.searchQuery || "",
       startDate: filterOptions.startDate || "",
       endDate: filterOptions.endDate || "",
+      warehouseId: filterOptions.warehouseId || "",
+      setWarehouseId,
       applyFilters,
       resetFilters,
     },

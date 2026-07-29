@@ -11,15 +11,24 @@ import {
   DynamicFilterBar,
   type FilterFieldConfig,
 } from "@/components/ui/dynamic-filter-bar";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { usePermission } from "@/hooks/usePermission";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 
 export default function SalesContent() {
-  const { table, filters, pagination, actions, modal } = useSalesManager();
+  const { table, warehouses, warehousesLoading, filters, pagination, actions, modal } =
+    useSalesManager();
   const { sales, loading, locale } = table;
-  const { searchQuery, startDate, endDate, applyFilters, resetFilters } =
-    filters;
+  const {
+    searchQuery,
+    startDate,
+    endDate,
+    warehouseId,
+    setWarehouseId,
+    applyFilters,
+    resetFilters,
+  } = filters;
   const { page, pageSize, totalPages, totalItems, setPage, setPageSize } =
     pagination;
   const { handleVoid, refetch } = actions;
@@ -103,6 +112,26 @@ export default function SalesContent() {
           <p className="text-gray-600 dark:text-gray-300">{tCommon("manageYourData")}</p>
         </div>
 
+        {/* Warehouse scope — defaults to all branches this user is assigned
+            to; pick one to narrow the list down to a single branch. */}
+        {!warehousesLoading && warehouses.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-4 max-w-xs">
+            <Input
+              inputType={INPUT_TYPES.SELECT}
+              value={warehouseId}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setWarehouseId(e.target.value)
+              }
+              emptyOptionLabel={t("allBranches")}
+              emptyOptionIsValue
+              options={warehouses.map((w) => ({
+                value: w.id,
+                label: `${w.code} - ${w.name_i18n[locale as "th" | "en"]}`,
+              }))}
+            />
+          </div>
+        )}
+
         {/* Search and Filter Bar */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
           <DynamicFilterBar
@@ -160,6 +189,9 @@ export default function SalesContent() {
                         {t("date")}
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        {t("warehouse")}
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("customer")}
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
@@ -196,6 +228,11 @@ export default function SalesContent() {
                               new Date(sale.sale_date),
                               "dd/MM/yyyy HH:mm",
                             )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-white">
+                            {sale.warehouse?.name_i18n?.[locale as "th" | "en"] ?? "-"}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

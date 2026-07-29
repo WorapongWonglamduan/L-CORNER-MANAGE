@@ -622,6 +622,7 @@
     "date": "Date",
     "customer": "Customer",
     "warehouse": "Warehouse",
+    "allBranches": "All Branches",
     "total": "Total",
     "paymentMethod": "Payment Method",
     "paymentStatus": "Payment Status",
