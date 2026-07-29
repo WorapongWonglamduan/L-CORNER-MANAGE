@@ -31,7 +31,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         // Dynamic import to avoid bundling Prisma into Edge Runtime
         const [{ prisma }, bcrypt] = await Promise.all([
-          import("./src/lib/prisma"),
+          import("./lib/prisma"),
           import("bcryptjs"),
         ]);
 

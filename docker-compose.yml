@@ -2,11 +2,11 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: l-corner-postgres
     restart: unless-stopped
     ports:
-      - "5436:5432"
+      - "5435:5432"
     environment:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -47,24 +47,6 @@ services:
   #     postgres:
   #       condition: service_healthy
   #   command: npm run dev
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: l-corner-pgadmin
-    restart: unless-stopped
-    ports:
-      - "5050:80"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@lcorner.local}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - l-corner-network
-    depends_on:
-      - postgres
-
 volumes:
   postgres_data:
     driver: local
