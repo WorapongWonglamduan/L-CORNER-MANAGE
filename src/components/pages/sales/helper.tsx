@@ -6,6 +6,15 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { toast } from "@/lib/toast";
 import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
+interface SaleRefund {
+  id: string;
+  refund_number: string;
+  total_amount: string;
+  reason: string | null;
+  created_at: string;
+  items: { sale_item_id: string; quantity: string }[];
+}
+
 interface Sale {
   id: string;
   sale_number: string;
@@ -34,6 +43,7 @@ interface Sale {
     full_name: string;
   } | null;
   items: SaleItem[];
+  refunds: SaleRefund[];
 }
 
 interface SaleItem {
@@ -50,6 +60,7 @@ interface SaleItem {
   base_quantity: string | null;
   note: string | null;
   created_at: string;
+  refund_items: { sale_item_id: string; quantity: string }[];
   product: {
     id: string;
     name_i18n: {

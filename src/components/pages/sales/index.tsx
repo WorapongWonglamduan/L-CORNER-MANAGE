@@ -22,7 +22,7 @@ export default function SalesContent() {
     filters;
   const { page, pageSize, totalPages, totalItems, setPage, setPageSize } =
     pagination;
-  const { handleVoid } = actions;
+  const { handleVoid, refetch } = actions;
   const { ConfirmDialog } = modal;
   const canVoid = usePermission("sales.void");
 
@@ -230,7 +230,7 @@ export default function SalesContent() {
                               <Eye className="w-4 h-4" />
                               {t("viewDetails")}
                             </Button>
-                            {canVoid && sale.status !== "cancelled" && (
+                            {canVoid && sale.status !== "cancelled" && sale.refunds.length === 0 && (
                               <Button
                                 onClick={() => handleVoid(sale)}
                                 variant="destructive"
@@ -270,6 +270,7 @@ export default function SalesContent() {
           onClose={() => setIsDetailsModalOpen(false)}
           sale={selectedSale}
           locale={locale}
+          onRefunded={refetch}
         />
       )}
 
