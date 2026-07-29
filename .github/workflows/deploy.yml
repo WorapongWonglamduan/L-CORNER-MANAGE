@@ -3,6 +3,7 @@ name: Build and deploy
 on:
   push:
     branches: [main]
+  pull_request:
   # Lets you re-run a deploy from the Actions tab without an empty commit.
   workflow_dispatch:
 
@@ -10,7 +11,37 @@ env:
   IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: l_corner_pos_test
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma db push --url="postgresql://postgres:postgres@localhost:5435/l_corner_pos_test?schema=public"
+      - run: npm test
+
   build-and-push:
+    needs: test
+    # pull_request runs only exist to gate the PR on `test` above — nothing
+    # to build/push/deploy until it's actually merged to main.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read

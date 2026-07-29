@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# .env.test holds no real secrets (dummy NEXTAUTH_SECRET, same local-only
+# Postgres password as .env) — committed so `npm test` works for anyone who
+# clones the repo without them having to hand-assemble it first.
+!.env.test
 
 # vercel
 .vercel
