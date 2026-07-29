@@ -100,6 +100,7 @@ export async function DELETE(
           select: {
             products_as_base: true,
             recipe_ingredients: true,
+            recipes: true,
           },
         },
       },
@@ -111,9 +112,15 @@ export async function DELETE(
 
     // Hard delete - check for relations first
     if (hardDelete) {
+      // Recipe.serving_unit_id -> Unit is ON DELETE SET NULL, so without
+      // this check a unit with zero products/recipe_ingredients but still
+      // referenced as a recipe's serving unit would hard-delete silently —
+      // Postgres just NULLs out serving_unit_id on every recipe that used
+      // it, with no error and no warning to the caller.
       const hasRelations =
         existingUnit._count.products_as_base > 0 ||
-        existingUnit._count.recipe_ingredients > 0;
+        existingUnit._count.recipe_ingredients > 0 ||
+        existingUnit._count.recipes > 0;
 
       if (hasRelations) {
         const errors = [];
@@ -123,6 +130,9 @@ export async function DELETE(
         if (existingUnit._count.recipe_ingredients > 0) {
           errors.push(`${existingUnit._count.recipe_ingredients} recipe ingredients`);
         }
+        if (existingUnit._count.recipes > 0) {
+          errors.push(`${existingUnit._count.recipes} recipes (as serving unit)`);
+        }
 
         return NextResponse.json(
           {
@@ -130,6 +140,7 @@ export async function DELETE(
             details: {
               products_as_base: existingUnit._count.products_as_base,
               recipe_ingredients: existingUnit._count.recipe_ingredients,
+              recipes: existingUnit._count.recipes,
             },
           },
           { status: 400 }

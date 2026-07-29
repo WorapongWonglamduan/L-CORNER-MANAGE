@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import type { NextAuthConfig } from "next-auth";
+import { isLockedOut, recordFailedLogin, clearFailedLogins } from "@/lib/login-lockout";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -29,6 +30,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         const { email, password } = parsedCredentials.data;
 
+        if (isLockedOut(email)) return null;
+
         // Dynamic import to avoid bundling Prisma into Edge Runtime
         const [{ prisma }, bcrypt] = await Promise.all([
           import("./lib/prisma"),
@@ -47,10 +50,18 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           },
         });
 
-        if (!user) return null;
+        if (!user) {
+          recordFailedLogin(email);
+          return null;
+        }
 
         const passwordsMatch = await bcrypt.compare(password, user.password);
-        if (!passwordsMatch) return null;
+        if (!passwordsMatch) {
+          recordFailedLogin(email);
+          return null;
+        }
+
+        clearFailedLogins(email);
 
         const roles = user.user_roles.map((ur) => ur.role.name);
         const allPermissions = user.user_roles.flatMap((ur) =>
