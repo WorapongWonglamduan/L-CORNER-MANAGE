@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requireWarehouseAccess } from "@/lib/permissions";
 import type { Prisma } from "@prisma/client";
+import { format } from "date-fns";
 
 export async function GET(request: NextRequest) {
   try {
@@ -210,7 +211,10 @@ export async function GET(request: NextRequest) {
         });
 
         return {
-          date: date.toISOString().split("T")[0],
+          // format() reads the Date's local getters — toISOString() would
+          // convert to UTC first, shifting the label a day off from the
+          // query's own (local-midnight) day boundaries above.
+          date: format(date, "yyyy-MM-dd"),
           total: Number(daySales._sum.total_amount || 0),
           count: daySales._count,
         };

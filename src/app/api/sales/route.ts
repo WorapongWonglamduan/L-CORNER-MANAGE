@@ -567,6 +567,12 @@ export async function POST(request: NextRequest) {
       // buy at a price it made up itself.
       const unitPrice = Number(product.selling_price) || 0;
       const quantity = item.quantity || 1;
+      if (!(quantity > 0)) {
+        return NextResponse.json(
+          { error: `Invalid quantity for product ${item.product_id}: ${quantity}` },
+          { status: 400 },
+        );
+      }
       const itemSubtotal = unitPrice * quantity;
       // Per-item discounts aren't a feature anything in the app actually
       // sets (the only real discount path is a server-validated promotion
@@ -620,6 +626,12 @@ export async function POST(request: NextRequest) {
           }
 
           const toppingQty = sel.quantity || 1;
+          if (!(toppingQty > 0)) {
+            return NextResponse.json(
+              { error: `Invalid quantity for topping ${sel.topping_id}: ${toppingQty}` },
+              { status: 400 },
+            );
+          }
           const toppingPrice = Number(topping.price);
           toppingsTotal += toppingPrice * toppingQty * quantity;
           resolvedToppings.push({

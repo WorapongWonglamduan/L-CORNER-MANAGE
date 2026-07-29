@@ -71,6 +71,23 @@ export async function PUT(
     const body = await request.json();
     const { payment_status, status, note } = body;
 
+    // Untyped String columns (not Prisma enums) — allow-list here since
+    // nothing else stands between this request body and the DB row.
+    const VALID_PAYMENT_STATUSES = ["paid", "unpaid"];
+    const VALID_STATUSES = ["completed", "cancelled"];
+    if (payment_status !== undefined && !VALID_PAYMENT_STATUSES.includes(payment_status)) {
+      return NextResponse.json(
+        { error: `Invalid payment_status: ${payment_status}` },
+        { status: 400 },
+      );
+    }
+    if (status !== undefined && !VALID_STATUSES.includes(status)) {
+      return NextResponse.json(
+        { error: `Invalid status: ${status}` },
+        { status: 400 },
+      );
+    }
+
     const updatedSale = await prisma.sale.update({
       where: { id },
       data: {
