@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       direction?: string;
       transaction_date?: {
         gte?: Date;
-        lte?: Date;
+        lt?: Date;
       };
     }
 
@@ -42,13 +42,19 @@ export async function GET(request: NextRequest) {
       where.direction = direction;
     }
 
+    // Bare "yyyy-MM-dd" strings — parsed with no "Z" so JS treats them as
+    // the server's own local midnight (Asia/Bangkok), not UTC midnight
+    // (~7h off from the real local day boundary). Upper bound is exclusive
+    // (start of the next local day), same fix as /api/sales.
     if (startDate || endDate) {
       where.transaction_date = {};
       if (startDate) {
-        where.transaction_date.gte = new Date(startDate);
+        where.transaction_date.gte = new Date(`${startDate}T00:00:00`);
       }
       if (endDate) {
-        where.transaction_date.lte = new Date(endDate);
+        const endExclusive = new Date(`${endDate}T00:00:00`);
+        endExclusive.setDate(endExclusive.getDate() + 1);
+        where.transaction_date.lt = endExclusive;
       }
     }
 

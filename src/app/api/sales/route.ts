@@ -9,6 +9,7 @@ import {
 import { getLocale, getTranslations } from "next-intl/server";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { Prisma } from "@prisma/client";
+import { format } from "date-fns";
 import type { I18nText, Locale } from "@/types/i18n";
 
 type TransactionClient = Prisma.TransactionClient;
@@ -356,7 +357,12 @@ async function deductToppingStock(
 // sale_number unique-constraint conflict rather than treat it as fatal.
 async function generateSaleNumber(): Promise<string> {
   const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
+  // toISOString() is UTC — a sale made at 1am Bangkok time (UTC+7) is still
+  // 6pm the previous UTC day, so it'd get stamped with yesterday's date
+  // while sale_date (shown to the user in local time) already reads today.
+  // format() uses the Date object's local getters instead, matching the
+  // server's own Asia/Bangkok clock.
+  const dateStr = format(today, "yyyyMMdd");
   const lastSale = await prisma.sale.findFirst({
     where: {
       sale_number: {
@@ -414,13 +420,22 @@ export async function GET(request: NextRequest) {
       where.warehouse_id = warehouseId;
     }
 
+    // startDate/endDate arrive as bare "yyyy-MM-dd" (see DateField, which
+    // never adds a time or offset) — appending "T00:00:00" with no "Z"
+    // makes JS parse it as the server's own local midnight (Asia/Bangkok)
+    // instead of UTC midnight, which was ~7h off from the actual local day
+    // boundary. The upper bound is exclusive (start of the *next* local
+    // day), not `lte` on the end date's own midnight, which used to cut
+    // off nearly the entire end day.
     if (startDate || endDate) {
       where.sale_date = {};
       if (startDate) {
-        where.sale_date.gte = new Date(startDate);
+        where.sale_date.gte = new Date(`${startDate}T00:00:00`);
       }
       if (endDate) {
-        where.sale_date.lte = new Date(endDate);
+        const endExclusive = new Date(`${endDate}T00:00:00`);
+        endExclusive.setDate(endExclusive.getDate() + 1);
+        where.sale_date.lt = endExclusive;
       }
     }
 
