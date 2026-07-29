@@ -133,6 +133,14 @@ export function usePOSManager() {
   const displaySuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  // Stable across a double-click that slips past the modal's own
+  // isProcessing guard, two tabs resubmitting the same cart, or a network
+  // retry — POST /api/sales treats a repeat of this key as a replay and
+  // returns the original sale instead of creating a duplicate. Reset to
+  // null only after a checkout actually succeeds, so a *failed* attempt
+  // (e.g. insufficient stock) that gets retried still dedupes correctly
+  // against itself.
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const { control, watch, setValue, formState: { errors } } = useForm<{
     searchQuery: string;
@@ -486,6 +494,10 @@ export function usePOSManager() {
           })),
         }));
 
+        if (!idempotencyKeyRef.current) {
+          idempotencyKeyRef.current = crypto.randomUUID();
+        }
+
         const response = await fetch("/api/sales", {
           method: "POST",
           headers: {
@@ -499,6 +511,7 @@ export function usePOSManager() {
             tax_rate: 0,
             promotion_code: promotionCode || undefined,
             note: "",
+            idempotency_key: idempotencyKeyRef.current,
           }),
         });
 
@@ -550,6 +563,7 @@ export function usePOSManager() {
           console.error("Error publishing print job:", error);
         });
 
+        idempotencyKeyRef.current = null;
         clearCart();
 
         // Refetch products to update stock

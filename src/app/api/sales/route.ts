@@ -14,6 +14,36 @@ import type { I18nText, Locale } from "@/types/i18n";
 
 type TransactionClient = Prisma.TransactionClient;
 
+// Shared between the idempotent-replay early return and the normal
+// creation path's final fetch, so a replayed response looks identical in
+// shape to a freshly-created one.
+const SALE_DETAIL_INCLUDE = {
+  warehouse: true,
+  created_by_user: {
+    select: {
+      id: true,
+      full_name: true,
+    },
+  },
+  promotion: { select: { id: true, code: true, name_i18n: true } },
+  items: {
+    include: {
+      product: {
+        include: {
+          product_type: true,
+          base_unit: true,
+        },
+      },
+      recipe: true,
+      toppings: {
+        include: {
+          topping: { select: { id: true, name_i18n: true } },
+        },
+      },
+    },
+  },
+} satisfies Prisma.SaleInclude;
+
 interface DeductStockContext {
   saleId: string;
   warehouseId: string;
@@ -527,6 +557,7 @@ export async function POST(request: NextRequest) {
       payment_method,
       promotion_code,
       note,
+      idempotency_key,
     } = body;
 
     if (!warehouse_id || !items || items.length === 0) {
@@ -534,6 +565,22 @@ export async function POST(request: NextRequest) {
         { error: "Warehouse and items are required" },
         { status: 400 },
       );
+    }
+
+    // A double-submit (double-click past the UI's own guard, a network
+    // retry, two tabs) sends the same client-generated idempotency_key —
+    // return the sale that request already created instead of the usual
+    // path, which would otherwise create a second real sale (double stock
+    // deduction, duplicate revenue) since nothing else here deduplicates
+    // by cart contents.
+    if (idempotency_key) {
+      const existingSale = await prisma.sale.findUnique({
+        where: { idempotency_key },
+        include: SALE_DETAIL_INCLUDE,
+      });
+      if (existingSale) {
+        return NextResponse.json(existingSale, { status: 200 });
+      }
     }
 
     const deniedWarehouse = await assertWarehouseAccessLive(
@@ -737,6 +784,27 @@ export async function POST(request: NextRequest) {
           String(error.meta?.target ?? error.message).includes("sale_number");
         if (isSaleNumberConflict && attempt < MAX_SALE_NUMBER_ATTEMPTS)
           continue;
+
+        // Two concurrent requests carrying the same idempotency_key can
+        // both pass the initial findUnique check above before either
+        // commits — retrying with a new sale_number wouldn't help here
+        // (the key conflict would just recur), so return the sale the
+        // other request already created instead of failing.
+        const isIdempotencyConflict =
+          idempotency_key &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002" &&
+          String(error.meta?.target ?? error.message).includes("idempotency_key");
+        if (isIdempotencyConflict) {
+          const wonByOther = await prisma.sale.findUnique({
+            where: { idempotency_key },
+            include: SALE_DETAIL_INCLUDE,
+          });
+          if (wonByOther) {
+            return NextResponse.json(wonByOther, { status: 200 });
+          }
+        }
+
         throw error;
       }
     }
@@ -791,6 +859,7 @@ export async function POST(request: NextRequest) {
             promotion_id: promotionId,
             promotion_code: promotionCodeNormalized,
             note,
+            idempotency_key: idempotency_key || null,
             items: {
               create: processedItems.map((item) => ({
                 product_id: item.product_id,
@@ -857,32 +926,7 @@ export async function POST(request: NextRequest) {
     // Fetch complete sale data
     const completeSale = await prisma.sale.findUnique({
       where: { id: newSale.id },
-      include: {
-        warehouse: true,
-        created_by_user: {
-          select: {
-            id: true,
-            full_name: true,
-          },
-        },
-        promotion: { select: { id: true, code: true, name_i18n: true } },
-        items: {
-          include: {
-            product: {
-              include: {
-                product_type: true,
-                base_unit: true,
-              },
-            },
-            recipe: true,
-            toppings: {
-              include: {
-                topping: { select: { id: true, name_i18n: true } },
-              },
-            },
-          },
-        },
-      },
+      include: SALE_DETAIL_INCLUDE,
     });
 
     return NextResponse.json(completeSale, { status: 201 });

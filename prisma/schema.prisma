@@ -325,6 +325,13 @@ model Sale {
   promotion_id   String?
   promotion_code String?
 
+  // Client-generated, one per checkout attempt (not per HTTP request) — a
+  // double-submit (double-click past the UI's own guard, a network retry,
+  // two tabs) reuses the same key, so POST /api/sales can detect it's a
+  // replay and return the original sale instead of creating a duplicate.
+  // Null for any request that doesn't send one (fully optional).
+  idempotency_key String? @unique
+
   warehouse       Warehouse    @relation(fields: [warehouse_id], references: [id])
   created_by_user User?        @relation("SaleCreatedBy", fields: [created_by], references: [id])
   promotion       Promotion?   @relation(fields: [promotion_id], references: [id])
