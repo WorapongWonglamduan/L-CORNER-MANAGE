@@ -28,10 +28,20 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.StockTransferWhereInput = {};
 
+    // A specific branch scopes to it; omitting the param must still scope
+    // to every branch this user is assigned to, not every warehouse in the
+    // system — otherwise any inventory.view holder could see every
+    // branch's transfers just by calling the API without warehouseId.
     if (warehouseId) {
       where.OR = [
         { from_warehouse_id: warehouseId },
         { to_warehouse_id: warehouseId },
+      ];
+    } else {
+      const assignedIds = session?.user?.warehouse_ids ?? [];
+      where.OR = [
+        { from_warehouse_id: { in: assignedIds } },
+        { to_warehouse_id: { in: assignedIds } },
       ];
     }
 
@@ -117,41 +127,40 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const fromStock = await tx.productStock.findUnique({
+      // Atomic guarded decrement at the source — same idiom as
+      // deductProductStock() in sales/route.ts. A plain findUnique-then-
+      // upsert(absolute value) here would let two concurrent transfers of
+      // the same product race: both read the same "before" stock before
+      // either commits, and both writes clobber each other's result
+      // instead of stacking, silently losing inventory.
+      const decremented = await tx.productStock.updateMany({
         where: {
-          product_id_warehouse_id: { product_id, warehouse_id: from_warehouse_id },
+          product_id,
+          warehouse_id: from_warehouse_id,
+          current_stock: { gte: transferQty },
         },
+        data: { current_stock: { decrement: transferQty } },
       });
-      const fromBefore = Number(fromStock?.current_stock) || 0;
-
-      if (fromBefore < transferQty) {
+      if (decremented.count === 0) {
         throw new Error("Insufficient stock at source warehouse");
       }
-
-      const fromAfter = fromBefore - transferQty;
-      await tx.productStock.upsert({
+      const fromStock = await tx.productStock.findUniqueOrThrow({
         where: {
           product_id_warehouse_id: { product_id, warehouse_id: from_warehouse_id },
         },
-        create: { product_id, warehouse_id: from_warehouse_id, current_stock: fromAfter },
-        update: { current_stock: fromAfter },
       });
+      const fromAfter = Number(fromStock.current_stock);
+      const fromBefore = fromAfter + transferQty;
 
-      const toStock = await tx.productStock.findUnique({
+      const toStock = await tx.productStock.upsert({
         where: {
           product_id_warehouse_id: { product_id, warehouse_id: to_warehouse_id },
         },
+        create: { product_id, warehouse_id: to_warehouse_id, current_stock: transferQty },
+        update: { current_stock: { increment: transferQty } },
       });
-      const toBefore = Number(toStock?.current_stock) || 0;
-      const toAfter = toBefore + transferQty;
-
-      await tx.productStock.upsert({
-        where: {
-          product_id_warehouse_id: { product_id, warehouse_id: to_warehouse_id },
-        },
-        create: { product_id, warehouse_id: to_warehouse_id, current_stock: toAfter },
-        update: { current_stock: toAfter },
-      });
+      const toAfter = Number(toStock.current_stock);
+      const toBefore = toAfter - transferQty;
 
       const transfer = await tx.stockTransfer.create({
         data: {

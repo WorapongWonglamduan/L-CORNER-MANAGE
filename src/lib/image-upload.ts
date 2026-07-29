@@ -50,6 +50,17 @@ export class ImageUploadError extends Error {
   }
 }
 
+// `folder` comes straight from client-supplied form data (see
+// media/upload/route.ts) and is joined into a filesystem path below —
+// without this allow-list, a value like `../../../../etc` would let any
+// authenticated products.create holder write image files outside
+// public/uploads entirely.
+const SAFE_FOLDER = /^[a-zA-Z0-9_-]+$/
+
+function sanitizeFolder(folder: string): string {
+  return SAFE_FOLDER.test(folder) ? folder : 'general'
+}
+
 /**
  * Get upload directory path for current year/month
  */
@@ -57,8 +68,8 @@ export function getUploadPath(folder: string = 'general'): string {
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
-  
-  return path.join(process.cwd(), 'public', 'uploads', String(year), month, folder)
+
+  return path.join(process.cwd(), 'public', 'uploads', String(year), month, sanitizeFolder(folder))
 }
 
 /**

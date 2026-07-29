@@ -327,6 +327,15 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    if (
+      (selling_price !== undefined && selling_price !== null && Number(selling_price) < 0) ||
+      (cost_price !== undefined && cost_price !== null && Number(cost_price) < 0)
+    ) {
+      return NextResponse.json(
+        { error: "selling_price and cost_price cannot be negative" },
+        { status: 400 },
+      );
+    }
 
     // Check if code already exists
     const existing = await prisma.product.findUnique({

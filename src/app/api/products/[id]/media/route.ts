@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { requirePermission } from '@/lib/permissions'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
+    // Attaching media mutates the product's image set, same as any other
+    // product-update — every sibling product-mutation route requires
+    // products.update, not just a valid session.
     const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const denied = requirePermission(session, 'products.update')
+    if (denied) return denied
 
     const { id: productId } = await params
     const body = await request.json()
@@ -92,6 +91,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    const denied = requirePermission(session, 'products.view')
+    if (denied) return denied
+
     const { id: productId } = await params
 
     const productMedia = await prisma.productMedia.findMany({

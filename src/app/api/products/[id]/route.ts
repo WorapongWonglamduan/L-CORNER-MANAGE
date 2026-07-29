@@ -122,6 +122,16 @@ export async function PUT(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
+    if (
+      (selling_price !== undefined && selling_price !== null && Number(selling_price) < 0) ||
+      (cost_price !== undefined && cost_price !== null && Number(cost_price) < 0)
+    ) {
+      return NextResponse.json(
+        { error: "selling_price and cost_price cannot be negative" },
+        { status: 400 },
+      );
+    }
+
     // Check if code is being changed and if new code already exists
     if (code !== existing.code) {
       const codeExists = await prisma.product.findUnique({

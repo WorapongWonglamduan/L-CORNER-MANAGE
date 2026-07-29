@@ -24,6 +24,12 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    if (Number(quantity) <= 0) {
+      return NextResponse.json(
+        { error: "quantity must be greater than 0" },
+        { status: 400 },
+      );
+    }
 
     const ingredient = await prisma.recipeIngredient.create({
       data: {

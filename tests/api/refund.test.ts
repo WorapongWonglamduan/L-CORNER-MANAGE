@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { POST as createSale } from "@/app/api/sales/route";
 import { POST as refundSale } from "@/app/api/sales/[id]/refund/route";
+import { DELETE as voidSale } from "@/app/api/sales/[id]/route";
 import { fakeSession, seedBasics, currentStock, resetDb } from "../helpers/fixtures";
 import type { Session } from "next-auth";
 
@@ -34,7 +35,7 @@ describe("POST /api/sales/[id]/refund", () => {
       fakeSession({
         userId: fx.userId,
         warehouseIds: [fx.warehouseId],
-        permissions: ["sales.create", "sales.refund", "sales.view"],
+        permissions: ["sales.create", "sales.refund", "sales.view", "sales.void"],
       }),
     );
 
@@ -148,5 +149,80 @@ describe("POST /api/sales/[id]/refund", () => {
       { params: Promise.resolve({ id: saleId }) },
     );
     expect(r3.status).toBe(400);
+  });
+
+  it("blocks voiding a sale that already has a refund (would double-restore stock)", async () => {
+    const refundRes = await refundSale(
+      refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 2 }] }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(refundRes.status).toBe(201);
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(97); // 95 + 2 refunded
+
+    const voidRes = await voidSale(
+      new NextRequest(`http://localhost/api/sales/${saleId}`, { method: "DELETE" }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(voidRes.status).toBe(400);
+
+    // Rejected before touching anything — stock must be exactly where the
+    // refund left it, not restored a second time for the full 5 units.
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(97);
+    const sale = await prisma.sale.findUnique({ where: { id: saleId } });
+    expect(sale?.status).toBe("completed");
+  });
+
+  it("never lets two concurrent refunds over-refund the same item (Serializable + retry)", async () => {
+    // The sale item has quantity 5. Two concurrent requests each ask for 3
+    // — fine individually, but 3+3=6 exceeds what was ever sold. Without
+    // the Serializable-isolation fix, both could read "5 remaining" before
+    // either commits and both would succeed, over-refunding by 1.
+    const [r1, r2] = await Promise.all([
+      refundSale(
+        refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 3 }] }),
+        { params: Promise.resolve({ id: saleId }) },
+      ),
+      refundSale(
+        refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 3 }] }),
+        { params: Promise.resolve({ id: saleId }) },
+      ),
+    ]);
+
+    const statuses = [r1.status, r2.status].sort();
+    // Exactly one must succeed and one must be rejected as exceeding what's
+    // refundable — never both succeeding, never both failing.
+    expect(statuses).toEqual([201, 400]);
+
+    const refunds = await prisma.saleRefund.findMany({
+      where: { sale_id: saleId },
+      include: { items: true },
+    });
+    const totalRefunded = refunds
+      .flatMap((r) => r.items)
+      .filter((i) => i.sale_item_id === saleItemId)
+      .reduce((sum, i) => sum + Number(i.quantity), 0);
+    expect(totalRefunded).toBe(3);
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(98); // 95 + 3
+  });
+
+  it("never lets two concurrent voids double-restore the same sale's stock", async () => {
+    // Same class of bug as the refund race above, but in DELETE (void):
+    // without Serializable + retry, both requests could read "completed"
+    // before either commits, and both would restore the full 5 units.
+    const voidReq = () =>
+      voidSale(
+        new NextRequest(`http://localhost/api/sales/${saleId}`, { method: "DELETE" }),
+        { params: Promise.resolve({ id: saleId }) },
+      );
+
+    const [r1, r2] = await Promise.all([voidReq(), voidReq()]);
+
+    const statuses = [r1.status, r2.status].sort();
+    // Exactly one void succeeds; the other must see "already cancelled".
+    expect(statuses).toEqual([200, 400]);
+
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(100); // 95 + 5, not +10
+    const sale = await prisma.sale.findUnique({ where: { id: saleId } });
+    expect(sale?.status).toBe("cancelled");
   });
 });

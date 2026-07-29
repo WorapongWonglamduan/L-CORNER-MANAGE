@@ -399,6 +399,16 @@ export async function GET(request: NextRequest) {
       if (deniedWarehouse) return deniedWarehouse;
     }
 
+    // A specific branch scopes to it; omitting the param must still scope
+    // to every branch *this user* is assigned to — not literally every
+    // warehouse in the system. Without this, any sales.view holder could
+    // see every branch's sales (payment status, items, refunds) just by
+    // calling the API without a warehouseId, bypassing the UI's own filter.
+    // Same idiom as dashboard/stats/route.ts.
+    const warehouseIdFilter: Prisma.StringFilter | string = warehouseId
+      ? warehouseId
+      : { in: session?.user?.warehouse_ids ?? [] };
+
     const skip = (page - 1) * pageSize;
 
     // Build where clause
@@ -416,9 +426,7 @@ export async function GET(request: NextRequest) {
       where.payment_status = paymentStatus;
     }
 
-    if (warehouseId) {
-      where.warehouse_id = warehouseId;
-    }
+    where.warehouse_id = warehouseIdFilter;
 
     // startDate/endDate arrive as bare "yyyy-MM-dd" (see DateField, which
     // never adds a time or offset) — appending "T00:00:00" with no "Z"
@@ -465,8 +473,10 @@ export async function GET(request: NextRequest) {
                   topping: { select: { id: true, name_i18n: true } },
                 },
               },
+              refund_items: true,
             },
           },
+          refunds: { include: { items: true }, orderBy: { created_at: "desc" } },
         },
         orderBy: { created_at: "desc" },
         skip,
@@ -733,8 +743,14 @@ export async function POST(request: NextRequest) {
 
     async function runSaleTransaction(saleNumber: string) {
       return prisma.$transaction(async (tx) => {
-        // Re-validate the promotion's usage limit inside the transaction and
-        // claim it atomically, so it can't be over-redeemed by a race.
+        // Re-validate the promotion inside the transaction and claim its
+        // usage atomically — same idiom as deductProductStock's updateMany
+        // guard above. A plain findUnique-then-update here would let two
+        // concurrent sales both read "used_count still under max_uses"
+        // before either commits and both redeem it, over-using a
+        // single-use code. Folding the used_count bound into the UPDATE's
+        // WHERE makes Postgres itself serialize the two attempts: whichever
+        // commits first is the only one that can still match the clause.
         if (promotionId) {
           const promotion = await tx.promotion.findUnique({
             where: { id: promotionId },
@@ -742,16 +758,20 @@ export async function POST(request: NextRequest) {
           if (
             !promotion ||
             !promotion.is_active ||
-            (promotion.expires_at && promotion.expires_at < new Date()) ||
-            (promotion.max_uses !== null &&
-              promotion.used_count >= promotion.max_uses)
+            (promotion.expires_at && promotion.expires_at < new Date())
           ) {
             throw new Error(tPromo("usageLimitReached"));
           }
-          await tx.promotion.update({
-            where: { id: promotionId },
+          const claimed = await tx.promotion.updateMany({
+            where:
+              promotion.max_uses === null
+                ? { id: promotionId }
+                : { id: promotionId, used_count: { lt: promotion.max_uses } },
             data: { used_count: { increment: 1 } },
           });
+          if (claimed.count === 0) {
+            throw new Error(tPromo("usageLimitReached"));
+          }
         }
 
         const sale = await tx.sale.create({

@@ -108,6 +108,16 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    // A negative quantity_per_serving would make deductToppingStock's
+    // decrement in sales/route.ts an increment instead, manufacturing
+    // stock on every sale; a negative price silently deflates a sale's
+    // recorded total.
+    if (Number(quantity_per_serving) <= 0 || Number(price) < 0) {
+      return NextResponse.json(
+        { error: "quantity_per_serving must be greater than 0 and price cannot be negative" },
+        { status: 400 },
+      );
+    }
 
     const ingredient = await prisma.product.findUnique({
       where: { id: ingredient_id },

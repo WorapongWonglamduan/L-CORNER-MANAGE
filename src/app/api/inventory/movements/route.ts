@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, requireWarehouseAccess } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("product_id");
+    const warehouseId = searchParams.get("warehouseId");
     const movementType = searchParams.get("movement_type");
     const direction = searchParams.get("direction");
     const startDate = searchParams.get("start_date");
@@ -18,8 +19,14 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "20");
 
+    if (warehouseId) {
+      const deniedWarehouse = requireWarehouseAccess(session, warehouseId);
+      if (deniedWarehouse) return deniedWarehouse;
+    }
+
     interface WhereClause {
       product_id?: string;
+      warehouse_id?: string | { in: string[] };
       movement_type?: string;
       direction?: string;
       transaction_date?: {
@@ -29,6 +36,14 @@ export async function GET(request: NextRequest) {
     }
 
     const where: WhereClause = {};
+
+    // A specific branch scopes to it; omitting the param must still scope
+    // to every branch this user is assigned to — previously this endpoint
+    // had no warehouse filter at all, so any inventory.view holder
+    // (including the cashier role) could see every branch's stock
+    // movements — sale deductions, adjustments, transfers, void-restores —
+    // system-wide.
+    where.warehouse_id = warehouseId ? warehouseId : { in: session?.user?.warehouse_ids ?? [] };
 
     if (productId) {
       where.product_id = productId;

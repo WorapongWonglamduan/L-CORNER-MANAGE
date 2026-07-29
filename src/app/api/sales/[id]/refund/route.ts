@@ -13,11 +13,24 @@ interface RefundItemInput {
   quantity: number;
 }
 
+// Thrown for validation failures discovered *inside* the transaction (see
+// the isolation-level comment below on why the check has to live there) —
+// caught in the outer handler and turned into the right HTTP response,
+// since throwing is how a $transaction callback aborts/rolls back.
+class RefundError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
+
 // Same local-day-boundary fix as generateSaleNumber() in ../../route.ts —
 // format() reads the Date's local getters, not toISOString()'s UTC ones.
-async function generateRefundNumber(): Promise<string> {
+async function generateRefundNumber(tx: TransactionClient): Promise<string> {
   const dateStr = format(new Date(), "yyyyMMdd");
-  const lastRefund = await prisma.saleRefund.findFirst({
+  const lastRefund = await tx.saleRefund.findFirst({
     where: { refund_number: { startsWith: `REF-${dateStr}` } },
     orderBy: { refund_number: "desc" },
   });
@@ -51,6 +64,8 @@ async function restoreProductStock(
   return { currentQty, newQty };
 }
 
+const MAX_SERIALIZATION_RETRIES = 5;
+
 // POST /api/sales/[id]/refund - partial or full refund of specific line
 // items (and quantities within them) from a completed sale. Distinct from
 // DELETE /api/sales/[id] (void), which cancels the whole sale — this can
@@ -72,20 +87,22 @@ export async function POST(
     if (items.length === 0) {
       return NextResponse.json({ error: "items is required" }, { status: 400 });
     }
+    for (const req of items) {
+      if (!(Number(req.quantity) > 0)) {
+        return NextResponse.json(
+          { error: `Invalid refund quantity for ${req.sale_item_id}: ${req.quantity}` },
+          { status: 400 },
+        );
+      }
+    }
 
+    // Sale existence/status/warehouse-access are checked once upfront —
+    // none of them change based on a concurrent refund request, so there's
+    // nothing to re-validate for those inside the retry loop below.
     const sale = await prisma.sale.findUnique({
       where: { id },
-      include: {
-        items: {
-          include: {
-            product: { include: { product_type: true } },
-            toppings: { include: { topping: { include: { ingredient: true } } } },
-            refund_items: true,
-          },
-        },
-      },
+      select: { id: true, sale_number: true, status: true, warehouse_id: true },
     });
-
     if (!sale) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }
@@ -95,192 +112,216 @@ export async function POST(
         { status: 400 },
       );
     }
-
     const deniedWarehouse = await assertWarehouseAccessLive(session, sale.warehouse_id);
     if (deniedWarehouse) return deniedWarehouse;
 
     const createdBy = session?.user?.id || null;
     const warehouseId = sale.warehouse_id;
 
-    // Validate every requested line before touching anything — a shortage
-    // partway through must never leave a partial refund.
-    const resolved: {
-      saleItem: (typeof sale.items)[number];
-      quantity: number;
-      amount: number;
-    }[] = [];
-
-    for (const req of items) {
-      const quantity = Number(req.quantity);
-      if (!(quantity > 0)) {
-        return NextResponse.json(
-          { error: `Invalid refund quantity for ${req.sale_item_id}: ${req.quantity}` },
-          { status: 400 },
-        );
-      }
-
-      const saleItem = sale.items.find((i) => i.id === req.sale_item_id);
-      if (!saleItem) {
-        return NextResponse.json(
-          { error: `Sale item not found on this sale: ${req.sale_item_id}` },
-          { status: 404 },
-        );
-      }
-
-      const alreadyRefunded = saleItem.refund_items.reduce(
-        (sum, ri) => sum + Number(ri.quantity),
-        0,
-      );
-      const originalQty = Number(saleItem.quantity);
-      const remaining = originalQty - alreadyRefunded;
-      if (quantity > remaining) {
-        return NextResponse.json(
-          {
-            error: `Cannot refund ${quantity} of "${saleItem.id}" — only ${remaining} of ${originalQty} remain refundable`,
-          },
-          { status: 400 },
-        );
-      }
-
-      // Proportional to what this item actually charged per unit (already
-      // includes its toppings' share and any applied discount), not the
-      // product's current selling_price — a later price change must never
-      // change what a past sale's refund is worth.
-      const unitAmount = Number(saleItem.total_amount) / originalQty;
-      resolved.push({ saleItem, quantity, amount: unitAmount * quantity });
-    }
-
-    const refund = await prisma.$transaction(async (tx) => {
-      const refundNumber = await generateRefundNumber();
-      const totalAmount = resolved.reduce((sum, r) => sum + r.amount, 0);
-
-      const created = await tx.saleRefund.create({
-        data: {
-          sale_id: sale.id,
-          refund_number: refundNumber,
-          total_amount: totalAmount,
-          reason,
-          created_by: createdBy,
-          items: {
-            create: resolved.map((r) => ({
-              sale_item_id: r.saleItem.id,
-              quantity: r.quantity,
-              amount: r.amount,
-            })),
-          },
-        },
-        include: { items: true },
-      });
-
-      for (const { saleItem, quantity } of resolved) {
-        const originalQty = Number(saleItem.quantity);
-        const productType = saleItem.product.product_type.type;
-
-        if (productType !== PRODUCTS_TYPES.SEMI_FINISHED) {
-          if (saleItem.product.track_stock) {
-            const { currentQty, newQty } = await restoreProductStock(
-              tx,
-              saleItem.product_id,
-              warehouseId,
-              quantity,
-            );
-            await tx.stockMovement.create({
-              data: {
-                product_id: saleItem.product_id,
-                warehouse_id: warehouseId,
-                movement_type: "return",
-                direction: "in",
-                quantity_before: currentQty,
-                quantity_change: quantity,
-                quantity_after: newQty,
-                reference_type: "sale_refund",
-                reference_id: created.id,
-                reason_code: "sale_refund",
-                reason_text: `คืนสินค้าจากการขาย: ${sale.sale_number}`,
-                created_by: createdBy || "",
+    // Serializable + retry-on-conflict (same idiom as generateSaleNumber's
+    // retry loop in ../../route.ts) rather than Prisma's default Read
+    // Committed: two refund requests for the *same* sale item, submitted at
+    // the same moment, would otherwise both read "X remaining" before
+    // either commits and both pass validation — over-refunding beyond what
+    // was ever sold. Serializable makes Postgres itself detect that
+    // conflict and abort one side (Prisma surfaces it as P2034) instead of
+    // silently letting both through.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const refund = await prisma.$transaction(
+          async (tx) => {
+            // Re-read inside the transaction, not reused from before it —
+            // the whole point of Serializable here is that this has to be
+            // the value Postgres will actually conflict-check against.
+            const saleItems = await tx.saleItem.findMany({
+              where: { sale_id: sale.id },
+              include: {
+                product: { include: { product_type: true } },
+                toppings: { include: { topping: { include: { ingredient: true } } } },
+                refund_items: true,
               },
             });
-          }
-        } else {
-          const recipe = await tx.recipe.findFirst({
-            where: { product_id: saleItem.product_id, is_default: true, is_active: true },
-          });
-          if (recipe) {
-            const recipeIngredients = await tx.recipeIngredient.findMany({
-              where: { recipe_id: recipe.id },
-              include: { ingredient: true },
-            });
-            for (const ri of recipeIngredients) {
-              if (!ri.ingredient.track_stock) continue;
-              const ingredientQty = Number(ri.quantity) * quantity;
-              const { currentQty, newQty } = await restoreProductStock(
-                tx,
-                ri.ingredient_id,
-                warehouseId,
-                ingredientQty,
+
+            const resolved: {
+              saleItem: (typeof saleItems)[number];
+              quantity: number;
+              amount: number;
+            }[] = [];
+
+            for (const req of items) {
+              const quantity = Number(req.quantity);
+              const saleItem = saleItems.find((i) => i.id === req.sale_item_id);
+              if (!saleItem) {
+                throw new RefundError(
+                  `Sale item not found on this sale: ${req.sale_item_id}`,
+                  404,
+                );
+              }
+
+              const alreadyRefunded = saleItem.refund_items.reduce(
+                (sum, ri) => sum + Number(ri.quantity),
+                0,
               );
-              await tx.stockMovement.create({
-                data: {
-                  product_id: ri.ingredient_id,
-                  warehouse_id: warehouseId,
-                  movement_type: "return",
-                  direction: "in",
-                  quantity_before: currentQty,
-                  quantity_change: ingredientQty,
-                  quantity_after: newQty,
-                  reference_type: "sale_refund",
-                  reference_id: created.id,
-                  reason_code: "sale_refund",
-                  reason_text: `คืนวัตถุดิบจากการคืนสินค้า: ${sale.sale_number}`,
-                  created_by: createdBy || "",
-                },
-              });
+              const originalQty = Number(saleItem.quantity);
+              const remaining = originalQty - alreadyRefunded;
+              if (quantity > remaining) {
+                throw new RefundError(
+                  `Cannot refund ${quantity} of "${saleItem.id}" — only ${remaining} of ${originalQty} remain refundable`,
+                  400,
+                );
+              }
+
+              // Proportional to what this item actually charged per unit
+              // (already includes its toppings' share and any applied
+              // discount), not the product's current selling_price — a
+              // later price change must never change what a past sale's
+              // refund is worth.
+              const unitAmount = Number(saleItem.total_amount) / originalQty;
+              resolved.push({ saleItem, quantity, amount: unitAmount * quantity });
             }
-          }
-        }
 
-        // Toppings scale with however much of this line is being refunded,
-        // not the item's full original quantity.
-        const refundRatio = quantity / originalQty;
-        for (const st of saleItem.toppings) {
-          // Mirrors deductToppingStock()'s own check in ../../route.ts — if
-          // this ingredient's stock was never deducted at sale time because
-          // track_stock was off, restoring it here would add stock that was
-          // never actually subtracted.
-          if (!st.topping.ingredient.track_stock) continue;
-          const ingredientRequired =
-            Number(st.topping.quantity_per_serving) * Number(st.quantity) * refundRatio;
-          if (ingredientRequired <= 0) continue;
+            const refundNumber = await generateRefundNumber(tx);
+            const totalAmount = resolved.reduce((sum, r) => sum + r.amount, 0);
 
-          const { currentQty, newQty } = await restoreProductStock(
-            tx,
-            st.topping.ingredient_id,
-            warehouseId,
-            ingredientRequired,
-          );
-          await tx.stockMovement.create({
-            data: {
-              product_id: st.topping.ingredient_id,
-              warehouse_id: warehouseId,
-              movement_type: "return",
-              direction: "in",
-              quantity_before: currentQty,
-              quantity_change: ingredientRequired,
-              quantity_after: newQty,
-              reference_type: "sale_refund",
-              reference_id: created.id,
-              reason_code: "sale_refund",
-              reason_text: `คืนวัตถุดิบ topping จากการคืนสินค้า: ${sale.sale_number}`,
-              created_by: createdBy || "",
-            },
-          });
+            const created = await tx.saleRefund.create({
+              data: {
+                sale_id: sale.id,
+                refund_number: refundNumber,
+                total_amount: totalAmount,
+                reason,
+                created_by: createdBy,
+                items: {
+                  create: resolved.map((r) => ({
+                    sale_item_id: r.saleItem.id,
+                    quantity: r.quantity,
+                    amount: r.amount,
+                  })),
+                },
+              },
+              include: { items: true },
+            });
+
+            for (const { saleItem, quantity } of resolved) {
+              const originalQty = Number(saleItem.quantity);
+              const productType = saleItem.product.product_type.type;
+
+              if (productType !== PRODUCTS_TYPES.SEMI_FINISHED) {
+                if (saleItem.product.track_stock) {
+                  const { currentQty, newQty } = await restoreProductStock(
+                    tx,
+                    saleItem.product_id,
+                    warehouseId,
+                    quantity,
+                  );
+                  await tx.stockMovement.create({
+                    data: {
+                      product_id: saleItem.product_id,
+                      warehouse_id: warehouseId,
+                      movement_type: "return",
+                      direction: "in",
+                      quantity_before: currentQty,
+                      quantity_change: quantity,
+                      quantity_after: newQty,
+                      reference_type: "sale_refund",
+                      reference_id: created.id,
+                      reason_code: "sale_refund",
+                      reason_text: `คืนสินค้าจากการขาย: ${sale.sale_number}`,
+                      created_by: createdBy || "",
+                    },
+                  });
+                }
+              } else {
+                const recipe = await tx.recipe.findFirst({
+                  where: { product_id: saleItem.product_id, is_default: true, is_active: true },
+                });
+                if (recipe) {
+                  const recipeIngredients = await tx.recipeIngredient.findMany({
+                    where: { recipe_id: recipe.id },
+                    include: { ingredient: true },
+                  });
+                  for (const ri of recipeIngredients) {
+                    if (!ri.ingredient.track_stock) continue;
+                    const ingredientQty = Number(ri.quantity) * quantity;
+                    const { currentQty, newQty } = await restoreProductStock(
+                      tx,
+                      ri.ingredient_id,
+                      warehouseId,
+                      ingredientQty,
+                    );
+                    await tx.stockMovement.create({
+                      data: {
+                        product_id: ri.ingredient_id,
+                        warehouse_id: warehouseId,
+                        movement_type: "return",
+                        direction: "in",
+                        quantity_before: currentQty,
+                        quantity_change: ingredientQty,
+                        quantity_after: newQty,
+                        reference_type: "sale_refund",
+                        reference_id: created.id,
+                        reason_code: "sale_refund",
+                        reason_text: `คืนวัตถุดิบจากการคืนสินค้า: ${sale.sale_number}`,
+                        created_by: createdBy || "",
+                      },
+                    });
+                  }
+                }
+              }
+
+              // Toppings scale with however much of this line is being
+              // refunded, not the item's full original quantity.
+              const refundRatio = quantity / originalQty;
+              for (const st of saleItem.toppings) {
+                // Mirrors deductToppingStock()'s own check in ../../route.ts
+                // — if this ingredient's stock was never deducted at sale
+                // time because track_stock was off, restoring it here would
+                // add stock that was never actually subtracted.
+                if (!st.topping.ingredient.track_stock) continue;
+                const ingredientRequired =
+                  Number(st.topping.quantity_per_serving) * Number(st.quantity) * refundRatio;
+                if (ingredientRequired <= 0) continue;
+
+                const { currentQty, newQty } = await restoreProductStock(
+                  tx,
+                  st.topping.ingredient_id,
+                  warehouseId,
+                  ingredientRequired,
+                );
+                await tx.stockMovement.create({
+                  data: {
+                    product_id: st.topping.ingredient_id,
+                    warehouse_id: warehouseId,
+                    movement_type: "return",
+                    direction: "in",
+                    quantity_before: currentQty,
+                    quantity_change: ingredientRequired,
+                    quantity_after: newQty,
+                    reference_type: "sale_refund",
+                    reference_id: created.id,
+                    reason_code: "sale_refund",
+                    reason_text: `คืนวัตถุดิบ topping จากการคืนสินค้า: ${sale.sale_number}`,
+                    created_by: createdBy || "",
+                  },
+                });
+              }
+            }
+
+            return created;
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+
+        return NextResponse.json(refund, { status: 201 });
+      } catch (error) {
+        if (error instanceof RefundError) {
+          return NextResponse.json({ error: error.message }, { status: error.status });
         }
+        const isWriteConflict =
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+        if (isWriteConflict && attempt < MAX_SERIALIZATION_RETRIES) continue;
+        throw error;
       }
-
-      return created;
-    });
-
-    return NextResponse.json(refund, { status: 201 });
+    }
   } catch (error) {
     console.error("Error creating refund:", error);
     const message = error instanceof Error ? error.message : "Failed to create refund";

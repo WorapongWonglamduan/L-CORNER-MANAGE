@@ -112,21 +112,34 @@ export async function POST(request: NextRequest) {
       // 1. หักวัตถุดิบ
       for (const recipeIng of recipe.ingredients) {
         const requiredQty = Number(recipeIng.quantity) * quantity;
-        const ingredientBefore = Number(recipeIng.ingredient.stock[0]?.current_stock) || 0;
-        const ingredientAfter = ingredientBefore - requiredQty;
 
-        // อัปเดตสต็อกวัตถุดิบที่คลังนี้
-        await tx.productStock.upsert({
+        // Atomic guarded decrement — same idiom as deductProductStock() in
+        // sales/route.ts. The pre-transaction `insufficientIngredients`
+        // check above reads stock before the transaction opens, so it's
+        // only an early UX check; this UPDATE's WHERE...current_stock>=
+        // clause is what actually enforces it, so two concurrent
+        // productions racing on the same ingredient can't both pass a
+        // stale check and both deduct past zero.
+        const decremented = await tx.productStock.updateMany({
+          where: {
+            product_id: recipeIng.ingredient_id,
+            warehouse_id,
+            current_stock: { gte: requiredQty },
+          },
+          data: { current_stock: { decrement: requiredQty } },
+        });
+        if (decremented.count === 0) {
+          throw new Error(
+            `Insufficient stock for ingredient: ${(recipeIng.ingredient.name_i18n as unknown as I18nText).th || (recipeIng.ingredient.name_i18n as unknown as I18nText).en}`,
+          );
+        }
+        const ingredientStock = await tx.productStock.findUniqueOrThrow({
           where: {
             product_id_warehouse_id: { product_id: recipeIng.ingredient_id, warehouse_id },
           },
-          create: {
-            product_id: recipeIng.ingredient_id,
-            warehouse_id,
-            current_stock: ingredientAfter,
-          },
-          update: { current_stock: ingredientAfter },
         });
+        const ingredientAfter = Number(ingredientStock.current_stock);
+        const ingredientBefore = ingredientAfter + requiredQty;
 
         // บันทึก StockMovement สำหรับวัตถุดิบ (ลด)
         const movement = await tx.stockMovement.create({
@@ -151,18 +164,17 @@ export async function POST(request: NextRequest) {
         stockMovements.push(movement);
       }
 
-      // 2. เพิ่มสินค้า semi_finished ที่คลังนี้
-      const existingProductStock = await tx.productStock.findUnique({
-        where: { product_id_warehouse_id: { product_id, warehouse_id } },
-      });
-      const productBefore = Number(existingProductStock?.current_stock) || 0;
-      const productAfter = productBefore + Number(quantity);
-
+      // 2. เพิ่มสินค้า semi_finished ที่คลังนี้ — atomic increment (upsert's
+      // `update` branch runs a single `SET current_stock = current_stock +
+      // quantity`, not a read-then-write), so no race with any other
+      // concurrent stock movement on this same row.
       const updatedProductStock = await tx.productStock.upsert({
         where: { product_id_warehouse_id: { product_id, warehouse_id } },
-        create: { product_id, warehouse_id, current_stock: productAfter },
-        update: { current_stock: productAfter },
+        create: { product_id, warehouse_id, current_stock: Number(quantity) },
+        update: { current_stock: { increment: Number(quantity) } },
       });
+      const productAfter = Number(updatedProductStock.current_stock);
+      const productBefore = productAfter - Number(quantity);
 
       // 3. บันทึก StockMovement สำหรับสินค้า semi_finished (เพิ่ม)
       const productMovement = await tx.stockMovement.create({
@@ -200,9 +212,11 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Error in production:", error);
+    const message = error instanceof Error ? error.message : "Failed to complete production";
+    const isInsufficientStock = message.startsWith("Insufficient stock for ingredient");
     return NextResponse.json(
-      { error: "Failed to complete production" },
-      { status: 500 }
+      { error: message },
+      { status: isInsufficientStock ? 400 : 500 }
     );
   }
 }

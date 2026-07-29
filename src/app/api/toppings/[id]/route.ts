@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 // GET /api/toppings/[id] - ดึงข้อมูล topping ตาม ID
 export async function GET(
@@ -75,6 +76,40 @@ export async function PUT(
     const existing = await prisma.topping.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Topping not found" }, { status: 404 });
+    }
+
+    // Same guards as POST /api/toppings — a negative quantity_per_serving
+    // would make deductToppingStock's decrement in sales/route.ts an
+    // increment instead, manufacturing stock on every sale.
+    if (quantity_per_serving !== undefined && Number(quantity_per_serving) <= 0) {
+      return NextResponse.json(
+        { error: "quantity_per_serving must be greater than 0" },
+        { status: 400 },
+      );
+    }
+    if (price !== undefined && Number(price) < 0) {
+      return NextResponse.json({ error: "price cannot be negative" }, { status: 400 });
+    }
+
+    // Re-validate a changed ingredient the same way POST does — otherwise
+    // editing an existing topping could silently attach a semi-finished
+    // product as its ingredient, which sales/route.ts's deductToppingStock
+    // isn't equipped to handle (it deducts the product's own stock row
+    // directly instead of exploding a recipe).
+    if (ingredient_id !== undefined && ingredient_id !== existing.ingredient_id) {
+      const ingredient = await prisma.product.findUnique({
+        where: { id: ingredient_id },
+        include: { product_type: true },
+      });
+      if (!ingredient) {
+        return NextResponse.json({ error: "Ingredient product not found" }, { status: 404 });
+      }
+      if (ingredient.product_type.type === PRODUCTS_TYPES.SEMI_FINISHED) {
+        return NextResponse.json(
+          { error: "A topping's ingredient must be a real stock item, not a semi-finished product" },
+          { status: 400 },
+        );
+      }
     }
 
     const topping = await prisma.$transaction(async (tx) => {
