@@ -61,7 +61,7 @@ async function main() {
     "users.view", "users.create", "users.update", "users.delete",
     "products.view", "products.create", "products.update", "products.delete",
     "inventory.view", "inventory.adjust", "inventory.transfer",
-    "sales.view", "sales.create", "sales.void",
+    "sales.view", "sales.create", "sales.void", "sales.refund",
     "reports.view",
     "settings.view", "settings.update",
   ];
@@ -69,13 +69,15 @@ async function main() {
   const managerPermissions = [
     "products.view", "products.create", "products.update", "products.delete",
     "inventory.view", "inventory.adjust", "inventory.transfer",
-    "sales.view", "sales.create", "sales.void",
+    "sales.view", "sales.create", "sales.void", "sales.refund",
     "reports.view",
   ];
 
+  // Cashiers get sales.refund (return a couple of items on the spot) but not
+  // sales.void — voiding a whole completed sale needs a manager/admin.
   const cashierPermissions = [
     "inventory.view",
-    "sales.view", "sales.create",
+    "sales.view", "sales.create", "sales.refund",
     "products.view",
   ];
 

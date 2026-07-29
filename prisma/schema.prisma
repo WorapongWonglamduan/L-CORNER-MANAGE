@@ -20,6 +20,7 @@ model User {
   user_warehouses   UserWarehouse[]
   created_sales     Sale[]          @relation("SaleCreatedBy")
   created_transfers StockTransfer[]
+  created_refunds   SaleRefund[]    @relation("RefundCreatedBy")
 
   @@map("users")
 }
@@ -324,10 +325,11 @@ model Sale {
   promotion_id   String?
   promotion_code String?
 
-  warehouse       Warehouse  @relation(fields: [warehouse_id], references: [id])
-  created_by_user User?      @relation("SaleCreatedBy", fields: [created_by], references: [id])
-  promotion       Promotion? @relation(fields: [promotion_id], references: [id])
+  warehouse       Warehouse    @relation(fields: [warehouse_id], references: [id])
+  created_by_user User?        @relation("SaleCreatedBy", fields: [created_by], references: [id])
+  promotion       Promotion?   @relation(fields: [promotion_id], references: [id])
   items           SaleItem[]
+  refunds         SaleRefund[]
 
   @@index([warehouse_id])
   @@index([created_by])
@@ -350,15 +352,55 @@ model SaleItem {
   note             String?  @db.Text
   created_at       DateTime @default(now())
 
-  sale     Sale              @relation(fields: [sale_id], references: [id])
-  product  Product           @relation(fields: [product_id], references: [id])
-  recipe   Recipe?           @relation(fields: [recipe_id], references: [id])
-  toppings SaleItemTopping[]
+  sale         Sale              @relation(fields: [sale_id], references: [id])
+  product      Product           @relation(fields: [product_id], references: [id])
+  recipe       Recipe?           @relation(fields: [recipe_id], references: [id])
+  toppings     SaleItemTopping[]
+  refund_items SaleRefundItem[]
 
   @@index([sale_id])
   @@index([product_id])
   @@index([recipe_id])
   @@map("sale_items")
+}
+
+// A single refund transaction against a sale — one cashier action can
+// return several line items (or partial quantities of them) at once.
+// Refunded quantity is deliberately NOT a running total stored on SaleItem;
+// it's computed by summing SaleRefundItem rows for that item, so the
+// original sold quantity in sale_items never gets mutated and every refund
+// stays in the audit trail (same reasoning as StockMovement elsewhere in
+// this schema).
+model SaleRefund {
+  id            String   @id @default(uuid())
+  sale_id       String
+  refund_number String   @unique
+  total_amount  Decimal  @db.Decimal(15, 2)
+  reason        String?  @db.Text
+  created_by    String?
+  created_at    DateTime @default(now())
+
+  sale            Sale             @relation(fields: [sale_id], references: [id])
+  created_by_user User?            @relation("RefundCreatedBy", fields: [created_by], references: [id])
+  items           SaleRefundItem[]
+
+  @@index([sale_id])
+  @@map("sale_refunds")
+}
+
+model SaleRefundItem {
+  id             String  @id @default(uuid())
+  sale_refund_id String
+  sale_item_id   String
+  quantity       Decimal @db.Decimal(15, 4)
+  amount         Decimal @db.Decimal(15, 2)
+
+  sale_refund SaleRefund @relation(fields: [sale_refund_id], references: [id], onDelete: Cascade)
+  sale_item   SaleItem   @relation(fields: [sale_item_id], references: [id])
+
+  @@index([sale_refund_id])
+  @@index([sale_item_id])
+  @@map("sale_refund_items")
 }
 
 // Toppings actually selected for a given sale item. `unit_price` snapshots the
