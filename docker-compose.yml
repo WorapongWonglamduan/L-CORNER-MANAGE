@@ -48,7 +48,20 @@ services:
   #       condition: service_healthy
   #   command: npm run dev
 volumes:
+  # Bumping to postgres:17-alpine left the previous postgres_data volume on
+  # PG16 (incompatible file format) — pg_upgrade'd it into this volume rather
+  # than reinitializing, so local dev data survives. The old PG16 volume
+  # (l-corner-manage_postgres_data) is left in place as a backup, not deleted.
+  #
+  # Note: the pg_upgrade helper's own initdb wrote a pg_hba.conf that only
+  # trusts 127.0.0.1/::1 — unlike the official image's fresh-init path, it
+  # never adds a rule for the wider docker network, so the app (running on
+  # the host, connecting through the forwarded port) got "denied access"
+  # until a `host all all all trust` line was appended manually inside the
+  # container. That edit lives in the volume itself, not in this repo — if
+  # this volume is ever recreated from scratch, this note is the reminder.
   postgres_data:
+    name: l-corner-manage_postgres_data_pg17
     driver: local
   pgadmin_data:
     driver: local
