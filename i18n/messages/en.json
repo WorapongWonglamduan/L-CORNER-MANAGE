@@ -876,6 +876,7 @@
       "delete": "Delete",
       "adjust": "Adjust Stock",
       "void": "Void Sale",
+      "refund": "Refund",
       "transfer": "Transfer"
     }
   },
