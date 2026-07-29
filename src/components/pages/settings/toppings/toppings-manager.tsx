@@ -151,13 +151,13 @@ export default function ToppingsManager() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">{t("loading")}</p>
+            <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
           </div>
         </div>
       ) : toppings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-          <IceCreamCone className="h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-gray-600 text-lg">{t("noData")}</p>
+        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+          <IceCreamCone className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
         </div>
       ) : (
         <>
@@ -165,7 +165,7 @@ export default function ToppingsManager() {
             {toppings.map((topping) => (
               <div
                 key={topping.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -173,10 +173,10 @@ export default function ToppingsManager() {
                       <IceCreamCone className="h-8 w-8 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 text-base">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-base">
                         {topping.name_i18n[locale]}
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         ฿{Number(topping.price).toLocaleString()}
                       </p>
                     </div>
@@ -200,38 +200,38 @@ export default function ToppingsManager() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("ingredient")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {topping.ingredient?.name_i18n[locale] || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("quantityPerServing")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {Number(topping.quantity_per_serving).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("availableProducts")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {topping.available_on.length}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("status")}:
                     </span>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         topping.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                       }`}
                     >
                       {topping.is_active ? t("active") : t("inactive")}
@@ -289,14 +289,14 @@ export default function ToppingsManager() {
 
           <div className="space-y-2 max-h-[50vh] overflow-y-auto">
             {availableProducts.length === 0 ? (
-              <p className="text-sm text-gray-500 py-4 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
                 {t("noData")}
               </p>
             ) : (
               availableProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50"
+                  className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <Input
                     inputType={INPUT_TYPES.CHECKBOX}
@@ -304,11 +304,11 @@ export default function ToppingsManager() {
                     onCheckedChange={() => toggleProductId(product.id)}
                   />
                   <span
-                    className="text-sm text-gray-900 cursor-pointer"
+                    className="text-sm text-gray-900 dark:text-white cursor-pointer"
                     onClick={() => toggleProductId(product.id)}
                   >
                     {product.name_i18n[locale]}{" "}
-                    <span className="text-gray-500">({product.code})</span>
+                    <span className="text-gray-500 dark:text-gray-400">({product.code})</span>
                   </span>
                 </div>
               ))

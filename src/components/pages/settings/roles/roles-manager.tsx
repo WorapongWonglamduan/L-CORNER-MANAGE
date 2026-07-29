@@ -110,13 +110,13 @@ export default function RolesManager() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">{t("loading")}</p>
+            <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
           </div>
         </div>
       ) : roles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-          <ShieldCheck className="h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-gray-600 text-lg">{t("noData")}</p>
+        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+          <ShieldCheck className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
         </div>
       ) : (
         <>
@@ -124,7 +124,7 @@ export default function RolesManager() {
             {roles.map((role) => (
               <div
                 key={role.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -132,10 +132,10 @@ export default function RolesManager() {
                       <ShieldCheck className="h-8 w-8 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 text-base">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-base">
                         {role.display_name_i18n[locale]}
                       </h3>
-                      <p className="text-sm text-gray-500 font-mono">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
                         {role.name}
                       </p>
                     </div>
@@ -162,35 +162,35 @@ export default function RolesManager() {
 
                 <div className="space-y-2">
                   {role.description_i18n?.[locale] && (
-                    <p className="text-sm text-gray-500 pb-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 pb-2">
                       {role.description_i18n[locale]}
                     </p>
                   )}
                   {role.is_system && (
                     <div className="flex items-center gap-1 pb-2">
-                      <Lock className="h-3.5 w-3.5 text-amber-600" />
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                         {t("systemRole")}
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("permissions")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {role.permissions.length}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("status")}:
                     </span>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         role.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                       }`}
                     >
                       {role.is_active ? t("active") : t("inactive")}
@@ -248,7 +248,7 @@ export default function RolesManager() {
             </div>
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 {t("permissions")}
               </p>
               <Controller
@@ -264,18 +264,18 @@ export default function RolesManager() {
                     );
                   };
                   return (
-                    <div className="space-y-4 max-h-[40vh] overflow-y-auto border border-gray-200 rounded-lg p-4">
+                    <div className="space-y-4 max-h-[40vh] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                       {Object.entries(GROUPED_PERMISSIONS).map(
                         ([resource, permissions]) => (
                           <div key={resource}>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
                               {resourceLabel(resource)}
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                               {permissions.map((permission) => (
                                 <div
                                   key={permission}
-                                  className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-gray-50"
+                                  className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
                                   <Input
                                     inputType={INPUT_TYPES.CHECKBOX}
@@ -284,7 +284,7 @@ export default function RolesManager() {
                                     disabled={formLoading}
                                   />
                                   <span
-                                    className="text-sm text-gray-900 cursor-pointer"
+                                    className="text-sm text-gray-900 dark:text-white cursor-pointer"
                                     onClick={() => toggle(permission)}
                                   >
                                     {permissionLabel(permission)}
@@ -302,8 +302,8 @@ export default function RolesManager() {
             </div>
 
             {formError && (
-              <div className="rounded-md bg-red-50 border border-red-200 p-4">
-                <p className="text-sm font-medium text-red-800">
+              <div className="rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-4">
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">
                   {formError}
                 </p>
               </div>

@@ -131,13 +131,13 @@ export default function ProductsManager() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">{t("loading")}</p>
+            <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
           </div>
         </div>
       ) : products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-          <Package className="h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-gray-600 text-lg">{t("noData")}</p>
+        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+          <Package className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
         </div>
       ) : (
         <>
@@ -155,10 +155,10 @@ export default function ProductsManager() {
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-primary/30 overflow-hidden"
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-primary/30 overflow-hidden"
                 >
                   {/* Product Image */}
-                  <div className="relative h-48 bg-gray-100">
+                  <div className="relative h-48 bg-gray-100 dark:bg-gray-700">
                     {product.primary_image_url ? (
                       <Image
                         src={product.primary_image_url}
@@ -170,7 +170,7 @@ export default function ProductsManager() {
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Package className="h-16 w-16 text-gray-300" />
+                        <Package className="h-16 w-16 text-gray-300 dark:text-gray-600" />
                       </div>
                     )}
                   </div>
@@ -215,8 +215,8 @@ export default function ProductsManager() {
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                               product.is_active
-                                ? "bg-green-400/90 text-green-900"
-                                : "bg-gray-300 text-gray-700"
+                                ? "bg-green-400/90 text-green-900 dark:bg-green-900/30 dark:text-green-300"
+                                : "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                             }`}
                           >
                             {product.is_active ? "ใช้งาน" : "ปิด"}
@@ -231,9 +231,9 @@ export default function ProductsManager() {
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
                           <Layers className="w-3.5 h-3.5 text-primary/60" />
-                          <span className="text-xs text-gray-500">ประเภท</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">ประเภท</span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-900 truncate">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                           {getProductTypeLabel(product.product_type)}
                         </span>
                       </div>
@@ -241,11 +241,11 @@ export default function ProductsManager() {
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
                           <Tag className="w-3.5 h-3.5 text-primary/60" />
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
                             หมวดหมู่
                           </span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-900 truncate">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                           {getCategoryLabel(product.category)}
                         </span>
                       </div>
@@ -257,7 +257,7 @@ export default function ProductsManager() {
                           <div className="bg-primary p-1 rounded">
                             <DollarSign className="w-3.5 h-3.5 text-white" />
                           </div>
-                          <span className="text-xs font-medium text-gray-600">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
                             ราคาขาย
                           </span>
                         </div>
@@ -270,8 +270,8 @@ export default function ProductsManager() {
 
                       {product.cost_price && (
                         <div className="flex items-center justify-between text-xs pt-2 border-t border-primary/10">
-                          <span className="text-gray-600">ราคาทุน</span>
-                          <span className="font-semibold text-gray-700">
+                          <span className="text-gray-600 dark:text-gray-300">ราคาทุน</span>
+                          <span className="font-semibold text-gray-700 dark:text-gray-200">
                             ฿{Number(product.cost_price).toLocaleString()}
                           </span>
                         </div>
@@ -280,16 +280,16 @@ export default function ProductsManager() {
                       {profit !== null && profitMargin !== null && (
                         <div className="flex items-center justify-between pt-2 border-t border-primary/10">
                           <div className="flex items-center gap-1.5">
-                            <TrendingUp className="w-3.5 h-3.5 text-green-600" />
-                            <span className="text-xs font-medium text-gray-600">
+                            <TrendingUp className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
                               กำไร
                             </span>
                           </div>
                           <div className="text-right">
-                            <span className="text-sm font-bold text-green-600">
+                            <span className="text-sm font-bold text-green-600 dark:text-green-400">
                               ฿{profit.toLocaleString()}
                             </span>
-                            <span className="text-xs text-green-600/80 ml-1">
+                            <span className="text-xs text-green-600/80 dark:text-green-400/80 ml-1">
                               ({profitMargin}%)
                             </span>
                           </div>

@@ -54,8 +54,8 @@ export function Pagination({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t">
-      <div className="flex items-center gap-2 text-sm text-gray-600">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
         <span className="hidden sm:inline">{t("show")}</span>
         <Input
           inputType={INPUT_TYPES.SELECT}
@@ -101,8 +101,8 @@ export function Pagination({
                 page === currentPage
                   ? "bg-gradient-to-r from-primary to-primary-light text-white shadow-md"
                   : page === "..."
-                  ? "cursor-default text-gray-400"
-                  : "hover:bg-primary/10 text-gray-700"
+                  ? "cursor-default text-gray-400 dark:text-gray-500"
+                  : "hover:bg-primary/10 text-gray-700 dark:text-gray-300"
               }`}
             >
               {page}

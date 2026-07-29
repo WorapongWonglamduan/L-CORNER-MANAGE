@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { useTheme } from "next-themes";
 import { Sidebar } from "@/components/sidebar";
 import { useTranslations } from "next-intl";
-import { Palette, ArrowLeft, Check, AlertTriangle } from "lucide-react";
+import { Palette, ArrowLeft, Check, AlertTriangle, Sun, Moon, Monitor } from "lucide-react";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { useRouter } from "next/navigation";
 import { THEME_PRESETS } from "@/constants/theme-presets";
@@ -19,14 +20,30 @@ const DEFAULT_CUSTOM_COLOR = "#213559";
 // bold labels/icons, so this is a softer heads-up, not a hard block).
 const LOW_CONTRAST_THRESHOLD = 2.5;
 
+const DISPLAY_MODES = [
+  { value: "light", labelKey: "modeLight", icon: Sun },
+  { value: "dark", labelKey: "modeDark", icon: Moon },
+  { value: "system", labelKey: "modeSystem", icon: Monitor },
+] as const;
+
 export default function ThemeContent() {
   const t = useTranslations("theme");
   const router = useRouter();
   const locale = useLocale() as Locale;
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [currentColor, setCurrentColor] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingCustom, setSavingCustom] = useState(false);
+
+  // `theme` is unknown on the server and on the very first client render
+  // (next-themes resolves it from localStorage/matchMedia after mount), so
+  // this guard avoids a hydration mismatch and a flash of the wrong active
+  // state on the mode buttons below.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const { control, watch, setValue } = useForm<{ customColorInput: string }>({
     defaultValues: { customColorInput: DEFAULT_CUSTOM_COLOR },
   });
@@ -98,14 +115,14 @@ export default function ThemeContent() {
     contrastRatioWithWhite(customColorInput) < LOW_CONTRAST_THRESHOLD;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       <Sidebar />
 
       <div className="flex-1 p-6 pt-20 md:pt-6 lg:p-8 overflow-auto">
         <div className="mb-8">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-primary mb-4 transition-colors"
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light mb-4 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-medium">กลับ</span>
@@ -115,13 +132,60 @@ export default function ThemeContent() {
             <div className="bg-gradient-to-r from-primary to-primary-light p-2 rounded-lg shadow-lg shadow-primary/30">
               <Palette className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">{t("title")}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("title")}</h1>
           </div>
-          <p className="text-gray-600">{t("description")}</p>
+          <p className="text-gray-600 dark:text-gray-300">{t("description")}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <p className="text-sm font-semibold text-gray-700 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">
+            {t("modeTitle")}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            {t("modeDescription")}
+          </p>
+
+          {!mounted ? (
+            <div className="grid grid-cols-3 gap-3">
+              {DISPLAY_MODES.map((mode) => (
+                <div
+                  key={mode.value}
+                  className="h-24 rounded-xl bg-gray-100 dark:bg-gray-700 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {DISPLAY_MODES.map(({ value, labelKey, icon: Icon }) => {
+                const isActive = theme === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setTheme(value)}
+                    className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all hover:shadow-lg ${
+                      isActive
+                        ? "border-gray-900 dark:border-white shadow-lg"
+                        : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5 text-gray-700 dark:text-gray-200" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {t(labelKey)}
+                    </span>
+                    {isActive && (
+                      <span className="absolute top-2 right-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full p-0.5">
+                        <Check className="w-3 h-3" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">
             {t("choosePreset")}
           </p>
 
@@ -141,8 +205,8 @@ export default function ThemeContent() {
                     disabled={isSaving}
                     className={`relative rounded-xl border-2 p-4 text-left transition-all hover:shadow-lg disabled:opacity-60 ${
                       isActive
-                        ? "border-gray-900 shadow-lg"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-gray-900 dark:border-white shadow-lg"
+                        : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                     }`}
                   >
                     <div
@@ -152,17 +216,17 @@ export default function ThemeContent() {
                       }}
                     />
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-gray-900 text-sm">
+                      <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
                         {preset.name_i18n[locale]}
                       </span>
                       {isActive && (
-                        <span className="bg-gray-900 text-white rounded-full p-1">
+                        <span className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full p-1">
                           <Check className="w-3.5 h-3.5" />
                         </span>
                       )}
                     </div>
                     {isActive && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {t("applied")}
                       </p>
                     )}
@@ -173,11 +237,11 @@ export default function ThemeContent() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6 mt-6">
-          <p className="text-sm font-semibold text-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mt-6">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
             {t("customColor")}
           </p>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {t("customColorDescription")}
           </p>
 
@@ -192,7 +256,7 @@ export default function ThemeContent() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     field.onChange(e.target.value)
                   }
-                  className="w-16! h-16! p-1! rounded-lg! cursor-pointer"
+                  className="w-16! h-16! p-1! rounded-lg! cursor-pointer dark:border-gray-600!"
                   containerClassName="shrink-0"
                   aria-label={t("pickColor")}
                 />
@@ -216,16 +280,16 @@ export default function ThemeContent() {
           </div>
 
           {isLowContrast && (
-            <div className="flex items-start gap-2 mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-              <p className="text-sm text-amber-800">
+            <div className="flex items-start gap-2 mt-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-sm text-amber-800 dark:text-amber-200">
                 {t("lowContrastWarning")}
               </p>
             </div>
           )}
 
           {currentColor === customColorInput && !loading && (
-            <p className="text-xs text-gray-500 mt-3">{t("applied")}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">{t("applied")}</p>
           )}
         </div>
       </div>

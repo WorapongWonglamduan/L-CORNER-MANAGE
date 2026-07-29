@@ -87,11 +87,11 @@ export function DynamicForm<T extends FieldValues = FieldValues>({
 
       {error && (
         <div
-          className={`${theme.rounded.md} bg-red-50 border border-red-200 p-4`}
+          className={`${theme.rounded.md} bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-4`}
         >
           <div className="flex items-center gap-2">
             <svg
-              className="w-5 h-5 text-red-600"
+              className="w-5 h-5 text-red-600 dark:text-red-400"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -101,7 +101,7 @@ export function DynamicForm<T extends FieldValues = FieldValues>({
                 clipRule="evenodd"
               />
             </svg>
-            <p className="text-sm font-medium text-red-800">{error}</p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
           </div>
         </div>
       )}

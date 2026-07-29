@@ -684,6 +684,34 @@
     "successTitle": "Payment successful",
     "successSubtitle": "Thank you for your purchase"
   },
+  "printerAgent": {
+    "title": "Printer Station",
+    "back": "Back",
+    "selectBranch": "Select branch",
+    "loading": "Loading...",
+    "noWarehouseAssigned": "No branch assigned",
+    "connect": "Connect printer",
+    "connectMock": "Use mock printer (testing)",
+    "mockBadge": "Mock",
+    "pairedAsMock": "Simulated printer — no real hardware",
+    "reconnect": "Reconnect",
+    "disconnect": "Disconnect",
+    "testPrint": "Print test receipt",
+    "preview": "Preview",
+    "statusUnsupported": "Bluetooth not supported",
+    "statusDisconnected": "Not connected",
+    "statusConnecting": "Connecting…",
+    "statusConnected": "Connected",
+    "statusError": "Connection error",
+    "pairedAs": "Paired: {name}",
+    "paperWidth": "Paper width",
+    "recentJobs": "Recent print jobs",
+    "noJobsYet": "No print jobs yet",
+    "retry": "Retry",
+    "printSuccess": "Printed {saleNumber}",
+    "printError": "Failed to print {saleNumber}: {message}",
+    "bluetoothUnsupported": "This browser doesn't support Bluetooth printing. Use Chrome or Edge on this PC."
+  },
   "promotions": {
     "title": "Promotions",
     "description": "Manage discount codes for the POS",
@@ -893,6 +921,11 @@
     "customColorDescription": "Pick any color — the light/dark shades are computed automatically",
     "pickColor": "Pick a color",
     "useCustomColor": "Use This Color",
-    "lowContrastWarning": "This color may make white button text hard to read. Try a darker shade."
+    "lowContrastWarning": "This color may make white button text hard to read. Try a darker shade.",
+    "modeTitle": "Appearance",
+    "modeDescription": "Choose how L-Corner looks on this device",
+    "modeLight": "Light",
+    "modeDark": "Dark",
+    "modeSystem": "System"
   }
 }

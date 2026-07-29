@@ -48,7 +48,7 @@ export function ProductCard({
 
   return (
     <div
-      className={`group relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 ${
+      className={`group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 dark:border-gray-700 ${
         isOutOfStock
           ? "opacity-60 cursor-not-allowed"
           : "hover:border-primary/30 cursor-pointer"
@@ -102,12 +102,12 @@ export function ProductCard({
         {category && (
           <div className="flex items-center gap-1.5 mb-2">
             <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">
               {category}
             </p>
           </div>
         )}
-        <h3 className="font-bold text-gray-900 text-base mb-3 line-clamp-2 min-h-10 leading-tight">
+        <h3 className="font-bold text-gray-900 dark:text-white text-base mb-3 line-clamp-2 min-h-10 leading-tight">
           {name}
         </h3>
 
@@ -116,7 +116,7 @@ export function ProductCard({
             ฿{price.toLocaleString()}
           </div>
           {stock && (
-            <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-green-600 dark:text-green-300 font-medium bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full">
               {t("inStock")}
             </span>
           )}

@@ -67,7 +67,7 @@ export function StockAdjustmentModal({
   if (product.product_type === PRODUCTS_TYPES.SEMI_FINISHED) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
           {/* Header */}
           <div className="shrink-0 bg-gradient-to-r from-primary to-primary-light text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
             <div className="flex items-center gap-3">
@@ -101,11 +101,11 @@ export function StockAdjustmentModal({
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               </div>
             ) : !recipe ? (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-orange-800">
+                    <p className="font-semibold text-orange-800 dark:text-orange-200">
                       {t("noRecipeFound")}
                     </p>
                     <p className="text-sm text-orange-700 mt-1">
@@ -117,13 +117,13 @@ export function StockAdjustmentModal({
             ) : (
               <>
                 {/* Current Stock */}
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
                     {t("currentStock")}
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     {product.current_stock.toLocaleString()}{" "}
-                    <span className="text-lg text-gray-500">
+                    <span className="text-lg text-gray-500 dark:text-gray-400">
                       {product.unit}
                     </span>
                   </p>
@@ -131,7 +131,7 @@ export function StockAdjustmentModal({
 
                 {/* Adjustment Type */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
                     {t("adjustmentType")}{" "}
                     <span className="text-red-500">*</span>
                   </label>
@@ -141,22 +141,22 @@ export function StockAdjustmentModal({
                       onClick={() => setAdjustmentType(ADJUSTMENT_TYPES.IN)}
                       className={`p-4 rounded-xl border-2 transition-all ${
                         adjustmentType === ADJUSTMENT_TYPES.IN
-                          ? "border-green-500 bg-green-50 shadow-md"
-                          : "border-gray-200 hover:border-green-300 hover:bg-green-50/50"
+                          ? "border-green-500 bg-green-50 dark:bg-green-950/30 shadow-md"
+                          : "border-gray-200 dark:border-gray-600 hover:border-green-300 hover:bg-green-50/50"
                       }`}
                     >
                       <Plus
                         className={`w-6 h-6 mx-auto mb-2 ${
                           adjustmentType === ADJUSTMENT_TYPES.IN
                             ? "text-green-600"
-                            : "text-gray-400"
+                            : "text-gray-400 dark:text-gray-500"
                         }`}
                       />
                       <p
                         className={`text-sm font-medium ${
                           adjustmentType === ADJUSTMENT_TYPES.IN
                             ? "text-green-700"
-                            : "text-gray-600"
+                            : "text-gray-600 dark:text-gray-300"
                         }`}
                       >
                         {t("increase")}
@@ -168,22 +168,22 @@ export function StockAdjustmentModal({
                       onClick={() => setAdjustmentType(ADJUSTMENT_TYPES.OUT)}
                       className={`p-4 rounded-xl border-2 transition-all ${
                         adjustmentType === ADJUSTMENT_TYPES.OUT
-                          ? "border-orange-500 bg-orange-50 shadow-md"
-                          : "border-gray-200 hover:border-orange-300 hover:bg-orange-50/50"
+                          ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30 shadow-md"
+                          : "border-gray-200 dark:border-gray-600 hover:border-orange-300 hover:bg-orange-50/50"
                       }`}
                     >
                       <Minus
                         className={`w-6 h-6 mx-auto mb-2 ${
                           adjustmentType === ADJUSTMENT_TYPES.OUT
                             ? "text-orange-600"
-                            : "text-gray-400"
+                            : "text-gray-400 dark:text-gray-500"
                         }`}
                       />
                       <p
                         className={`text-sm font-medium ${
                           adjustmentType === ADJUSTMENT_TYPES.OUT
                             ? "text-orange-700"
-                            : "text-gray-600"
+                            : "text-gray-600 dark:text-gray-300"
                         }`}
                       >
                         {t("decrease")}
@@ -198,21 +198,21 @@ export function StockAdjustmentModal({
                       className={`p-4 rounded-xl border-2 transition-all ${
                         adjustmentType === ADJUSTMENT_TYPES.ADJUSTMENT
                           ? "border-primary bg-primary/10 shadow-md"
-                          : "border-gray-200 hover:border-primary/30 hover:bg-primary/5"
+                          : "border-gray-200 dark:border-gray-600 hover:border-primary/30 hover:bg-primary/5"
                       }`}
                     >
                       <RotateCcw
                         className={`w-6 h-6 mx-auto mb-2 ${
                           adjustmentType === ADJUSTMENT_TYPES.ADJUSTMENT
                             ? "text-primary"
-                            : "text-gray-400"
+                            : "text-gray-400 dark:text-gray-500"
                         }`}
                       />
                       <p
                         className={`text-sm font-medium ${
                           adjustmentType === ADJUSTMENT_TYPES.ADJUSTMENT
                             ? "text-primary"
-                            : "text-gray-600"
+                            : "text-gray-600 dark:text-gray-300"
                         }`}
                       >
                         {t("adjust")}
@@ -230,8 +230,8 @@ export function StockAdjustmentModal({
 
                 {/* Recipe Ingredients List */}
                 {recipe?.ingredients && recipe.ingredients.length > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                    <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-3 flex items-center gap-2">
                       <Package className="w-5 h-5" />
                       {t("ingredientsInRecipe")}
                     </h3>
@@ -239,19 +239,19 @@ export function StockAdjustmentModal({
                       {recipe.ingredients.map((ing) => (
                         <div
                           key={ing.id}
-                          className="bg-white rounded-lg p-3 flex items-center justify-between"
+                          className="bg-white dark:bg-gray-800 rounded-lg p-3 flex items-center justify-between"
                         >
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">
+                            <p className="font-medium text-gray-900 dark:text-white">
                               {ing.ingredient?.name_i18n?.th ||
                                 ing.ingredient?.name_i18n?.en}
                             </p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
                               {ing.ingredient?.code}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-gray-700">
+                            <p className="text-sm text-gray-700 dark:text-gray-200">
                               <span className="font-semibold">
                                 {Number(ing.quantity).toLocaleString()}
                               </span>{" "}
@@ -259,12 +259,12 @@ export function StockAdjustmentModal({
                                 {ing.unit?.abbreviation_i18n?.th ||
                                   ing.unit?.abbreviation_i18n?.en}
                               </span>
-                              <span className="text-gray-500">
+                              <span className="text-gray-500 dark:text-gray-400">
                                 {" "}
                                 / {t("perUnit")}
                               </span>
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               {t("available")}:{" "}
                               {Number(
                                 ing.ingredient?.current_stock || 0,
@@ -279,8 +279,8 @@ export function StockAdjustmentModal({
 
                 {/* Calculated Ingredients (when qty > 0) */}
                 {qty > 0 && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                    <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                  <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+                    <h3 className="font-semibold text-purple-900 dark:text-purple-200 mb-3 flex items-center gap-2">
                       <Package className="w-5 h-5" />
                       {t("totalIngredientsNeeded")}
                     </h3>
@@ -288,33 +288,33 @@ export function StockAdjustmentModal({
                       {calculatedIngredients.map((ing) => (
                         <div
                           key={ing.id}
-                          className="bg-white rounded-lg p-3 flex items-center justify-between"
+                          className="bg-white dark:bg-gray-800 rounded-lg p-3 flex items-center justify-between"
                         >
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">
+                            <p className="font-medium text-gray-900 dark:text-white">
                               {ing.ingredient?.name_i18n?.th ||
                                 ing.ingredient?.name_i18n?.en}
                             </p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
                               {ing.ingredient?.code}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-purple-700">
+                            <p className="font-semibold text-purple-700 dark:text-purple-300">
                               {ing.required.toLocaleString()}{" "}
                               <span className="text-sm">
                                 {ing.unit?.abbreviation_i18n?.th ||
                                   ing.unit?.abbreviation_i18n?.en}
                               </span>
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {t("available")}:{" "}
                               {Number(
                                 ing.ingredient?.current_stock || 0,
                               ).toLocaleString()}
                               {Number(ing.ingredient?.current_stock || 0) <
                                 ing.required && (
-                                <span className="text-red-600 font-semibold ml-1">
+                                <span className="text-red-600 dark:text-red-400 font-semibold ml-1">
                                   ({t("insufficient")}!)
                                 </span>
                               )}
@@ -328,19 +328,19 @@ export function StockAdjustmentModal({
 
                 {/* New Stock Display */}
                 {qty > 0 && (
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600">สต็อกใหม่</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">สต็อกใหม่</p>
                         <p
                           className={`text-3xl font-bold ${
                             newStock < 0
-                              ? "text-red-600"
+                              ? "text-red-600 dark:text-red-400"
                               : newStock > product.current_stock
-                                ? "text-green-600"
+                                ? "text-green-600 dark:text-green-400"
                                 : newStock < product.current_stock
-                                  ? "text-orange-600"
-                                  : "text-gray-900"
+                                  ? "text-orange-600 dark:text-orange-400"
+                                  : "text-gray-900 dark:text-white"
                           }`}
                         >
                           {newStock.toLocaleString()}
@@ -398,7 +398,7 @@ export function StockAdjustmentModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="shrink-0 bg-gradient-to-r from-primary to-primary-light text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <div className="flex items-center gap-3">
@@ -425,28 +425,28 @@ export function StockAdjustmentModal({
           className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0"
         >
           {/* Current Stock Display */}
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">{t("currentStock")}</p>
-                <p className="text-3xl font-bold text-gray-900">
+                <p className="text-sm text-gray-600 dark:text-gray-300">{t("currentStock")}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
                   {product.current_stock.toLocaleString()}
-                  <span className="text-lg text-gray-500 ml-2">
+                  <span className="text-lg text-gray-500 dark:text-gray-400 ml-2">
                     {product.unit}
                   </span>
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">{t("newStock")}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{t("newStock")}</p>
                 <p
                   className={`text-3xl font-bold ${
                     newStock < 0
-                      ? "text-red-600"
+                      ? "text-red-600 dark:text-red-400"
                       : newStock > product.current_stock
-                        ? "text-green-600"
+                        ? "text-green-600 dark:text-green-400"
                         : newStock < product.current_stock
-                          ? "text-orange-600"
-                          : "text-gray-900"
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-gray-900 dark:text-white"
                   }`}
                 >
                   {newStock.toLocaleString()}
@@ -458,7 +458,7 @@ export function StockAdjustmentModal({
 
           {/* Adjustment Type */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
               {t("adjustmentType")} <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-3">
@@ -467,22 +467,22 @@ export function StockAdjustmentModal({
                 onClick={() => setAdjustmentType(ADJUSTMENT_TYPES.IN)}
                 className={`p-4 rounded-xl border-2 transition-all ${
                   adjustmentType === ADJUSTMENT_TYPES.IN
-                    ? "border-green-500 bg-green-50 shadow-md"
-                    : "border-gray-200 hover:border-green-300 hover:bg-green-50/50"
+                    ? "border-green-500 bg-green-50 dark:bg-green-950/30 shadow-md"
+                    : "border-gray-200 dark:border-gray-600 hover:border-green-300 hover:bg-green-50/50"
                 }`}
               >
                 <Plus
                   className={`w-6 h-6 mx-auto mb-2 ${
                     adjustmentType === ADJUSTMENT_TYPES.IN
                       ? "text-green-600"
-                      : "text-gray-400"
+                      : "text-gray-400 dark:text-gray-500"
                   }`}
                 />
                 <p
                   className={`text-sm font-medium ${
                     adjustmentType === ADJUSTMENT_TYPES.IN
                       ? "text-green-700"
-                      : "text-gray-600"
+                      : "text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {t("increase")}
@@ -494,22 +494,22 @@ export function StockAdjustmentModal({
                 onClick={() => setAdjustmentType(ADJUSTMENT_TYPES.OUT)}
                 className={`p-4 rounded-xl border-2 transition-all ${
                   adjustmentType === ADJUSTMENT_TYPES.OUT
-                    ? "border-orange-500 bg-orange-50 shadow-md"
-                    : "border-gray-200 hover:border-orange-300 hover:bg-orange-50/50"
+                    ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30 shadow-md"
+                    : "border-gray-200 dark:border-gray-600 hover:border-orange-300 hover:bg-orange-50/50"
                 }`}
               >
                 <Minus
                   className={`w-6 h-6 mx-auto mb-2 ${
                     adjustmentType === ADJUSTMENT_TYPES.OUT
                       ? "text-orange-600"
-                      : "text-gray-400"
+                      : "text-gray-400 dark:text-gray-500"
                   }`}
                 />
                 <p
                   className={`text-sm font-medium ${
                     adjustmentType === ADJUSTMENT_TYPES.OUT
                       ? "text-orange-700"
-                      : "text-gray-600"
+                      : "text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {t("decrease")}
@@ -522,21 +522,21 @@ export function StockAdjustmentModal({
                 className={`p-4 rounded-xl border-2 transition-all ${
                   adjustmentType === ADJUSTMENT_TYPES.ADJUSTMENT
                     ? "border-primary bg-primary/10 shadow-md"
-                    : "border-gray-200 hover:border-primary/30 hover:bg-primary/5"
+                    : "border-gray-200 dark:border-gray-600 hover:border-primary/30 hover:bg-primary/5"
                 }`}
               >
                 <RotateCcw
                   className={`w-6 h-6 mx-auto mb-2 ${
                     adjustmentType === ADJUSTMENT_TYPES.ADJUSTMENT
                       ? "text-primary"
-                      : "text-gray-400"
+                      : "text-gray-400 dark:text-gray-500"
                   }`}
                 />
                 <p
                   className={`text-sm font-medium ${
                     adjustmentType === ADJUSTMENT_TYPES.ADJUSTMENT
                       ? "text-primary"
-                      : "text-gray-600"
+                      : "text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {t("adjust")}
@@ -554,12 +554,12 @@ export function StockAdjustmentModal({
 
           {/* Warning */}
           {newStock < 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-              <div className="bg-red-100 p-2 rounded-lg">
-                <X className="w-5 h-5 text-red-600" />
+            <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
+              <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
+                <X className="w-5 h-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="font-semibold text-red-800">{t("errorTitle")}</p>
+                <p className="font-semibold text-red-800 dark:text-red-200">{t("errorTitle")}</p>
                 <p className="text-sm text-red-600 mt-1">
                   {t("errorNegative")}
                 </p>

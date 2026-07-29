@@ -178,7 +178,7 @@ export const Input = forwardRef<
               onClick={() => onCheckedChange?.(!checked)}
               id={id}
               className={cn(
-                "peer h-5 w-5 shrink-0 rounded border-2 border-gray-300 ring-offset-white hover:border-primary hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+                "peer h-5 w-5 shrink-0 rounded border-2 border-gray-300 dark:border-gray-600 ring-offset-white dark:ring-offset-gray-900 hover:border-primary hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
                 checked &&
                   "bg-gradient-to-r from-primary to-primary-light text-white border-primary",
               )}
@@ -223,7 +223,7 @@ export const Input = forwardRef<
                 className={cn(
                   baseInputClass,
                   "appearance-none pr-10",
-                  !selectProps.value && "text-gray-400",
+                  !selectProps.value && "text-gray-400 dark:text-gray-500",
                 )}
                 {...selectProps}
               >
@@ -236,7 +236,7 @@ export const Input = forwardRef<
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 pointer-events-none" />
             </div>
           );
 
@@ -297,7 +297,7 @@ export const Input = forwardRef<
         {label && (
           <label
             htmlFor={props.id}
-            className="block text-sm font-semibold text-gray-700 mb-2"
+            className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
           >
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
@@ -310,7 +310,7 @@ export const Input = forwardRef<
             inputType !== INPUT_TYPES.DATE_RANGE &&
             inputType !== INPUT_TYPES.IMAGE_UPLOAD &&
             inputType !== INPUT_TYPES.MULTI_IMAGE_UPLOAD && (
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 z-10">
                 <Icon className="w-5 h-5" />
               </div>
             )}
@@ -332,7 +332,7 @@ export const Input = forwardRef<
         )}
 
         {helperText && !errorMessage && (
-          <p className="mt-2 text-sm text-gray-500">{helperText}</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{helperText}</p>
         )}
       </div>
     );

@@ -112,13 +112,13 @@ export function DateField({
         className={cn(
           baseInputClass,
           "flex items-center justify-between text-left",
-          !value && "text-gray-400",
+          !value && "text-gray-400 dark:text-gray-500",
         )}
       >
         <span className="truncate">
           {selected ? format(selected, "d MMM yyyy", { locale }) : placeholder}
         </span>
-        <CalendarIcon className="w-4 h-4 text-gray-400 shrink-0 ml-2" />
+        <CalendarIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 ml-2" />
       </button>
 
       {value && (
@@ -128,35 +128,35 @@ export function DateField({
             e.stopPropagation();
             onChange("");
           }}
-          className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
           <X className="w-3.5 h-3.5" />
         </button>
       )}
 
       {isOpen && (
-        <div className="absolute z-20 mt-1 rounded-xl border-2 border-gray-200 bg-white shadow-lg p-3 w-72">
+        <div className="absolute z-20 mt-1 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg p-3 w-72">
           <div className="flex items-center justify-between mb-2">
             <button
               type="button"
               onClick={() => setViewMonth((m) => subMonths(m, 1))}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
+              <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
             </button>
-            <span className="text-sm font-semibold text-gray-700">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               {format(viewMonth, "MMMM yyyy", { locale })}
             </span>
             <button
               type="button"
               onClick={() => setViewMonth((m) => addMonths(m, 1))}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-400 mb-1">
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">
             {weekdayLabels.map((label, i) => (
               <div key={i}>{label}</div>
             ))}
@@ -177,10 +177,10 @@ export function DateField({
                   }}
                   className={cn(
                     "h-8 w-8 rounded-lg text-sm transition-colors",
-                    !isSameMonth(day, viewMonth) && "text-gray-300",
+                    !isSameMonth(day, viewMonth) && "text-gray-300 dark:text-gray-600",
                     isSelected
                       ? "bg-primary text-white font-semibold hover:bg-primary"
-                      : "hover:bg-gray-100 text-gray-700",
+                      : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300",
                     disabled &&
                       "opacity-30 cursor-not-allowed hover:bg-transparent",
                   )}

@@ -43,7 +43,7 @@ export function TransferModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         <div className="shrink-0 bg-gradient-to-r from-primary to-primary-light text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 p-2 rounded-lg">
@@ -68,7 +68,7 @@ export function TransferModal({
           />
 
           {selectedProduct && (
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-sm text-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200">
               {t("available")}:{" "}
               <span className="font-semibold">
                 {selectedProduct.available_quantity.toLocaleString()}{" "}

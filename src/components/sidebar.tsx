@@ -242,7 +242,7 @@ export function Sidebar({ userName }: SidebarProps) {
         {/* Toggle Button (desktop only — mobile uses the hamburger/close buttons instead) */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden md:flex absolute -right-3 top-20 w-6 h-6 bg-white rounded-full shadow-lg items-center justify-center text-primary hover:bg-gray-100 transition-colors"
+          className="hidden md:flex absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-gray-800 rounded-full shadow-lg items-center justify-center text-primary hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
           {isCollapsed ? (
             <ChevronRight className="w-4 h-4" />

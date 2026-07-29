@@ -57,12 +57,12 @@ export default function SalesContent() {
 
   const getPaymentStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      paid: { label: t("paid"), className: "bg-green-100 text-green-800" },
-      unpaid: { label: t("unpaid"), className: "bg-red-100 text-red-800" },
+      paid: { label: t("paid"), className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+      unpaid: { label: t("unpaid"), className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
     };
     const config = statusMap[status] || {
       label: status,
-      className: "bg-gray-100 text-gray-800",
+      className: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
     };
     return (
       <span
@@ -77,16 +77,16 @@ export default function SalesContent() {
     const statusMap: Record<string, { label: string; className: string }> = {
       completed: {
         label: t("completed"),
-        className: "bg-blue-100 text-blue-800",
+        className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
       },
       cancelled: {
         label: t("cancelled"),
-        className: "bg-gray-100 text-gray-800",
+        className: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
       },
     };
     const config = statusMap[status] || {
       label: status,
-      className: "bg-gray-100 text-gray-800",
+      className: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
     };
     return (
       <span
@@ -98,20 +98,20 @@ export default function SalesContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex">
       <Sidebar />
 
       <div className="flex-1 px-4 pt-20 pb-8 md:py-8 overflow-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {t("title")}
           </h1>
-          <p className="text-gray-600">{tCommon("manageYourData")}</p>
+          <p className="text-gray-600 dark:text-gray-300">{tCommon("manageYourData")}</p>
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Search */}
             <DynamicFormFields<SalesFilterValues>
@@ -143,9 +143,9 @@ export default function SalesContent() {
           {/* Active Filters Display */}
           {(searchQuery || startDate || endDate) && (
             <div className="mt-3 flex flex-wrap gap-2 items-center">
-              <span className="text-sm text-gray-600">{t("filteredBy")}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">{t("filteredBy")}</span>
               {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-sm">
                   {t("searchLabel")}: {searchQuery}
                   <button
                     onClick={() => setSearchQuery("")}
@@ -156,7 +156,7 @@ export default function SalesContent() {
                 </span>
               )}
               {startDate && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full text-sm">
                   {t("fromDate")}: {format(new Date(startDate), "dd/MM/yyyy")}
                   <button
                     onClick={() => setStartDate("")}
@@ -167,7 +167,7 @@ export default function SalesContent() {
                 </span>
               )}
               {endDate && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full text-sm">
                   {t("toDate")}: {format(new Date(endDate), "dd/MM/yyyy")}
                   <button
                     onClick={() => setEndDate("")}
@@ -192,17 +192,17 @@ export default function SalesContent() {
         </div>
 
         {/* Sales Table */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
           {loading && sales.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-gray-600">{t("loading")}</p>
+                <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
               </div>
             </div>
           ) : sales.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="text-gray-400 mb-4">
+              <div className="text-gray-400 dark:text-gray-500 mb-4">
                 <svg
                   className="w-16 h-16 mx-auto"
                   fill="none"
@@ -217,53 +217,53 @@ export default function SalesContent() {
                   />
                 </svg>
               </div>
-              <p className="text-gray-600 text-lg">{t("noOrders")}</p>
+              <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noOrders")}</p>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-600">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("orderNumber")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("date")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("customer")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("total")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("paymentMethod")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("paymentStatus")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("status")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("actions")}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {sales.map((sale) => (
                       <tr
                         key={sale.id}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {sale.sale_number}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-600 dark:text-gray-300">
                             {format(
                               new Date(sale.sale_date),
                               "dd/MM/yyyy HH:mm",
@@ -271,17 +271,17 @@ export default function SalesContent() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-gray-900 dark:text-white">
                             {t("walkIn")}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
                             ฿{Number(sale.total_amount).toLocaleString()}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-600 dark:text-gray-300">
                             {getPaymentMethodLabel(sale.payment_method)}
                           </div>
                         </td>

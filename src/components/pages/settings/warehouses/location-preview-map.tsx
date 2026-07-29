@@ -36,7 +36,7 @@ function Recenter({ position }: { position: [number, number] }) {
 export function LocationPreviewMap({ latitude, longitude, emptyLabel }: LocationPreviewMapProps) {
   if (latitude === null || longitude === null || Number.isNaN(latitude) || Number.isNaN(longitude)) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-lg bg-gray-50 text-sm text-gray-500">
+      <div className="flex h-48 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-900 text-sm text-gray-500 dark:text-gray-400">
         {emptyLabel}
       </div>
     );

@@ -691,6 +691,34 @@
     "successTitle": "ชำระเงินสำเร็จ",
     "successSubtitle": "ขอบคุณที่อุดหนุนค่ะ/ครับ"
   },
+  "printerAgent": {
+    "title": "เครื่องพิมพ์ใบเสร็จ",
+    "back": "กลับ",
+    "selectBranch": "เลือกสาขา",
+    "loading": "กำลังโหลด...",
+    "noWarehouseAssigned": "ไม่มีคลังที่ได้รับสิทธิ์",
+    "connect": "เชื่อมต่อเครื่องพิมพ์",
+    "connectMock": "ใช้เครื่องพิมพ์จำลอง (ทดสอบ)",
+    "mockBadge": "จำลอง",
+    "pairedAsMock": "เครื่องพิมพ์จำลอง — ยังไม่มีฮาร์ดแวร์จริง",
+    "reconnect": "เชื่อมต่อใหม่",
+    "disconnect": "ยกเลิกการเชื่อมต่อ",
+    "testPrint": "พิมพ์ใบเสร็จทดสอบ",
+    "preview": "ดูตัวอย่าง",
+    "statusUnsupported": "เบราว์เซอร์นี้ไม่รองรับ Bluetooth",
+    "statusDisconnected": "ยังไม่ได้เชื่อมต่อ",
+    "statusConnecting": "กำลังเชื่อมต่อ...",
+    "statusConnected": "เชื่อมต่อแล้ว",
+    "statusError": "การเชื่อมต่อผิดพลาด",
+    "pairedAs": "จับคู่กับ: {name}",
+    "paperWidth": "ความกว้างกระดาษ",
+    "recentJobs": "รายการพิมพ์ล่าสุด",
+    "noJobsYet": "ยังไม่มีรายการพิมพ์",
+    "retry": "ลองใหม่",
+    "printSuccess": "พิมพ์ {saleNumber} สำเร็จ",
+    "printError": "พิมพ์ {saleNumber} ไม่สำเร็จ: {message}",
+    "bluetoothUnsupported": "เบราว์เซอร์นี้ไม่รองรับการพิมพ์ผ่าน Bluetooth กรุณาใช้ Chrome หรือ Edge บนเครื่อง PC นี้"
+  },
   "promotions": {
     "title": "จัดการโปรโมชั่น",
     "description": "จัดการโค้ดส่วนลดสำหรับหน้าขาย",
@@ -900,6 +928,11 @@
     "customColorDescription": "เลือกสีอะไรก็ได้ตามต้องการ ระบบจะคำนวณสีอ่อน/สีเข้มให้อัตโนมัติ",
     "pickColor": "เลือกสี",
     "useCustomColor": "ใช้สีนี้",
-    "lowContrastWarning": "สีนี้อาจทำให้ตัวอักษรสีขาวบนปุ่มอ่านยาก ลองเลือกสีที่เข้มกว่านี้"
+    "lowContrastWarning": "สีนี้อาจทำให้ตัวอักษรสีขาวบนปุ่มอ่านยาก ลองเลือกสีที่เข้มกว่านี้",
+    "modeTitle": "รูปแบบการแสดงผล",
+    "modeDescription": "เลือกรูปแบบการแสดงผลของระบบบนอุปกรณ์นี้",
+    "modeLight": "สว่าง",
+    "modeDark": "มืด",
+    "modeSystem": "ตามระบบ"
   }
 }

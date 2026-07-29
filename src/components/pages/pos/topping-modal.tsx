@@ -81,31 +81,31 @@ export function ToppingModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="shrink-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-xl font-bold text-gray-900">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600 p-6 flex items-center justify-between rounded-t-2xl">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             {t("customizeTitle", { productName })}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
-          <label className="block text-sm font-semibold text-gray-700">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
             {t("selectToppings")}
           </label>
 
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-              <span className="ml-3 text-gray-500">{t("loadingToppings")}</span>
+              <span className="ml-3 text-gray-500 dark:text-gray-400">{t("loadingToppings")}</span>
             </div>
           ) : options.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
+            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
               {t("noToppingsAvailable")}
             </p>
           ) : (
@@ -120,7 +120,7 @@ export function ToppingModal({
                     className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all ${
                       selected
                         ? "border-primary bg-primary/5"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -128,12 +128,12 @@ export function ToppingModal({
                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
                           selected
                             ? "bg-gradient-to-r from-primary to-primary-light border-primary"
-                            : "border-gray-300"
+                            : "border-gray-300 dark:border-gray-600"
                         }`}
                       >
                         {selected && <Check className="w-3.5 h-3.5 text-white" />}
                       </div>
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-gray-900 dark:text-white">
                         {opt.name_i18n[locale]}
                       </span>
                     </div>
@@ -147,7 +147,7 @@ export function ToppingModal({
           )}
         </div>
 
-        <div className="shrink-0 bg-white border-t border-gray-200 p-6 rounded-b-2xl">
+        <div className="shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-600 p-6 rounded-b-2xl">
           <div className="flex gap-3">
             <Button
               onClick={onClose}

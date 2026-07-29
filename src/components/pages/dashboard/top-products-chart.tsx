@@ -53,7 +53,7 @@ export function TopProductsChart({ data, locale, seriesLabel }: TopProductsChart
             dataKey="totalRevenue"
             position="right"
             offset={8}
-            className="fill-gray-700"
+            className="fill-gray-700 dark:fill-gray-300"
             fontSize={12}
             formatter={(value: number) => `฿${value.toLocaleString()}`}
           />

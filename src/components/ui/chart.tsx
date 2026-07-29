@@ -114,7 +114,7 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
-        "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-white px-2.5 py-1.5 text-xs shadow-xl",
+        "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-xs shadow-xl",
         className,
       )}
     >
@@ -146,10 +146,10 @@ function ChartTooltipContent({
                 />
               )}
               <div className="flex flex-1 justify-between leading-none items-center">
-                <span className="text-gray-500">
+                <span className="text-gray-500 dark:text-gray-400">
                   {itemConfig?.label ?? item.name}
                 </span>
-                <span className="font-mono font-medium text-gray-900 tabular-nums ml-2">
+                <span className="font-mono font-medium text-gray-900 dark:text-white tabular-nums ml-2">
                   {item.value?.toLocaleString()}
                 </span>
               </div>

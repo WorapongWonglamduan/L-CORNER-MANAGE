@@ -150,7 +150,7 @@ export function DynamicFilterBar({
         {basicFields.map((field) => (
           <div key={field.name} className="w-full max-w-xs">
             {field.label && (
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                 {field.label}
               </label>
             )}
@@ -181,7 +181,7 @@ export function DynamicFilterBar({
             size="sm"
             variant="ghost"
             onClick={() => setAdvancedOpen((open) => !open)}
-            className="ml-auto text-gray-500"
+            className="ml-auto text-gray-500 dark:text-gray-400"
           >
             {advancedLabel}
             <ChevronDown
@@ -195,11 +195,11 @@ export function DynamicFilterBar({
       </div>
 
       {advancedFields.length > 0 && advancedOpen && (
-        <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 p-4 sm:grid-cols-2 lg:grid-cols-4">
           {advancedFields.map((field) => (
             <div key={field.name} className="space-y-1.5">
               {field.label && (
-                <label className="block text-xs font-medium text-gray-500">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
                   {field.label}
                 </label>
               )}

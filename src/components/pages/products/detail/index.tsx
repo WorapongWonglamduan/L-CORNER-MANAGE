@@ -21,12 +21,12 @@ export default function ProductDetailContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 text-lg">{t("loading")}</p>
+            <p className="text-gray-600 dark:text-gray-300 text-lg">{t("loading")}</p>
           </div>
         </div>
       </div>
@@ -35,10 +35,10 @@ export default function ProductDetailContent() {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center py-20">
-          <p className="text-gray-600 text-lg">{t("noData")}</p>
+          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
         </div>
       </div>
     );
@@ -56,7 +56,7 @@ export default function ProductDetailContent() {
       : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       <Sidebar />
 
       <div className="flex-1 p-6 pt-20 md:pt-6 lg:p-8 overflow-auto">
@@ -81,7 +81,7 @@ export default function ProductDetailContent() {
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="relative bg-gradient-to-r from-primary to-primary-light p-6">
             <div className="flex items-center gap-4">
               <div className="relative h-20 w-20 rounded-xl bg-white/10 backdrop-blur-sm overflow-hidden shrink-0">
@@ -111,8 +111,8 @@ export default function ProductDetailContent() {
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                       product.is_active
-                        ? "bg-green-400/90 text-green-900"
-                        : "bg-gray-300 text-gray-700"
+                        ? "bg-green-400/90 text-green-900 dark:bg-green-900/30 dark:text-green-300"
+                        : "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                     }`}
                   >
                     {product.is_active ? t("active") : t("inactive")}
@@ -125,29 +125,29 @@ export default function ProductDetailContent() {
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-gray-500">
+                <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                   <Layers className="w-3.5 h-3.5" />
                   <span className="text-xs">{t("productType")}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
                   {product.product_type.name_i18n.th}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-gray-500">
+                <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                   <Tag className="w-3.5 h-3.5" />
                   <span className="text-xs">{t("category")}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
                   {product.category?.name_i18n.th ?? "-"}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-gray-500">
+                <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                   <Package className="w-3.5 h-3.5" />
                   <span className="text-xs">{t("baseUnit")}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
                   {product.base_unit.name_i18n.th} (
                   {product.base_unit.abbreviation_i18n.th})
                 </span>
@@ -155,7 +155,7 @@ export default function ProductDetailContent() {
             </div>
 
             {(product.description_i18n?.th || product.description_i18n?.en) && (
-              <p className="text-sm text-gray-600 border-t border-gray-100 pt-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300 border-t border-gray-100 dark:border-gray-700 pt-4">
                 {product.description_i18n?.th || product.description_i18n?.en}
               </p>
             )}
@@ -166,7 +166,7 @@ export default function ProductDetailContent() {
                   <div className="bg-primary p-1 rounded">
                     <DollarSign className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span className="text-xs font-medium text-gray-600">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
                     {t("sellingPrice")}
                   </span>
                 </div>
@@ -177,10 +177,10 @@ export default function ProductDetailContent() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-600">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
                   {t("costPrice")}
                 </span>
-                <span className="text-sm font-semibold text-gray-700">
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                   {product.cost_price
                     ? `฿${Number(product.cost_price).toLocaleString()}`
                     : "-"}
@@ -188,10 +188,10 @@ export default function ProductDetailContent() {
               </div>
               {profit !== null && profitMargin !== null && (
                 <div className="flex items-center justify-between sm:col-span-2 pt-3 border-t border-primary/10">
-                  <span className="text-xs font-medium text-gray-600">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
                     {t("detail.profit")}
                   </span>
-                  <span className="text-sm font-bold text-green-600">
+                  <span className="text-sm font-bold text-green-600 dark:text-green-400">
                     ฿{profit.toLocaleString()} ({profitMargin}%)
                   </span>
                 </div>
@@ -199,29 +199,29 @@ export default function ProductDetailContent() {
             </div>
 
             {product.track_stock && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-gray-100 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-gray-100 dark:border-gray-700 pt-4">
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     {t("currentStock")}
                   </span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
                     {Number(product.current_stock).toLocaleString()}{" "}
                     {product.base_unit.abbreviation_i18n.th}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     {t("minStockLevel")}
                   </span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
                     {Number(product.min_stock_level).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     {t("lowStockThreshold")}
                   </span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
                     {Number(product.low_stock_threshold).toLocaleString()}
                   </span>
                 </div>
@@ -229,13 +229,13 @@ export default function ProductDetailContent() {
             )}
 
             {product.images.length > 1 && (
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs text-gray-500 mb-2">{t("images")}</p>
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t("images")}</p>
                 <div className="flex gap-2 flex-wrap">
                   {product.images.map((img) => (
                     <div
                       key={img.id}
-                      className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
+                      className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
                     >
                       <Image
                         src={img.url}
@@ -252,10 +252,10 @@ export default function ProductDetailContent() {
             )}
 
             {product.recipes && product.recipes.length > 0 && (
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
                 <div className="flex items-center gap-2 mb-3">
                   <ChefHat className="w-4 h-4 text-primary" />
-                  <p className="text-sm font-semibold text-gray-900">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
                     {t("recipeTitle")}
                   </p>
                 </div>
@@ -263,12 +263,12 @@ export default function ProductDetailContent() {
                   {product.recipes[0].ingredients.map((ing) => (
                     <div
                       key={ing.id}
-                      className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+                      className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2"
                     >
-                      <span className="text-sm text-gray-700">
+                      <span className="text-sm text-gray-700 dark:text-gray-200">
                         {ing.ingredient.name_i18n.th}
                       </span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
                         {Number(ing.quantity).toLocaleString()}{" "}
                         {ing.unit.abbreviation_i18n.th}
                       </span>

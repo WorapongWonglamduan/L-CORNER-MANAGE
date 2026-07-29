@@ -11,14 +11,14 @@ export default function UsersContent() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       <Sidebar />
 
       <div className="flex-1 p-6 pt-20 md:pt-6 lg:p-8 overflow-auto">
         <div className="mb-8">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-primary mb-4 transition-colors"
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-primary mb-4 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-medium">กลับ</span>
@@ -28,12 +28,12 @@ export default function UsersContent() {
             <div className="bg-gradient-to-r from-primary to-primary-light p-2 rounded-lg shadow-lg shadow-primary/30">
               <Users className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">{t("title")}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("title")}</h1>
           </div>
-          <p className="text-gray-600">{t("description")}</p>
+          <p className="text-gray-600 dark:text-gray-300">{t("description")}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
           <UsersManager />
         </div>
       </div>

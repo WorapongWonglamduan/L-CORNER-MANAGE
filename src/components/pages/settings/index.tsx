@@ -118,7 +118,7 @@ export default function SettingsContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex">
       <Sidebar />
 
       <div className="flex-1 p-6 pt-20 md:pt-6 lg:p-8 overflow-auto">
@@ -127,16 +127,16 @@ export default function SettingsContent() {
             <div className="bg-gradient-to-r from-primary to-primary-light p-2 rounded-lg shadow-lg shadow-primary/30">
               <Settings className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t("pageTitle")}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t("pageTitle")}</h1>
           </div>
-          <p className="text-gray-600">{t("pageDescription")}</p>
+          <p className="text-gray-600 dark:text-gray-300">{t("pageDescription")}</p>
         </div>
 
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
             {t("posSection.title")}
           </h2>
-          <p className="text-gray-600 text-sm mb-4">
+          <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
             {t("posSection.description")}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -146,18 +146,18 @@ export default function SettingsContent() {
                 <button
                   key={card.id}
                   onClick={() => router.push(card.href)}
-                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all hover:scale-105 text-left group"
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-xl transition-all hover:scale-105 text-left group"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="bg-gradient-to-r from-primary to-primary-light w-14 h-14 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
                       <Icon className="w-7 h-7 text-white" />
                     </div>
-                    <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                    <ArrowRight className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                     {card.title}
                   </h3>
-                  <p className="text-sm text-gray-600">{card.description}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{card.description}</p>
                 </button>
               );
             })}
@@ -166,10 +166,10 @@ export default function SettingsContent() {
 
         {systemSettingCards.length > 0 && (
           <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
               {t("systemSection.title")}
             </h2>
-            <p className="text-gray-600 text-sm mb-4">
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
               {t("systemSection.description")}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -179,18 +179,18 @@ export default function SettingsContent() {
                   <button
                     key={card.id}
                     onClick={() => router.push(card.href)}
-                    className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all hover:scale-105 text-left group"
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-xl transition-all hover:scale-105 text-left group"
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="bg-gradient-to-r from-primary to-primary-light w-14 h-14 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
                         <Icon className="w-7 h-7 text-white" />
                       </div>
-                      <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                      <ArrowRight className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                       {card.title}
                     </h3>
-                    <p className="text-sm text-gray-600">{card.description}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{card.description}</p>
                   </button>
                 );
               })}

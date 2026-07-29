@@ -28,7 +28,7 @@ export function LoginForm() {
           </svg>
         </div>
         <h2 className={`text-2xl font-bold text-[${theme.colors.text.primary}]`}>{t('title')}</h2>
-        <p className="mt-2 text-sm text-gray-600">{t('subtitle')}</p>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{t('subtitle')}</p>
       </div>
 
       <DynamicForm
@@ -42,7 +42,7 @@ export function LoginForm() {
       />
 
       <div className="text-center">
-        <div className={`inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 ${theme.rounded.sm} ${theme.shadows.sm}`}>
+        <div className={`inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 ${theme.rounded.sm} ${theme.shadows.sm}`}>
           <svg
             className={`w-4 h-4 text-[${theme.colors.text.primary}]`}
             fill="currentColor"

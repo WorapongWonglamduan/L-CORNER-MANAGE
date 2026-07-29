@@ -18,7 +18,7 @@ import type { Locale } from '@/types/i18n'
 // be excluded from that pass entirely.
 const BranchesMap = dynamic(
   () => import('./branches-map').then((mod) => mod.BranchesMap),
-  { ssr: false, loading: () => <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100" /> },
+  { ssr: false, loading: () => <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700" /> },
 )
 
 interface DashboardContentProps {
@@ -43,7 +43,7 @@ export default function DashboardContent({
   })
 
   return (
-    <div className={`min-h-screen ${theme.gradients.background} flex`}>
+    <div className={`min-h-screen ${theme.gradients.background} dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex`}>
       <Sidebar userName={userName} />
 
       {/* Main Content */}
@@ -52,10 +52,10 @@ export default function DashboardContent({
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">
                 {t('welcome')}, {userName}!
               </h1>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                 <Calendar className="w-4 h-4 shrink-0" />
                 <span>{currentDate}</span>
               </div>
@@ -95,7 +95,7 @@ export default function DashboardContent({
 
           {userRoles && userRoles.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-gray-500">{t('role')}:</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{t('role')}:</span>
               <div className="flex flex-wrap gap-2">
                 {userRoles.map((role, index) => (
                   <span
@@ -147,8 +147,8 @@ export default function DashboardContent({
                       </div>
                     )}
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
-                  <p className="text-sm text-gray-600">{t(stat.titleKey)}</p>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{stat.value}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{t(stat.titleKey)}</p>
                 </div>
               )
             })
@@ -158,14 +158,14 @@ export default function DashboardContent({
         {/* Sales Trend */}
         <div className={`${theme.cards.flat} p-6 mb-8`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-blue-600" />
               {t('salesChart')}
             </h2>
-            <span className="text-xs text-gray-500">7 {t('days')}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">7 {t('days')}</span>
           </div>
           {status.loading ? (
-            <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100" />
+            <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700" />
           ) : (
             <SalesTrendChart
               data={stats.dashboardData?.salesByDay || []}
@@ -179,14 +179,14 @@ export default function DashboardContent({
           {/* Top Products */}
           <div className={`lg:col-span-2 ${theme.cards.flat} p-6`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-blue-600" />
                 {t('topProducts')}
               </h2>
-              <span className="text-xs text-gray-500">30 {t('days')}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">30 {t('days')}</span>
             </div>
             {status.loading ? (
-              <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100" />
+              <div className="h-64 w-full animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700" />
             ) : stats.dashboardData?.topProducts && stats.dashboardData.topProducts.length > 0 ? (
               <TopProductsChart
                 data={stats.dashboardData.topProducts}
@@ -194,7 +194,7 @@ export default function DashboardContent({
                 seriesLabel={t('revenue')}
               />
             ) : (
-              <div className="text-center py-8 text-gray-500">{t('noData')}</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('noData')}</div>
             )}
           </div>
 
@@ -202,12 +202,12 @@ export default function DashboardContent({
           <div className={`${theme.cards.flat} p-6`}>
             <div className="flex items-center gap-2 mb-4">
               <Clock className="w-5 h-5 text-purple-600" />
-              <h2 className="text-lg font-semibold text-gray-900">{t('recentSales')}</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('recentSales')}</h2>
             </div>
             <div className="space-y-3">
               {status.loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="pb-3 border-b border-gray-100 last:border-0 animate-pulse">
+                  <div key={i} className="pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0 animate-pulse">
                     <div className="bg-gray-200 h-4 w-24 rounded mb-2"></div>
                     <div className="bg-gray-200 h-3 w-32 rounded mb-1"></div>
                     <div className="bg-gray-200 h-3 w-20 rounded"></div>
@@ -215,17 +215,17 @@ export default function DashboardContent({
                 ))
               ) : stats.dashboardData?.recentSales && stats.dashboardData.recentSales.length > 0 ? (
                 stats.dashboardData.recentSales.map((sale) => (
-                  <div key={sale.id} className="pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+                  <div key={sale.id} className="pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-semibold text-gray-900">{sale.sale_number}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{sale.sale_number}</p>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        sale.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        sale.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
                       }`}>
                         {sale.status}
                       </span>
                     </div>
                     <p className="text-sm font-medium text-green-600">฿{Number(sale.total_amount).toLocaleString()}</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {new Date(sale.sale_date).toLocaleDateString('th-TH', { 
                         day: 'numeric', 
                         month: 'short',
@@ -236,7 +236,7 @@ export default function DashboardContent({
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-gray-500 text-sm">{t('noSales')}</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">{t('noSales')}</div>
               )}
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function DashboardContent({
         <div className={`${theme.cards.flat} p-6 mb-8`}>
           <div className="flex items-center gap-2 mb-4">
             <MapPin className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">{t('branchesMap')}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('branchesMap')}</h2>
           </div>
           <BranchesMap
             warehouses={warehouse.visibleWarehouses}
@@ -258,8 +258,8 @@ export default function DashboardContent({
         {/* Quick Actions */}
         <div className={`${theme.cards.flat} p-6`}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">{t('quickActions.title')}</h2>
-            <span className="text-sm text-gray-500">เข้าถึงฟีเจอร์หลักได้อย่างรวดเร็ว</span>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('quickActions.title')}</h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">เข้าถึงฟีเจอร์หลักได้อย่างรวดเร็ว</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {actions.quickActions.map((action, index) => {
@@ -288,7 +288,7 @@ export default function DashboardContent({
               {userPermissions.map((permission, index) => (
                 <span
                   key={index}
-                  className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700"
+                  className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                 >
                   {permission}
                 </span>

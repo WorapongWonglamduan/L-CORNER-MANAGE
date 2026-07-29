@@ -33,14 +33,14 @@ export function LanguageSwitcher({ isCollapsed = false }: LanguageSwitcherProps)
   }
 
   return (
-    <div className={`inline-flex items-center gap-2 bg-white ${theme.rounded.md} ${theme.shadows.md} ${theme.borders.medium} p-1`}>
-      <Globe className="w-4 h-4 text-gray-500 ml-2" />
+    <div className={`inline-flex items-center gap-2 bg-white dark:bg-gray-800 ${theme.rounded.md} ${theme.shadows.md} ${theme.borders.medium} p-1`}>
+      <Globe className="w-4 h-4 text-gray-500 dark:text-gray-400 ml-2" />
       <button
         onClick={() => switchLanguage('th')}
         className={`px-4 py-2 text-sm font-semibold ${theme.rounded.sm} transition-all duration-200 ${
           locale === 'th'
             ? `${theme.gradients.primary} text-white ${theme.shadows.md}`
-            : 'text-gray-600 hover:bg-gray-100'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
         }`}
       >
         ไทย
@@ -50,7 +50,7 @@ export function LanguageSwitcher({ isCollapsed = false }: LanguageSwitcherProps)
         className={`px-4 py-2 text-sm font-semibold ${theme.rounded.sm} transition-all duration-200 ${
           locale === 'en'
             ? `${theme.gradients.primary} text-white ${theme.shadows.md}`
-            : 'text-gray-600 hover:bg-gray-100'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
         }`}
       >
         EN

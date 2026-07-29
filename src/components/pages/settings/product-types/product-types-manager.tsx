@@ -49,10 +49,10 @@ export default function ProductTypesManager() {
 
   const getTypeBadgeColor = (id: string) => {
     const colors = [
-      "bg-blue-100 text-blue-800",
-      "bg-green-100 text-green-800",
-      "bg-yellow-100 text-yellow-800",
-      "bg-purple-100 text-purple-800",
+      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
     ];
     const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
@@ -83,13 +83,13 @@ export default function ProductTypesManager() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">{t("loading")}</p>
+            <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
           </div>
         </div>
       ) : types.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-          <FolderTree className="h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-gray-600 text-lg">{t("noData")}</p>
+        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+          <FolderTree className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
         </div>
       ) : (
         <>
@@ -97,7 +97,7 @@ export default function ProductTypesManager() {
             {types.map((productType) => (
               <div
                 key={productType.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -105,10 +105,10 @@ export default function ProductTypesManager() {
                       {productType.icon || <FolderTree className="h-6 w-6 text-primary" />}
                     </div> */}
                     <div>
-                      <h3 className="font-bold text-gray-900 text-base">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-base">
                         {productType.name_i18n.th}
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         {productType.name_i18n.en}
                       </p>
                     </div>
@@ -123,36 +123,36 @@ export default function ProductTypesManager() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
-                    <span className="text-sm text-gray-600">{t("code")}:</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t("code")}:</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {productType.code}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">{t("type")}:</span>
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t("type")}:</span>
                     <span
                       className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getTypeBadgeColor(productType.id)}`}
                     >
                       {productType.name_i18n[locale]}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("sortOrder")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {productType.sort_order}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("status")}:
                     </span>
                     <span
                       className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                         productType.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                       }`}
                     >
                       {productType.is_active ? t("active") : t("inactive")}

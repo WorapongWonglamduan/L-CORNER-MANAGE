@@ -2,6 +2,7 @@ import './globals.css'
 import { Kanit } from 'next/font/google'
 import { headers } from 'next/headers'
 import { getThemeColors } from '@/lib/theme-settings'
+import { ThemeProvider } from '@/components/theme-provider'
 
 const kanit = Kanit({
   subsets: ['latin', 'thai'],
@@ -23,6 +24,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
+      suppressHydrationWarning
       style={
         {
           '--primary': theme.theme_color,
@@ -32,7 +34,9 @@ export default async function RootLayout({
       }
     >
       <body className={kanit.className}>
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

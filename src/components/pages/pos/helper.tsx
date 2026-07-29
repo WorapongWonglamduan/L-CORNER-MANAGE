@@ -530,6 +530,26 @@ export function usePOSManager() {
           setDisplayPaymentState(null);
         }, DISPLAY_SUCCESS_DURATION_MS);
 
+        // Fire-and-forget: publishes to an in-memory bus with zero
+        // listeners when no printer-agent tab is open, which is a no-op,
+        // not an error — a sale must never be blocked by a printer problem.
+        fetch("/api/pos/print-jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            warehouse_id: warehouseId,
+            job: {
+              id: crypto.randomUUID(),
+              saleId: result.id,
+              saleNumber: result.sale_number,
+              createdAt: new Date().toISOString(),
+              payload: result,
+            },
+          }),
+        }).catch((error) => {
+          console.error("Error publishing print job:", error);
+        });
+
         clearCart();
 
         // Refetch products to update stock

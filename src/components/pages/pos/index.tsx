@@ -60,14 +60,14 @@ export default function POSContent() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex overflow-hidden">
       <Sidebar />
 
       <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
         {/* Left Sidebar - Categories */}
-        <div className="xl:w-56 bg-white border-b xl:border-b-0 xl:border-r border-gray-200 overflow-y-auto">
-          <div className="p-4 pt-16 md:pt-4 border-b border-gray-200">
-            <h2 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+        <div className="xl:w-56 bg-white dark:bg-gray-800 border-b xl:border-b-0 xl:border-r border-gray-200 dark:border-gray-600 overflow-y-auto">
+          <div className="p-4 pt-16 md:pt-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
               <Grid3x3 className="w-5 h-5 text-primary" />
               {t("categories")}
             </h2>
@@ -79,7 +79,7 @@ export default function POSContent() {
               className={`shrink-0 whitespace-nowrap xl:w-full text-left px-4 py-3 rounded-lg transition-all ${
                 catalog.selectedCategory === null
                   ? "bg-gradient-to-r from-primary to-primary-light text-white shadow-lg"
-                  : "hover:bg-gray-100 text-gray-700"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
               }`}
             >
               <span className="font-medium">{t("allCategories")}</span>
@@ -92,7 +92,7 @@ export default function POSContent() {
                 className={`shrink-0 whitespace-nowrap xl:w-full text-left px-4 py-3 rounded-lg transition-all ${
                   catalog.selectedCategory === category.id
                     ? "bg-gradient-to-r from-primary to-primary-light text-white shadow-lg"
-                    : "hover:bg-gray-100 text-gray-700"
+                    : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
                 }`}
               >
                 <span className="font-medium">
@@ -142,10 +142,10 @@ export default function POSContent() {
             {/* Products Grid */}
             {warehouse.warehouses.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                  <ShoppingCart className="h-12 w-12 text-gray-400" />
+                <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                  <ShoppingCart className="h-12 w-12 text-gray-400 dark:text-gray-500" />
                 </div>
-                <p className="text-gray-600 text-lg text-center">
+                <p className="text-gray-600 dark:text-gray-300 text-lg text-center">
                   {t("noWarehouseAssigned")}
                 </p>
               </div>
@@ -153,15 +153,15 @@ export default function POSContent() {
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-gray-600 text-lg">{t("loading")}</p>
+                  <p className="text-gray-600 dark:text-gray-300 text-lg">{t("loading")}</p>
                 </div>
               </div>
             ) : catalog.products.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                  <ShoppingCart className="h-12 w-12 text-gray-400" />
+                <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                  <ShoppingCart className="h-12 w-12 text-gray-400 dark:text-gray-500" />
                 </div>
-                <p className="text-gray-600 text-lg">{t("noProducts")}</p>
+                <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noProducts")}</p>
               </div>
             ) : (
               <>
@@ -214,10 +214,10 @@ export default function POSContent() {
         </div>
 
         {/* Right Sidebar - Cart (Desktop) */}
-        <div className="hidden xl:flex xl:w-80 bg-white border-l border-gray-200 flex-col">
-          <div className="p-6 border-b border-gray-200">
+        <div className="hidden xl:flex xl:w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-600 flex-col">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-bold text-xl text-gray-900 flex items-center gap-2">
+              <h2 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
                 <ShoppingCart className="w-6 h-6 text-primary" />
                 {t("cart")}
               </h2>
@@ -231,7 +231,7 @@ export default function POSContent() {
                 </button>
               )}
             </div>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
               {cart.itemCount} {t("items")}
             </p>
           </div>
@@ -239,7 +239,7 @@ export default function POSContent() {
           {/* Cart Items */}
           <div className="flex-1 overflow-y-auto p-4">
             {cart.items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                 <ShoppingCart className="w-16 h-16 mb-4" />
                 <p className="text-center">{t("emptyCart")}</p>
               </div>
@@ -248,15 +248,15 @@ export default function POSContent() {
                 {cart.items.map((item) => (
                   <div
                     key={item.lineId}
-                    className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors"
+                    className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 pr-2">
-                        <h3 className="font-semibold text-gray-900">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">
                           {item.name}
                         </h3>
                         {item.toppings.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {t("toppingsSummary", {
                               names: item.toppings.map((tp) => tp.name).join(", "),
                             })}
@@ -277,7 +277,7 @@ export default function POSContent() {
                           onClick={() =>
                             cart.updateLineQuantity(item.lineId, item.quantity - 1)
                           }
-                          className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="w-8 h-8 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           -
                         </button>
@@ -288,14 +288,14 @@ export default function POSContent() {
                           onClick={() =>
                             cart.updateLineQuantity(item.lineId, item.quantity + 1)
                           }
-                          className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="w-8 h-8 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           +
                         </button>
                       </div>
 
                       <div className="text-right">
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           ฿
                           {(
                             item.price +
@@ -316,9 +316,9 @@ export default function POSContent() {
 
           {/* Cart Summary */}
           {cart.items.length > 0 && (
-            <div className="border-t border-gray-200 p-6 bg-gray-50">
+            <div className="border-t border-gray-200 dark:border-gray-600 p-6 bg-gray-50 dark:bg-gray-900">
               <div className="space-y-3 mb-4">
-                <div className="border-t border-gray-300 pt-3 flex justify-between text-xl font-bold text-gray-900">
+                <div className="border-t border-gray-300 dark:border-gray-600 pt-3 flex justify-between text-xl font-bold text-gray-900 dark:text-white">
                   <span>{t("total")}</span>
                   <span className="text-primary">
                     ฿{cart.total.toLocaleString()}
@@ -339,12 +339,12 @@ export default function POSContent() {
 
       {/* Mobile Cart Bar (Bottom) */}
       {cart.items.length > 0 && (
-        <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-2xl z-50">
+        <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-600 p-4 shadow-2xl z-50">
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <ShoppingCart className="w-5 h-5 text-primary" />
-                <span className="font-bold text-gray-900">
+                <span className="font-bold text-gray-900 dark:text-white">
                   {cart.itemCount} {t("items")}
                 </span>
               </div>

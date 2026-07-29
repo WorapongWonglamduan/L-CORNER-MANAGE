@@ -110,8 +110,8 @@ export function ImageUpload({
         onClick={handleClick}
         className={`relative border-2 border-dashed rounded-xl overflow-hidden transition-all ${
           preview
-            ? "border-gray-300"
-            : "border-gray-300 hover:border-blue-500 hover:bg-blue-50"
+            ? "border-gray-300 dark:border-gray-600"
+            : "border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950"
         } ${disabled || uploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
         {preview ? (
@@ -146,18 +146,18 @@ export function ImageUpload({
             {uploading ? (
               <>
                 <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                <p className="text-sm text-gray-600">กำลังอัพโหลด...</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">กำลังอัพโหลด...</p>
               </>
             ) : (
               <>
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <ImageIcon className="w-8 h-8 text-gray-400" />
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                  <ImageIcon className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="flex items-center gap-2 text-blue-600 mb-2">
                   <Upload className="w-5 h-5" />
                   <span className="font-semibold">คลิกเพื่ออัพโหลดรูปภาพ</span>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   PNG, JPG, WebP (สูงสุด {maxSize}MB)
                 </p>
               </>
@@ -176,7 +176,7 @@ export function ImageUpload({
       />
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+        <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-3">
           {error}
         </div>
       )}

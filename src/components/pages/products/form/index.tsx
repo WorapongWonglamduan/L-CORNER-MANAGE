@@ -52,12 +52,12 @@ export default function AddProductContent() {
 
   if (dataLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 text-lg">{t("loadingUnits")}</p>
+            <p className="text-gray-600 dark:text-gray-300 text-lg">{t("loadingUnits")}</p>
           </div>
         </div>
       </div>
@@ -65,13 +65,13 @@ export default function AddProductContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       <Sidebar />
 
       <div className="flex-1 p-6 pt-20 md:pt-6 lg:p-8 overflow-auto">
         <button
           onClick={() => router.push(`/${locale}/products/list`)}
-          className="flex items-center gap-2 text-gray-600 hover:text-primary mb-6 transition-colors group"
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-primary mb-6 transition-colors group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           <span className="font-medium">กลับไปรายการสินค้า</span>
@@ -85,7 +85,7 @@ export default function AddProductContent() {
             <h1 className="text-3xl font-bold text-primary">
               {isEdit ? t("editProduct") : t("addNewProduct")}
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
               {isEdit ? "แก้ไขข้อมูลสินค้า" : t("fillProductInfo")}
             </p>
           </div>
@@ -97,12 +97,12 @@ export default function AddProductContent() {
         >
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
                   <Package className="w-5 h-5 text-primary" />
                 </div>
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                   {t("basicInfo")}
                 </h2>
               </div>
@@ -185,17 +185,17 @@ export default function AddProductContent() {
 
             {/* Recipe Section */}
             {isSemiFinished && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
                       <ChefHat className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900">
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                         {t("recipeTitle")}
                       </h2>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
                         {t("recipeDescription")}
                       </p>
                     </div>
@@ -214,8 +214,8 @@ export default function AddProductContent() {
 
                 <div className="space-y-3">
                   {fields.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <ChefHat className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <ChefHat className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                       <p>{t("noIngredients")}</p>
                     </div>
                   ) : (
@@ -230,7 +230,7 @@ export default function AddProductContent() {
                       return (
                         <div
                           key={field.id}
-                          className="flex gap-3 items-start bg-gray-50 p-4 rounded-lg"
+                          className="flex gap-3 items-start bg-gray-50 dark:bg-gray-900 p-4 rounded-lg"
                         >
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                             <Controller
@@ -356,8 +356,8 @@ export default function AddProductContent() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Price */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 p-6">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                 {t("price")}
               </h3>
               <div className="space-y-4">
@@ -372,17 +372,17 @@ export default function AddProductContent() {
             {/* Branches (create only — reassigning after creation happens via
                 the products-list "จัดการคลัง" modal, one place, not two) */}
             {!isEdit && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
                     <Warehouse className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                     {t("branchesTitle")}
                   </h3>
                 </div>
                 {optionsData.warehouses.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t("warehouses.noWarehouseAssigned")}
                   </p>
                 ) : (
@@ -394,7 +394,7 @@ export default function AddProductContent() {
                       return (
                         <div
                           key={warehouse.id}
-                          className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50"
+                          className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
                           <Input
                             inputType={INPUT_TYPES.CHECKBOX}
@@ -404,11 +404,11 @@ export default function AddProductContent() {
                             }
                           />
                           <span
-                            className="text-sm text-gray-900 cursor-pointer"
+                            className="text-sm text-gray-900 dark:text-white cursor-pointer"
                             onClick={() => toggleWarehouseId(warehouse.id)}
                           >
                             {warehouse.name_i18n[locale]}{" "}
-                            <span className="text-gray-500">
+                            <span className="text-gray-500 dark:text-gray-400">
                               ({warehouse.code})
                             </span>
                           </span>

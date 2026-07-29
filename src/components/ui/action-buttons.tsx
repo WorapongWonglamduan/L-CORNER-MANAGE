@@ -24,7 +24,7 @@ export function ActionButtons({
       </button>
       <button
         onClick={onDelete}
-        className="p-2 hover:bg-red-50 rounded-lg transition-all hover:scale-105 active:scale-95"
+        className="p-2 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-all hover:scale-105 active:scale-95"
         title={deleteTitle}
       >
         <Trash2 className="h-4 w-4 text-red-600" />

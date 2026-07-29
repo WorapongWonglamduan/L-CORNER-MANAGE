@@ -72,17 +72,17 @@ export default function InventoryContent() {
   }, [locale]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex">
       <Sidebar />
 
       <div className="flex-1 px-4 pt-20 pb-8 md:py-8 overflow-auto">
         {/* Header */}
         <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
               {t("title")}
             </h1>
-            <p className="text-gray-600">{tCommon("manageYourData")}</p>
+            <p className="text-gray-600 dark:text-gray-300">{tCommon("manageYourData")}</p>
           </div>
           {canTransfer && (
             <Button
@@ -97,9 +97,9 @@ export default function InventoryContent() {
         </div>
 
         {!warehousesLoading && warehouses.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm flex flex-col items-center justify-center py-20">
-            <Package className="w-16 h-16 text-gray-400 mb-4" />
-            <p className="text-gray-600 text-lg text-center px-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm flex flex-col items-center justify-center py-20">
+            <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" />
+            <p className="text-gray-600 dark:text-gray-300 text-lg text-center px-4">
               {t("noWarehouseAssigned")}
             </p>
           </div>
@@ -107,7 +107,7 @@ export default function InventoryContent() {
           <>
         {/* Warehouse scope — defaults to all branches; pick one to scope stock
             figures and enable per-branch actions (adjust stock, transfer). */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-4 max-w-xs">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-4 max-w-xs">
           <Input
             inputType={INPUT_TYPES.SELECT}
             value={filters.warehouseId}
@@ -121,7 +121,7 @@ export default function InventoryContent() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
           {(() => {
             const filterFields: FilterFieldConfig[] = [
               {
@@ -169,46 +169,46 @@ export default function InventoryContent() {
         </div>
 
         {/* Products Table */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
           {loading && products.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-gray-600">{tCommon("loading")}</p>
+                <p className="text-gray-600 dark:text-gray-300">{tCommon("loading")}</p>
               </div>
             </div>
           ) : products.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Package className="w-16 h-16 text-gray-400 mb-4" />
-              <p className="text-gray-600 text-lg">{tCommon("noData")}</p>
+              <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" />
+              <p className="text-gray-600 dark:text-gray-300 text-lg">{tCommon("noData")}</p>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-600">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("code")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("name")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("currentStock")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("minStock")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("status")}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         {t("actions")}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {products.map((product) => {
                       const status = getStockStatus(product);
                       const isLowStock = status.label !== "normal";
@@ -220,20 +220,20 @@ export default function InventoryContent() {
                       return (
                         <tr
                           key={product.id}
-                          className={`hover:bg-gray-50 transition-colors ${
+                          className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                             isLowStock
                               ? `${status.bgColor} border-l-4 ${status.borderColor}`
                               : ""
                           }`}
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
                               {product.code}
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                              <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                                 {product.primary_image_url ? (
                                   <Image
                                     src={product.primary_image_url}
@@ -244,14 +244,14 @@ export default function InventoryContent() {
                                     unoptimized
                                   />
                                 ) : (
-                                  <Package className="w-4 h-4 text-gray-400" />
+                                  <Package className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                                 )}
                               </div>
                               <div>
-                                <div className="text-sm font-medium text-gray-900">
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">
                                   {product.name_i18n[locale as "th" | "en"]}
                                 </div>
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
                                   {
                                     product.product_type.name_i18n[
                                       locale as "th" | "en"
@@ -263,7 +263,7 @@ export default function InventoryContent() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <div className="text-sm font-semibold text-gray-900">
+                              <div className="text-sm font-semibold text-gray-900 dark:text-white">
                                 {Number(product.current_stock).toLocaleString()}{" "}
                                 {
                                   product.base_unit.abbreviation_i18n[
@@ -293,7 +293,7 @@ export default function InventoryContent() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-gray-600 dark:text-gray-300">
                               {Number(product.min_stock_level).toLocaleString()}
                             </div>
                           </td>

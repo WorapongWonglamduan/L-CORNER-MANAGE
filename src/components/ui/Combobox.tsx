@@ -157,7 +157,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
     return (
       <div className={containerClassName} ref={containerRef}>
         {label && (
-          <label htmlFor={id} className="block text-sm font-semibold text-gray-700 mb-2">
+          <label htmlFor={id} className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
@@ -183,7 +183,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
           />
           <ChevronDown
             className={cn(
-              "absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none transition-transform",
+              "absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 pointer-events-none transition-transform",
               isOpen && "rotate-180",
             )}
           />
@@ -192,10 +192,10 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
             <div
               id={listboxId}
               role="listbox"
-              className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-xl border-2 border-gray-200 bg-white shadow-lg"
+              className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg"
             >
               {filteredOptions.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-gray-500">{noResultsText}</div>
+                <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{noResultsText}</div>
               ) : (
                 filteredOptions.map((option, index) => (
                   <button
@@ -206,8 +206,8 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectOption(option)}
                     className={cn(
-                      "w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors",
-                      index === highlightedIndex && "bg-gray-50",
+                      "w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors",
+                      index === highlightedIndex && "bg-gray-50 dark:bg-gray-700",
                       option.value === value && "font-semibold text-primary",
                     )}
                   >
@@ -234,7 +234,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
         )}
 
         {helperText && !errorMessage && (
-          <p className="mt-2 text-sm text-gray-500">{helperText}</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{helperText}</p>
         )}
       </div>
     );

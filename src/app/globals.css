@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #ffffff;
@@ -19,6 +20,31 @@
      family, picked specifically to work as a chart fill; confirmed passing
      against the white card surface used everywhere in this app. */
   --chart-1: #3b6ec2;
+
+  /* Standard shadcn/ui token set — was never defined even though button.tsx,
+     badge.tsx, table.tsx, checkbox.tsx, alert-dialog.tsx and chart.tsx
+     already reference these classes (bg-muted, text-muted-foreground,
+     border-border, bg-accent, bg-secondary, bg-destructive, ring-ring,
+     border-input, text-primary-foreground, etc.) — those were silently
+     no-ops in light mode too until now. Values follow Tailwind's gray scale
+     to match the dark:bg-gray-800/900 + dark:border-gray-600 convention used
+     across every hand-styled page, so cards/borders read as one system. */
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #9ca3af;
 }
 
 @theme inline {
@@ -32,13 +58,60 @@
   --color-primary: var(--primary);
   --color-primary-light: var(--primary-light);
   --color-primary-dark: var(--primary-dark);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Class-based (not @media) so an explicit Light/Dark choice from
+   next-themes always wins over the OS preference — see
+   src/components/theme-provider.tsx and the `dark` custom variant above. */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  /* Brighter than the light-mode chart-1 so the data mark still passes a
+     contrast/chroma check against a near-black card background. */
+  --chart-1: #6ea3e8;
+
+  --card: #1f2937;
+  --card-foreground: #f3f4f6;
+  --popover: #1f2937;
+  --popover-foreground: #f3f4f6;
+  --primary-foreground: #ffffff;
+  --secondary: #374151;
+  --secondary-foreground: #f3f4f6;
+  --muted: #1f2937;
+  --muted-foreground: #9ca3af;
+  --accent: #374151;
+  --accent-foreground: #f3f4f6;
+  --destructive: #f87171;
+  --destructive-foreground: #1f2937;
+  --border: #4b5563;
+  --input: #4b5563;
+  --ring: #6b7280;
+}
+
+/* react-leaflet renders raw OpenStreetMap tile images that can't be themed
+   via CSS custom properties — this is the standard trick for a readable
+   dark-mode map without a separate dark tile provider. Shared by the
+   dashboard branches map and the warehouse location-preview map. */
+.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
 }
 
 body {

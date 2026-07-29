@@ -83,7 +83,7 @@ export function EntityDialog<T extends FieldValues>({
           see [[tailwind-important-override]]): only the fields area scrolls,
           header and footer stay fixed in place. */}
       <DialogContent className={`${maxWidthClass} max-h-[90vh]! overflow-hidden! p-0! flex! flex-col!`}>
-        <DialogHeader className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-gray-100">
+        <DialogHeader className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-gray-100 dark:border-gray-700">
           <DialogTitle className="text-primary text-xl font-bold">
             {title}
           </DialogTitle>
@@ -112,10 +112,10 @@ export function EntityDialog<T extends FieldValues>({
             {children}
 
             {error && (
-              <div className="rounded-md bg-red-50 border border-red-200 p-4">
+              <div className="rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-4">
                 <div className="flex items-center gap-2">
                   <svg
-                    className="w-5 h-5 text-red-600"
+                    className="w-5 h-5 text-red-600 dark:text-red-400"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -125,13 +125,13 @@ export function EntityDialog<T extends FieldValues>({
                       clipRule="evenodd"
                     />
                   </svg>
-                  <p className="text-sm font-medium text-red-800">{error}</p>
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter className="shrink-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-4 border-t border-gray-100">
+          <DialogFooter className="shrink-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-4 border-t border-gray-100 dark:border-gray-700">
             <Button
               type="button"
               variant="outline"

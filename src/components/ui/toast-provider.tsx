@@ -24,30 +24,30 @@ export function ToastProvider() {
   const getStyles = (type: string) => {
     switch (type) {
       case "success":
-        return "bg-green-50 border-green-200 text-green-800";
+        return "bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200";
       case "error":
-        return "bg-red-50 border-red-200 text-red-800";
+        return "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200";
       case "warning":
-        return "bg-yellow-50 border-yellow-200 text-yellow-800";
+        return "bg-yellow-50 dark:bg-yellow-950/40 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200";
       case "info":
-        return "bg-blue-50 border-blue-200 text-blue-800";
+        return "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200";
       default:
-        return "bg-gray-50 border-gray-200 text-gray-800";
+        return "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200";
     }
   };
 
   const getIconColor = (type: string) => {
     switch (type) {
       case "success":
-        return "text-green-600";
+        return "text-green-600 dark:text-green-400";
       case "error":
-        return "text-red-600";
+        return "text-red-600 dark:text-red-400";
       case "warning":
-        return "text-yellow-600";
+        return "text-yellow-600 dark:text-yellow-400";
       case "info":
-        return "text-blue-600";
+        return "text-blue-600 dark:text-blue-400";
       default:
-        return "text-gray-600";
+        return "text-gray-600 dark:text-gray-400";
     }
   };
 
@@ -64,7 +64,7 @@ export function ToastProvider() {
           <p className="flex-1 text-sm font-medium">{t.message}</p>
           <button
             onClick={() => removeToast(t.id)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

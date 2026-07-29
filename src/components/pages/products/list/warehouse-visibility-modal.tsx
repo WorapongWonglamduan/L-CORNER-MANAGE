@@ -102,7 +102,7 @@ export function WarehouseVisibilityModal({
           <DialogTitle className="text-primary text-xl font-bold">
             {t("title")}
           </DialogTitle>
-          <p className="text-sm text-gray-500">{productName}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{productName}</p>
         </DialogHeader>
 
         <div className="space-y-2 max-h-[60vh] overflow-y-auto">
@@ -112,8 +112,8 @@ export function WarehouseVisibilityModal({
             </div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8">
-              <Package className="w-10 h-10 text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500 text-center px-4">
+              <Package className="w-10 h-10 text-gray-400 dark:text-gray-500 mb-2" />
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center px-4">
                 {t("noWarehouseAssigned")}
               </p>
             </div>
@@ -123,23 +123,23 @@ export function WarehouseVisibilityModal({
               return (
                 <div
                   key={item.warehouse_id}
-                  className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate flex items-center gap-2">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate flex items-center gap-2">
                       {item.name_i18n[locale]}{" "}
-                      <span className="text-gray-500">({item.code})</span>
+                      <span className="text-gray-500 dark:text-gray-400">({item.code})</span>
                       <span
                         className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                           item.is_active
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-200 text-gray-600"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                            : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
                         }`}
                       >
                         {item.is_active ? t("visible") : t("hidden")}
                       </span>
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {t("currentStock")}: {item.current_stock.toLocaleString()}
                     </p>
                     {hideDisabled && (

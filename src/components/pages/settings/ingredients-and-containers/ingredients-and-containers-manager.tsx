@@ -94,13 +94,13 @@ export default function IngredientsAndContainersManager() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">{t("loading")}</p>
+            <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
           </div>
         </div>
       ) : ingredientsAndContainers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-          <Package className="h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-gray-600 text-lg">{t("noData")}</p>
+        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+          <Package className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
         </div>
       ) : (
         <>
@@ -108,7 +108,7 @@ export default function IngredientsAndContainersManager() {
             {ingredientsAndContainers.map((ingredientContainer) => (
               <div
                 key={ingredientContainer.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -129,10 +129,10 @@ export default function IngredientsAndContainersManager() {
                       )}
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 text-base">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-base">
                         {ingredientContainer.name_i18n.th}
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         {ingredientContainer.code}
                       </p>
                     </div>
@@ -147,29 +147,29 @@ export default function IngredientsAndContainersManager() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2.5">
-                    <span className="text-sm text-gray-600">{t("type")}:</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t("type")}:</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {getTypeLabel(ingredientContainer.type)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">{t("unit")}:</span>
-                    <span className="font-semibold text-gray-900">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t("unit")}:</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {ingredientContainer.unit?.abbreviation_i18n.th || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("costPrice")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {ingredientContainer.cost_price
                         ? `฿${Number(ingredientContainer.cost_price).toLocaleString()}`
                         : "-"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("currentStock")}:
                     </span>
                     <span
@@ -177,31 +177,31 @@ export default function IngredientsAndContainersManager() {
                         Number(ingredientContainer.current_stock) <=
                         Number(ingredientContainer.min_stock)
                           ? "text-red-600"
-                          : "text-gray-900"
+                          : "text-gray-900 dark:text-white"
                       }`}
                     >
                       {Number(ingredientContainer.current_stock).toLocaleString()}{" "}
                       {ingredientContainer.unit?.abbreviation_i18n.th}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("minStock")}:
                     </span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {Number(ingredientContainer.min_stock).toLocaleString()}{" "}
                       {ingredientContainer.unit?.abbreviation_i18n.th}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {t("status")}:
                     </span>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         ingredientContainer.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                       }`}
                     >
                       {ingredientContainer.is_active ? t("active") : t("inactive")}

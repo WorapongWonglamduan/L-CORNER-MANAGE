@@ -47,21 +47,21 @@ export const theme = {
     full: 'rounded-full',
   },
   borders: {
-    light: 'border border-gray-100',
-    medium: 'border border-gray-200',
+    light: 'border border-gray-100 dark:border-gray-700',
+    medium: 'border border-gray-200 dark:border-gray-600',
     primary: 'border border-primary',
   },
   buttons: {
     primary: 'bg-gradient-to-r from-primary to-primary-light text-white hover:scale-105 active:scale-95 transition-all duration-200',
-    secondary: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors',
+    secondary: 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors',
     ghost: 'bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-all duration-200 border border-white/20',
   },
   cards: {
-    default: 'bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl hover:scale-105 transition-all duration-200',
-    flat: 'bg-white rounded-2xl shadow-lg border border-gray-100',
+    default: 'bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl hover:scale-105 transition-all duration-200',
+    flat: 'bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700',
   },
   inputs: {
-    default: 'block w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 placeholder-gray-400 transition-colors focus:border-primary focus:outline-none focus:ring-0',
+    default: 'block w-full rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors focus:border-primary focus:outline-none focus:ring-0',
   },
 }
 

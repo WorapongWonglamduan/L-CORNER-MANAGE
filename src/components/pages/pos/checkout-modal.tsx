@@ -212,8 +212,8 @@ export function CheckoutModal({
       }}
     >
       <DialogContent className="max-w-md max-h-[90vh]! overflow-hidden! p-0! flex! flex-col! gap-0! rounded-2xl!">
-        <DialogHeader className="shrink-0 border-b border-gray-200 p-6">
-          <DialogTitle className="text-2xl font-bold text-gray-900">
+        <DialogHeader className="shrink-0 border-b border-gray-200 dark:border-gray-600 p-6">
+          <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
             {t("checkoutTitle")}
           </DialogTitle>
         </DialogHeader>
@@ -221,18 +221,18 @@ export function CheckoutModal({
         {/* Content */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
           {/* Summary */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-            <div className="flex justify-between text-gray-600">
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 space-y-2">
+            <div className="flex justify-between text-gray-600 dark:text-gray-300">
               <span>{t("itemCount")}</span>
               <span className="font-semibold">{cartItemCount} {t("items")}</span>
             </div>
             {promoValidation && (
               <>
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-gray-600 dark:text-gray-300">
                   <span>{t("subtotalBeforeDiscount")}</span>
                   <span>฿{cartTotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-green-700">
+                <div className="flex justify-between text-green-700 dark:text-green-400">
                   <span>
                     {t("promoDiscount")} ({promoValidation.code})
                   </span>
@@ -240,7 +240,7 @@ export function CheckoutModal({
                 </div>
               </>
             )}
-            <div className="border-t border-gray-300 pt-2 flex justify-between text-xl font-bold text-primary">
+            <div className="border-t border-gray-300 dark:border-gray-600 pt-2 flex justify-between text-xl font-bold text-primary">
               <span>{t("total")}</span>
               <span>฿{discountedTotal.toLocaleString()}</span>
             </div>
@@ -248,12 +248,12 @@ export function CheckoutModal({
 
           {/* Promo Code */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
               {t("promoCode")}
             </label>
             {promoValidation ? (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-green-50 border-2 border-green-200">
-                <div className="flex items-center gap-2 text-green-700 font-semibold">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-green-50 dark:bg-green-950/40 border-2 border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-semibold">
                   <Tag className="w-4 h-4" />
                   {t("promoApplied", { code: promoValidation.code })}
                 </div>
@@ -298,7 +298,7 @@ export function CheckoutModal({
 
           {/* Payment Method */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
               {t("paymentMethod")}
             </label>
             <div className="grid grid-cols-3 gap-3">
@@ -307,17 +307,17 @@ export function CheckoutModal({
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   paymentMethod === PAYMENT_METHODS.CASH
                     ? "border-primary bg-primary/5"
-                    : "border-gray-200 hover:border-gray-300"
+                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                 }`}
               >
                 <Banknote
                   className={`w-8 h-8 ${
-                    paymentMethod === PAYMENT_METHODS.CASH ? "text-primary" : "text-gray-400"
+                    paymentMethod === PAYMENT_METHODS.CASH ? "text-primary" : "text-gray-400 dark:text-gray-500"
                   }`}
                 />
                 <span
                   className={`font-semibold ${
-                    paymentMethod === PAYMENT_METHODS.CASH ? "text-primary" : "text-gray-600"
+                    paymentMethod === PAYMENT_METHODS.CASH ? "text-primary" : "text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {t("cash")}
@@ -329,17 +329,17 @@ export function CheckoutModal({
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   paymentMethod === PAYMENT_METHODS.CARD
                     ? "border-primary bg-primary/5"
-                    : "border-gray-200 hover:border-gray-300"
+                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                 }`}
               >
                 <CreditCard
                   className={`w-8 h-8 ${
-                    paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-400"
+                    paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-400 dark:text-gray-500"
                   }`}
                 />
                 <span
                   className={`font-semibold ${
-                    paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-600"
+                    paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {t("card")}
@@ -352,17 +352,17 @@ export function CheckoutModal({
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   paymentMethod === PAYMENT_METHODS.QR
                     ? "border-primary bg-primary/5"
-                    : "border-gray-200 hover:border-gray-300"
+                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                 } ${!promptpayId ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <QrCode
                   className={`w-8 h-8 ${
-                    paymentMethod === PAYMENT_METHODS.QR ? "text-primary" : "text-gray-400"
+                    paymentMethod === PAYMENT_METHODS.QR ? "text-primary" : "text-gray-400 dark:text-gray-500"
                   }`}
                 />
                 <span
                   className={`font-semibold ${
-                    paymentMethod === PAYMENT_METHODS.QR ? "text-primary" : "text-gray-600"
+                    paymentMethod === PAYMENT_METHODS.QR ? "text-primary" : "text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {t("qr")}
@@ -376,11 +376,11 @@ export function CheckoutModal({
 
           {/* QR PromptPay */}
           {paymentMethod === PAYMENT_METHODS.QR && qrPayload && (
-            <div className="flex flex-col items-center gap-3 p-4 bg-gray-50 rounded-xl">
+            <div className="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
               <div className="bg-white p-4 rounded-xl">
                 <QRCode value={qrPayload} size={200} />
               </div>
-              <p className="text-sm text-gray-600">{t("qrScanInstruction")}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{t("qrScanInstruction")}</p>
               <p className="text-2xl font-bold text-primary">
                 ฿{discountedTotal.toLocaleString()}
               </p>
@@ -390,7 +390,7 @@ export function CheckoutModal({
           {/* Amount Paid (Cash only) */}
           {paymentMethod === PAYMENT_METHODS.CASH && (
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
                 {t("amountReceived")}
               </label>
               <Controller
@@ -416,7 +416,7 @@ export function CheckoutModal({
                     className={`px-3 py-2 rounded-lg font-semibold text-sm transition-colors ${
                       index === 0
                         ? "bg-primary text-white hover:bg-primary-light"
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-900"
+                        : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white"
                     }`}
                   >
                     {item.label}
@@ -426,12 +426,12 @@ export function CheckoutModal({
 
               {/* Change */}
               {amountPaid && Number(amountPaid) >= discountedTotal && (
-                <div className="mt-4 p-4 bg-green-50 rounded-xl">
+                <div className="mt-4 p-4 bg-green-50 dark:bg-green-950/40 rounded-xl">
                   <div className="flex justify-between items-center">
-                    <span className="text-green-700 font-semibold">
+                    <span className="text-green-700 dark:text-green-300 font-semibold">
                       {t("change")}
                     </span>
-                    <span className="text-2xl font-bold text-green-700">
+                    <span className="text-2xl font-bold text-green-700 dark:text-green-300">
                       ฿{change.toLocaleString()}
                     </span>
                   </div>
@@ -442,8 +442,8 @@ export function CheckoutModal({
               {amountPaid &&
                 Number(amountPaid) > 0 &&
                 Number(amountPaid) < discountedTotal && (
-                  <div className="mt-4 p-4 bg-red-50 rounded-xl">
-                    <span className="text-red-700 font-semibold text-sm">
+                  <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/40 rounded-xl">
+                    <span className="text-red-700 dark:text-red-300 font-semibold text-sm">
                       {t("insufficientAmount")}
                     </span>
                   </div>
@@ -452,7 +452,7 @@ export function CheckoutModal({
           )}
         </div>
 
-        <DialogFooter className="shrink-0 border-t border-gray-200 p-6 sm:justify-stretch">
+        <DialogFooter className="shrink-0 border-t border-gray-200 dark:border-gray-600 p-6 sm:justify-stretch">
           <div className="flex gap-3 w-full">
             <Button
               onClick={() => handleClose()}
