@@ -66,6 +66,21 @@ export async function PUT(
           { status: 400 },
         );
       }
+      // Same guard as POST /api/roles: this endpoint (gated only by
+      // users.update, this app's only "manage roles" permission) would
+      // otherwise let any holder rewrite ANY role's permissions — including
+      // is_system roles like admin/manager/cashier — up to and including
+      // full admin. Callers can only ever grant permissions they themselves
+      // already hold.
+      const ungranted = permissionList.filter(
+        (p) => !(session?.user?.permissions ?? []).includes(p),
+      );
+      if (ungranted.length > 0) {
+        return NextResponse.json(
+          { error: `Cannot grant permissions you don't hold yourself: ${ungranted.join(", ")}` },
+          { status: 403 },
+        );
+      }
     }
 
     if (name && name !== existing.name) {

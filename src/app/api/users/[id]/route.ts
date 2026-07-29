@@ -88,6 +88,32 @@ export async function PUT(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Defense in depth alongside the same check in roles/route.ts and
+    // roles/[id]/route.ts: even if a role's own permission set is locked
+    // down correctly, assigning an EXISTING broader role (e.g. the seeded
+    // admin role) to a user would still hand them permissions the caller
+    // doesn't have. Block granting any role whose permissions aren't a
+    // subset of the caller's own.
+    if (role_ids !== undefined && Array.isArray(role_ids) && role_ids.length > 0) {
+      const roles = await prisma.role.findMany({
+        where: { id: { in: role_ids } },
+        select: { permissions: true },
+      });
+      const grantedPermissions = new Set(
+        roles.flatMap((r) => (Array.isArray(r.permissions) ? (r.permissions as string[]) : [])),
+      );
+      const callerPermissions = new Set(session?.user?.permissions ?? []);
+      const ungranted = [...grantedPermissions].filter((p) => !callerPermissions.has(p));
+      if (ungranted.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Cannot assign a role granting permissions you don't hold yourself: ${ungranted.join(", ")}`,
+          },
+          { status: 403 },
+        );
+      }
+    }
+
     if (username || email) {
       const conflict = await prisma.user.findFirst({
         where: {

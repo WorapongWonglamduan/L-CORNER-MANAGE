@@ -19,6 +19,7 @@ export const ALL_PERMISSIONS = [
   "sales.view",
   "sales.create",
   "sales.void",
+  "sales.refund",
   "reports.view",
   "settings.view",
   "settings.update",

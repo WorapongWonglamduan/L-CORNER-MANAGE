@@ -93,6 +93,19 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    // Fixed discounts had no bound at all — a negative discount_value here
+    // flows straight into sales/route.ts's Math.min(discount_value,
+    // subtotal), which only clamps the *upper* bound, so a negative value
+    // increases the sale's total instead of discounting it.
+    if (discount_type === "fixed" && Number(discount_value) <= 0) {
+      return NextResponse.json(
+        { error: "Fixed discount must be greater than 0" },
+        { status: 400 },
+      );
+    }
+    if (max_uses !== undefined && max_uses !== null && Number(max_uses) < 0) {
+      return NextResponse.json({ error: "max_uses cannot be negative" }, { status: 400 });
+    }
 
     const existing = await prisma.promotion.findUnique({ where: { code } });
     if (existing) {
@@ -108,7 +121,9 @@ export async function POST(request: NextRequest) {
         name_i18n,
         discount_type,
         discount_value,
-        max_uses: max_uses || null,
+        // `|| null` would coerce max_uses: 0 into "unlimited" (null) — the
+        // opposite of what setting it to 0 clearly means (no uses left).
+        max_uses: max_uses === undefined || max_uses === null ? null : Number(max_uses),
         expires_at: expires_at ? new Date(expires_at) : null,
         is_active: is_active ?? true,
       },

@@ -86,6 +86,21 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    // A role's permissions are only gated by users.create, with no separate
+    // "manage roles" permission in this app's model — without this check,
+    // any custom role scoped down to just users.create/users.update could
+    // create (or edit, see roles/[id]/route.ts) a role with FULL admin
+    // permissions and assign it to itself via PUT /api/users/[id]. Callers
+    // can only ever grant permissions they themselves already hold.
+    const ungranted = permissionList.filter(
+      (p) => !(session?.user?.permissions ?? []).includes(p),
+    );
+    if (ungranted.length > 0) {
+      return NextResponse.json(
+        { error: `Cannot grant permissions you don't hold yourself: ${ungranted.join(", ")}` },
+        { status: 403 },
+      );
+    }
 
     const existing = await prisma.role.findUnique({ where: { name } });
     if (existing) {

@@ -70,14 +70,33 @@ export async function PUT(
       }
     }
 
-    if (
-      (discount_type ?? existing.discount_type) === "percentage" &&
-      (discount_value ?? Number(existing.discount_value)) > 100
-    ) {
+    if (discount_type !== undefined && discount_type !== "percentage" && discount_type !== "fixed") {
+      return NextResponse.json(
+        { error: 'discount_type must be "percentage" or "fixed"' },
+        { status: 400 },
+      );
+    }
+
+    const effectiveType = discount_type ?? existing.discount_type;
+    const effectiveValue = Number(discount_value ?? existing.discount_value);
+    if (effectiveType === "percentage" && (effectiveValue <= 0 || effectiveValue > 100)) {
       return NextResponse.json(
         { error: "Percentage discount must be between 0 and 100" },
         { status: 400 },
       );
+    }
+    // The lower bound existed on create but was missing here — an existing
+    // valid promotion could be PUT to a negative discount_value, which
+    // sales/route.ts's Math.min only clamps from above, so it increases
+    // the sale's total instead of discounting it.
+    if (effectiveType === "fixed" && effectiveValue <= 0) {
+      return NextResponse.json(
+        { error: "Fixed discount must be greater than 0" },
+        { status: 400 },
+      );
+    }
+    if (max_uses !== undefined && max_uses !== null && Number(max_uses) < 0) {
+      return NextResponse.json({ error: "max_uses cannot be negative" }, { status: 400 });
     }
 
     const promotion = await prisma.promotion.update({
@@ -87,7 +106,13 @@ export async function PUT(
         name_i18n: name_i18n ?? existing.name_i18n,
         discount_type: discount_type ?? existing.discount_type,
         discount_value: discount_value ?? existing.discount_value,
-        max_uses: max_uses !== undefined ? max_uses || null : existing.max_uses,
+        // `|| null` would coerce max_uses: 0 into "unlimited" (null).
+        max_uses:
+          max_uses !== undefined
+            ? max_uses === null
+              ? null
+              : Number(max_uses)
+            : existing.max_uses,
         expires_at:
           expires_at !== undefined
             ? expires_at
