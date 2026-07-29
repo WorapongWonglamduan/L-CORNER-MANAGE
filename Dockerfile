@@ -28,6 +28,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Every "local day boundary" fix in this app (sales/inventory-movements
+# date filters, sale/refund number generation, dashboard "today" stats)
+# relies on `new Date()`'s local getters/setters actually reflecting
+# Asia/Bangkok wall-clock time. Alpine's musl libc has no timezone data
+# without `tzdata`, and without TZ set the container defaults to UTC —
+# silently shifting every one of those boundaries by 7 hours in
+# production despite being correct in code.
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Bangkok
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 

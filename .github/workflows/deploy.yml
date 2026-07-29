@@ -9,6 +9,11 @@ on:
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
+  # Matches the TZ baked into the production Dockerfile — GitHub's runners
+  # default to UTC, which would silently mask (or falsely fail) any test
+  # covering a local-day-boundary calculation (sale/refund numbers, date
+  # range filters, dashboard "today" stats) that assumes Asia/Bangkok time.
+  TZ: Asia/Bangkok
 
 jobs:
   test:

@@ -42,6 +42,11 @@ services:
       - "3000"
     environment:
       NODE_ENV: production
+      # Baked into the Dockerfile too (tzdata + ENV TZ) — repeated here so
+      # it's visible/overridable without a rebuild. Every "local day
+      # boundary" date calculation in this app assumes the process clock
+      # reads Asia/Bangkok wall-clock time.
+      TZ: Asia/Bangkok
       DB_HOST: postgres
       DB_PORT: 5432
       DB_DATABASE: ${DB_DATABASE:-l_corner_pos}
