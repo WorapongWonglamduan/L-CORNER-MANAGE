@@ -38,6 +38,8 @@ export interface BaseInputProps {
   emptyOptionLabel?: string;
   /** Omits the blank option entirely — for a SELECT that must always hold a real value (e.g. a required branch context switcher). */
   hideEmptyOption?: boolean;
+  /** The blank option is itself a deliberate, permanent choice (e.g. "All branches" in a filter) rather than a "pick one" nudge — skips the placeholder-gray text so it doesn't look unselected. */
+  emptyOptionIsValue?: boolean;
   startPlaceholder?: string;
   endPlaceholder?: string;
   dateRangeValue?: DateRangeValue;
@@ -81,6 +83,7 @@ export const Input = forwardRef<
       required,
       emptyOptionLabel = "-- เลือก --",
       hideEmptyOption = false,
+      emptyOptionIsValue = false,
       ...props
     },
     ref,
@@ -220,15 +223,33 @@ export const Input = forwardRef<
             <div className="relative">
               <select
                 ref={ref as React.Ref<HTMLSelectElement>}
-                className={cn(
-                  baseInputClass,
-                  "appearance-none pr-10",
-                  !selectProps.value && "text-gray-400 dark:text-gray-500",
-                )}
+                className={cn(baseInputClass, "appearance-none pr-10")}
                 {...selectProps}
               >
+                {/* `hidden` keeps this out of the open dropdown list — a real
+                    native placeholder, not a selectable "-- เลือก --" row
+                    diluting the actual options — while still showing as the
+                    closed box's text when nothing else is picked. Skipped
+                    for emptyOptionIsValue selects (e.g. "ทุกสาขา"), since
+                    there the blank option is a real choice the user must be
+                    able to pick again from the list, not just a placeholder.
+                    Styled on the option itself, not the <select>, since
+                    coloring the <select> bleeds into every <option>'s
+                    rendered text in the open dropdown (Chromium inherits
+                    it). */}
                 {!hideEmptyOption && (
-                  <option value="">{emptyOptionLabel}</option>
+                  <option
+                    value=""
+                    disabled={!emptyOptionIsValue}
+                    hidden={!emptyOptionIsValue}
+                    className={
+                      emptyOptionIsValue
+                        ? undefined
+                        : "text-gray-400 dark:text-gray-500"
+                    }
+                  >
+                    {emptyOptionLabel}
+                  </option>
                 )}
                 {options?.map((option) => (
                   <option key={option.value} value={option.value}>

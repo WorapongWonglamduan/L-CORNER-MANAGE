@@ -106,33 +106,48 @@ export function DateField({
 
   return (
     <div className="relative" ref={containerRef}>
-      <button
-        type="button"
+      {/* A <div role="button"> here, not a <button> — the clear (×) button
+          below has to be a real nested <button> for its own click handling,
+          and a <button> can't contain another <button> (invalid HTML, and
+          the two clicks bubble/collide in confusing ways). Sharing one icon
+          slot that swaps calendar↔clear (instead of overlaying a second,
+          separately-positioned icon on top) is also what keeps this from
+          crowding or overlapping the date text once it's long enough
+          ("28 ก.ค. 2026" vs "8 ก.ค. 2026") to reach the icon area. */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={openPicker}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openPicker();
+          }
+        }}
         className={cn(
           baseInputClass,
-          "flex items-center justify-between text-left",
+          "flex items-center justify-between text-left cursor-pointer",
           !value && "text-gray-400 dark:text-gray-500",
         )}
       >
         <span className="truncate">
           {selected ? format(selected, "d MMM yyyy", { locale }) : placeholder}
         </span>
-        <CalendarIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 ml-2" />
-      </button>
-
-      {value && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onChange("");
-          }}
-          className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      )}
+        {value ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange("");
+            }}
+            className="shrink-0 ml-2 p-1 -m-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        ) : (
+          <CalendarIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 ml-2" />
+        )}
+      </div>
 
       {isOpen && (
         <div className="absolute z-20 mt-1 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg p-3 w-72">
