@@ -76,16 +76,7 @@ export default function PromotionsManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <DynamicFilterBar
-          fields={filterFields}
-          values={{ search: filters.search, isActive: filters.isActive }}
-          onApply={filters.applyFilters}
-          onReset={filters.resetFilters}
-          searchLabel={tCommon("search")}
-          resetLabel={tCommon("reset")}
-          className="w-full"
-        />
+      <div className="flex justify-end">
         <Button
           onClick={handleCreate}
           className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white"
@@ -94,6 +85,15 @@ export default function PromotionsManager() {
           {t("addPromotion")}
         </Button>
       </div>
+
+      <DynamicFilterBar
+        fields={filterFields}
+        values={{ search: filters.search, isActive: filters.isActive }}
+        onApply={filters.applyFilters}
+        onReset={filters.resetFilters}
+        searchLabel={tCommon("search")}
+        resetLabel={tCommon("reset")}
+      />
 
       {loading && promotions.length === 0 ? (
         <div className="flex items-center justify-center py-12">

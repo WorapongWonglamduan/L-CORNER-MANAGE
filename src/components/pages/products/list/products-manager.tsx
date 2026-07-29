@@ -94,6 +94,7 @@ export default function ProductsManager() {
               filters.setWarehouseId(e.target.value)
             }
             emptyOptionLabel={t("allBranches")}
+            emptyOptionIsValue
             options={[
               ...warehouses.map((w) => ({
                 value: w.id,
@@ -105,7 +106,17 @@ export default function ProductsManager() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <div className="flex justify-end mb-4">
+        <Button
+          onClick={handleCreate}
+          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white px-6 py-2.5"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          {t("addProduct")}
+        </Button>
+      </div>
+
+      <div className="mb-6">
         <DynamicFilterBar
           fields={filterFields}
           values={{
@@ -116,15 +127,7 @@ export default function ProductsManager() {
           onReset={filters.resetFilters}
           searchLabel={tCommon("search")}
           resetLabel={tCommon("reset")}
-          className="w-full"
         />
-        <Button
-          onClick={handleCreate}
-          className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary-light text-white px-6 py-2.5"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          {t("addProduct")}
-        </Button>
       </div>
 
       {loading && products.length === 0 ? (

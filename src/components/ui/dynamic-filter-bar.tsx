@@ -158,40 +158,49 @@ export function DynamicFilterBar({
           </div>
         ))}
 
-        <Button
-          size="sm"
-          onClick={handleSearch}
-          className="bg-gradient-to-r from-primary to-primary-light text-white hover:opacity-90"
-        >
-          <Search className="mr-2 h-4 w-4" />
-          {searchLabel}
-        </Button>
-        <Button size="sm" variant="outline" onClick={handleReset}>
-          <RotateCcw className="mr-2 h-4 w-4" />
-          {resetLabel}
-          {activeFilterCount > 0 && (
-            <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-primary text-white text-xs font-semibold">
-              {activeFilterCount}
-            </span>
-          )}
-        </Button>
-
-        {advancedFields.length > 0 && (
+        {/* ml-auto on the group (not each button) keeps search/reset/advanced
+            together as one cluster pinned to the right edge, instead of
+            trailing immediately after the last field. Assumes this bar owns
+            its whole row — pages needing a separate "add" button put it on
+            its own row instead of sharing this one (see e.g.
+            products-manager.tsx), so it never has to compete for space
+            here. */}
+        <div className="flex gap-3 ml-auto">
           <Button
             size="sm"
-            variant="ghost"
-            onClick={() => setAdvancedOpen((open) => !open)}
-            className="ml-auto text-gray-500 dark:text-gray-400"
+            onClick={handleSearch}
+            className="bg-gradient-to-r from-primary to-primary-light text-white hover:opacity-90"
           >
-            {advancedLabel}
-            <ChevronDown
-              className={cn(
-                "ml-1 h-4 w-4 transition-transform",
-                advancedOpen && "rotate-180",
-              )}
-            />
+            <Search className="mr-2 h-4 w-4" />
+            {searchLabel}
           </Button>
-        )}
+          <Button size="sm" variant="outline" onClick={handleReset}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            {resetLabel}
+            {activeFilterCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-primary text-white text-xs font-semibold">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+
+          {advancedFields.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setAdvancedOpen((open) => !open)}
+              className="text-gray-500 dark:text-gray-400"
+            >
+              {advancedLabel}
+              <ChevronDown
+                className={cn(
+                  "ml-1 h-4 w-4 transition-transform",
+                  advancedOpen && "rotate-180",
+                )}
+              />
+            </Button>
+          )}
+        </div>
       </div>
 
       {advancedFields.length > 0 && advancedOpen && (

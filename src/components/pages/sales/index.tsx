@@ -2,36 +2,24 @@
 
 import { useState } from "react";
 import { Sidebar } from "@/components/sidebar";
-import { Search, Eye, Ban, X } from "lucide-react";
+import { Eye, Ban } from "lucide-react";
 import { useSalesManager } from "./helper";
 import { Button } from "@/components/ui/button";
 import { SalesDetailsModal } from "./sales-details-modal";
-import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  DynamicFilterBar,
+  type FilterFieldConfig,
+} from "@/components/ui/dynamic-filter-bar";
 import { usePermission } from "@/hooks/usePermission";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
-import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
-
-interface SalesFilterValues {
-  searchQuery: string;
-  startDate: string;
-  endDate: string;
-}
 
 export default function SalesContent() {
   const { table, filters, pagination, actions, modal } = useSalesManager();
   const { sales, loading, locale } = table;
-  const {
-    searchQuery,
-    setSearchQuery,
-    startDate,
-    setStartDate,
-    endDate,
-    setEndDate,
-    control,
-    errors,
-  } = filters;
+  const { searchQuery, startDate, endDate, applyFilters, resetFilters } =
+    filters;
   const { page, pageSize, totalPages, totalItems, setPage, setPageSize } =
     pagination;
   const { handleVoid } = actions;
@@ -44,6 +32,11 @@ export default function SalesContent() {
     null,
   );
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const salesFilterFields: FilterFieldConfig[] = [
+    { name: "searchQuery", type: "text", placeholder: t("search") },
+    { name: "date", type: "date-range" },
+  ];
 
   const handleViewDetails = (sale: (typeof sales)[0]) => {
     setSelectedSale(sale);
@@ -112,83 +105,18 @@ export default function SalesContent() {
 
         {/* Search and Filter Bar */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Search */}
-            <DynamicFormFields<SalesFilterValues>
-              fields={[
-                {
-                  name: "searchQuery",
-                  type: INPUT_TYPES.TEXT,
-                  icon: Search,
-                  placeholder: t("search"),
-                },
-              ]}
-              control={control}
-              errors={errors}
-            />
-
-            {/* Date Range Picker */}
-            <Input
-              inputType={INPUT_TYPES.DATE_RANGE}
-              dateRangeValue={{ startDate, endDate }}
-              onDateRangeChange={({ startDate: newStart, endDate: newEnd }) => {
-                setStartDate(newStart);
-                setEndDate(newEnd);
-              }}
-              startPlaceholder={t("startDate")}
-              endPlaceholder={t("endDate")}
-            />
-          </div>
-
-          {/* Active Filters Display */}
-          {(searchQuery || startDate || endDate) && (
-            <div className="mt-3 flex flex-wrap gap-2 items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-300">{t("filteredBy")}</span>
-              {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-sm">
-                  {t("searchLabel")}: {searchQuery}
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="hover:text-blue-900"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {startDate && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full text-sm">
-                  {t("fromDate")}: {format(new Date(startDate), "dd/MM/yyyy")}
-                  <button
-                    onClick={() => setStartDate("")}
-                    className="hover:text-green-900"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {endDate && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full text-sm">
-                  {t("toDate")}: {format(new Date(endDate), "dd/MM/yyyy")}
-                  <button
-                    onClick={() => setEndDate("")}
-                    className="hover:text-green-900"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setStartDate("");
-                  setEndDate("");
-                }}
-                className="text-sm text-red-600 hover:text-red-800 underline"
-              >
-                {t("clearAll")}
-              </button>
-            </div>
-          )}
+          <DynamicFilterBar
+            fields={salesFilterFields}
+            values={{
+              searchQuery,
+              dateFrom: startDate,
+              dateTo: endDate,
+            }}
+            onApply={applyFilters}
+            onReset={resetFilters}
+            searchLabel={tCommon("search")}
+            resetLabel={tCommon("reset")}
+          />
         </div>
 
         {/* Sales Table */}

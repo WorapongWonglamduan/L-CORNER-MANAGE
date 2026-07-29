@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useCallback } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useEntityList } from "@/hooks/useEntityList";
+import { FilterOptions } from "@/hooks/usePagination";
 import { useConfirm } from "@/hooks/useConfirm";
 import { toast } from "@/lib/toast";
+import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
 
 interface Sale {
   id: string;
@@ -77,83 +79,55 @@ interface SaleItem {
   };
 }
 
+interface SalesFilterOptions extends FilterOptions {
+  searchQuery?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export function useSalesManager() {
   const locale = useLocale();
   const t = useTranslations("sales");
   const { confirm, ConfirmDialog } = useConfirm();
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { control, watch, setValue, formState: { errors } } = useForm<{
-    searchQuery: string;
-    startDate: string;
-    endDate: string;
-  }>({
-    defaultValues: { searchQuery: "", startDate: "", endDate: "" },
+
+  const {
+    items: sales,
+    loading,
+    totalItems,
+    totalPages,
+    filterOptions,
+    handlePageChange,
+    handlePageSizeChange,
+    updateFilter,
+    refetch,
+  } = useEntityList<Sale, SalesFilterOptions>({
+    endpoint: "/api/sales",
+    initialFilters: {
+      searchQuery: "",
+      startDate: "",
+      endDate: "",
+    },
   });
-  const searchQuery = watch("searchQuery");
-  const setSearchQuery = useCallback(
-    (value: string) => setValue("searchQuery", value),
-    [setValue],
+
+  // DynamicFilterBar's date-range field reports values as `${name}From`/
+  // `${name}To` (field is named "date" below), not startDate/endDate.
+  const applyFilters = useCallback(
+    (values: FilterValues) => {
+      updateFilter({
+        searchQuery: values.searchQuery ?? "",
+        startDate: values.dateFrom ?? "",
+        endDate: values.dateTo ?? "",
+      } as Partial<SalesFilterOptions>);
+    },
+    [updateFilter],
   );
-  const startDate = watch("startDate");
-  const setStartDate = useCallback(
-    (value: string) => setValue("startDate", value),
-    [setValue],
-  );
-  const endDate = watch("endDate");
-  const setEndDate = useCallback(
-    (value: string) => setValue("endDate", value),
-    [setValue],
-  );
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-
-  // Fetch sales
-  const fetchSales = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pageSize.toString(),
-      });
-
-      if (searchQuery) {
-        params.append("searchQuery", searchQuery);
-      }
-
-      if (startDate) {
-        params.append("startDate", startDate);
-      }
-
-      if (endDate) {
-        params.append("endDate", endDate);
-      }
-
-      const response = await fetch(`/api/sales?${params}`);
-      const data = await response.json();
-      
-      setSales(data.items || []);
-      setTotalPages(data.totalPages || 1);
-      setTotalItems(data.total || 0);
-    } catch (error) {
-      console.error("Error fetching sales:", error);
-      setSales([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, searchQuery, startDate, endDate]);
-
-  // Fetch sales on mount and when filters change
-  useEffect(() => {
-    fetchSales();
-  }, [fetchSales]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, startDate, endDate]);
+  const resetFilters = useCallback(() => {
+    updateFilter({
+      searchQuery: "",
+      startDate: "",
+      endDate: "",
+    } as Partial<SalesFilterOptions>);
+  }, [updateFilter]);
 
   const handleVoid = async (sale: Sale) => {
     const confirmed = await confirm({
@@ -173,7 +147,7 @@ export function useSalesManager() {
         throw new Error("Failed to void sale");
       }
       toast.success(t("voidSuccess"));
-      fetchSales();
+      refetch();
     } catch (error) {
       console.error("Error voiding sale:", error);
       toast.error(t("voidError"));
@@ -187,25 +161,22 @@ export function useSalesManager() {
       locale,
     },
     filters: {
-      searchQuery,
-      setSearchQuery,
-      startDate,
-      setStartDate,
-      endDate,
-      setEndDate,
-      control,
-      errors,
+      searchQuery: filterOptions.searchQuery || "",
+      startDate: filterOptions.startDate || "",
+      endDate: filterOptions.endDate || "",
+      applyFilters,
+      resetFilters,
     },
     pagination: {
-      page,
-      pageSize,
+      page: filterOptions.page,
+      pageSize: filterOptions.pageSize,
       totalPages,
       totalItems,
-      setPage,
-      setPageSize,
+      setPage: handlePageChange,
+      setPageSize: handlePageSizeChange,
     },
     actions: {
-      refetch: fetchSales,
+      refetch,
       handleVoid,
     },
     modal: {
