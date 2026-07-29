@@ -15,6 +15,27 @@ export async function DELETE(
 
     const { id } = await params;
 
+    const existing = await prisma.recipe.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+    }
+
+    // SaleItem.recipe_id -> Recipe is ON DELETE SET NULL, so without this
+    // check, hard-deleting a recipe that's been used in past sales would
+    // silently null out recipe_id on every one of those historical sale
+    // items — losing which recipe/version produced a past semi-finished
+    // sale, the same audit-trail concern this codebase otherwise protects
+    // carefully (e.g. SaleRefund never mutates the original sale record).
+    const saleItemCount = await prisma.saleItem.count({ where: { recipe_id: id } });
+    if (saleItemCount > 0) {
+      return NextResponse.json(
+        {
+          error: `Cannot delete a recipe used in ${saleItemCount} past sale item(s) — deactivate it instead (is_active: false)`,
+        },
+        { status: 400 },
+      );
+    }
+
     // Delete all recipe ingredients first
     await prisma.recipeIngredient.deleteMany({
       where: { recipe_id: id },
