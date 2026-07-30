@@ -43,6 +43,14 @@ export async function GET(
           },
         },
         stock: true,
+        _count: {
+          select: {
+            sale_items: true,
+            recipe_ingredients: true,
+            toppings_as_ingredient: true,
+            transfers: true,
+          },
+        },
       },
     });
 
@@ -60,7 +68,7 @@ export async function GET(
 
     // Product detail is master data (no warehouse selector on this page), so
     // stock figures are summed across every warehouse the product is stocked at.
-    const { stock, ...productRest } = product;
+    const { stock, _count, ...productRest } = product;
     const stockTotals = stock.reduce(
       (acc, s) => ({
         current_stock: acc.current_stock + Number(s.current_stock),
@@ -70,10 +78,22 @@ export async function GET(
       { current_stock: 0, min_stock_level: 0, low_stock_threshold: 0 },
     );
 
+    // Same rule as GET /api/products' list view — hard-deleting a product
+    // still referenced by sale history/recipes/toppings/transfers would
+    // either silently destroy that history (if the relation ever became
+    // SET NULL/CASCADE) or just fail loudly; either way the "Delete"
+    // button on the detail page shouldn't offer it as an option.
+    const can_delete =
+      _count.sale_items === 0 &&
+      _count.recipe_ingredients === 0 &&
+      _count.toppings_as_ingredient === 0 &&
+      _count.transfers === 0;
+
     return NextResponse.json({
       ...productRest,
       ...stockTotals,
       images,
+      can_delete,
     });
   } catch (error) {
     console.error("Error fetching product:", error);

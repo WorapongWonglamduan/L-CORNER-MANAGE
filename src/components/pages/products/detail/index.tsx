@@ -10,6 +10,8 @@ import {
   Layers,
   DollarSign,
   ChefHat,
+  Power,
+  PowerOff,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -17,7 +19,7 @@ import { useProductDetail } from "./helper";
 
 export default function ProductDetailContent() {
   const { t, product, loading, actions, modal } = useProductDetail();
-  const { handleBack, handleEdit, handleDelete } = actions;
+  const { handleBack, handleEdit, handleDelete, handleToggleActive } = actions;
 
   if (loading) {
     return (
@@ -70,14 +72,28 @@ export default function ProductDetailContent() {
               <Pencil className="h-4 w-4 mr-1" />
               {t("edit")}
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDelete}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              {t("delete")}
+            <Button variant="outline" size="sm" onClick={handleToggleActive}>
+              {product.is_active ? (
+                <PowerOff className="h-4 w-4 mr-1" />
+              ) : (
+                <Power className="h-4 w-4 mr-1" />
+              )}
+              {product.is_active ? t("deactivate") : t("activate")}
             </Button>
+            {/* Only offered when nothing references this product yet (no
+                sale history, recipe/topping usage, or transfers) — same
+                rule as the list page's delete button. Deactivating above
+                is always available as the safe alternative. */}
+            {product.can_delete && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                {t("delete")}
+              </Button>
+            )}
           </div>
         </div>
 
