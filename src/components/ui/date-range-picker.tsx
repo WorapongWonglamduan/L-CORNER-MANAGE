@@ -17,6 +17,8 @@ import {
   eachDayOfInterval,
   addMonths,
   subMonths,
+  subDays,
+  subYears,
   isSameDay,
   isSameMonth,
   parseISO,
@@ -25,6 +27,58 @@ import {
 } from "date-fns";
 import { th, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+export interface DateRangePresetOption {
+  key: string;
+  label: string;
+  /** Ignored for the "custom" key — clicking it always clears the range instead. */
+  range: () => { startDate: string; endDate: string };
+}
+
+/** Trailing windows ending today, plus a "custom" chip for manual picking.
+ * `t` receives keys like "dateRangePresets.today" — pass a translator
+ * scoped to a namespace that has that shape (see `common` in i18n/messages). */
+export function getDefaultDateRangePresets(
+  t: (key: string) => string,
+): DateRangePresetOption[] {
+  const todayStr = () => format(new Date(), "yyyy-MM-dd");
+  return [
+    {
+      key: "today",
+      label: t("dateRangePresets.today"),
+      range: () => ({ startDate: todayStr(), endDate: todayStr() }),
+    },
+    {
+      key: "last7Days",
+      label: t("dateRangePresets.last7Days"),
+      range: () => ({
+        startDate: format(subDays(new Date(), 6), "yyyy-MM-dd"),
+        endDate: todayStr(),
+      }),
+    },
+    {
+      key: "last1Month",
+      label: t("dateRangePresets.last1Month"),
+      range: () => ({
+        startDate: format(subMonths(new Date(), 1), "yyyy-MM-dd"),
+        endDate: todayStr(),
+      }),
+    },
+    {
+      key: "last1Year",
+      label: t("dateRangePresets.last1Year"),
+      range: () => ({
+        startDate: format(subYears(new Date(), 1), "yyyy-MM-dd"),
+        endDate: todayStr(),
+      }),
+    },
+    {
+      key: "custom",
+      label: t("dateRangePresets.custom"),
+      range: () => ({ startDate: "", endDate: "" }),
+    },
+  ];
+}
 
 interface DateRangePickerProps {
   startDate: string;
@@ -35,6 +89,9 @@ interface DateRangePickerProps {
   endPlaceholder?: string;
   className?: string;
   baseInputClass?: string;
+  presets?: DateRangePresetOption[];
+  /** Called instead of onStartDateChange/onEndDateChange for a non-custom preset click, so the caller can apply the filter immediately rather than waiting for an explicit search action. */
+  onPresetApply?: (range: { startDate: string; endDate: string }) => void;
 }
 
 function toDate(value: string): Date | undefined {
@@ -220,28 +277,78 @@ export function DateRangePicker({
   endPlaceholder = "วันที่สิ้นสุด",
   className = "",
   baseInputClass = "",
+  presets,
+  onPresetApply,
 }: DateRangePickerProps) {
   const locale = useLocale();
   const dateLocale = locale === "th" ? th : enUS;
   const minEndDate = toDate(startDate);
 
+  // A preset is "active" only once its exact range is in effect; with both
+  // fields empty (no filter yet) nothing lights up, and a manually-adjusted
+  // range that doesn't match any quick option falls back to "custom".
+  const matchedPreset = presets?.find(
+    (preset) =>
+      preset.key !== "custom" &&
+      preset.range().startDate === startDate &&
+      preset.range().endDate === endDate,
+  );
+  const activePresetKey =
+    matchedPreset?.key ?? (startDate || endDate ? "custom" : undefined);
+
+  const handlePresetClick = (preset: DateRangePresetOption) => {
+    if (preset.key === "custom") {
+      onStartDateChange("");
+      onEndDateChange("");
+      return;
+    }
+    const range = preset.range();
+    if (onPresetApply) {
+      onPresetApply(range);
+    } else {
+      onStartDateChange(range.startDate);
+      onEndDateChange(range.endDate);
+    }
+  };
+
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${className}`}>
-      <DateField
-        value={startDate}
-        onChange={onStartDateChange}
-        placeholder={startPlaceholder}
-        baseInputClass={baseInputClass}
-        locale={dateLocale}
-      />
-      <DateField
-        value={endDate}
-        onChange={onEndDateChange}
-        placeholder={endPlaceholder}
-        baseInputClass={baseInputClass}
-        minDate={minEndDate}
-        locale={dateLocale}
-      />
+    <div className={className}>
+      {presets && presets.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {presets.map((preset) => (
+            <button
+              key={preset.key}
+              type="button"
+              onClick={() => handlePresetClick(preset)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                activePresetKey === preset.key
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700",
+              )}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DateField
+          value={startDate}
+          onChange={onStartDateChange}
+          placeholder={startPlaceholder}
+          baseInputClass={baseInputClass}
+          locale={dateLocale}
+        />
+        <DateField
+          value={endDate}
+          onChange={onEndDateChange}
+          placeholder={endPlaceholder}
+          baseInputClass={baseInputClass}
+          minDate={minEndDate}
+          locale={dateLocale}
+        />
+      </div>
     </div>
   );
 }
