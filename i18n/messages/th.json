@@ -105,7 +105,14 @@
     "page": "หน้า",
     "of": "จาก",
     "previous": "ก่อนหน้า",
-    "next": "ถัดไป"
+    "next": "ถัดไป",
+    "dateRangePresets": {
+      "today": "วันนี้",
+      "last7Days": "1 สัปดาห์",
+      "last1Month": "1 เดือน",
+      "last1Year": "1 ปี",
+      "custom": "กำหนดเอง"
+    }
   },
   "connectivity": {
     "offlineTitle": "ไม่มีการเชื่อมต่ออินเทอร์เน็ต",

@@ -11,6 +11,7 @@ import {
   DynamicFilterBar,
   type FilterFieldConfig,
 } from "@/components/ui/dynamic-filter-bar";
+import { getDefaultDateRangePresets } from "@/components/ui/date-range-picker";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -46,7 +47,7 @@ export default function SalesContent() {
 
   const salesFilterFields: FilterFieldConfig[] = [
     { name: "searchQuery", type: "text", placeholder: t("search") },
-    { name: "date", type: "date-range" },
+    { name: "date", type: "date-range", presets: getDefaultDateRangePresets(tCommon) },
   ];
 
   const handleViewDetails = (sale: (typeof sales)[0]) => {
