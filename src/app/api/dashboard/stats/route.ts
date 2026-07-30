@@ -34,6 +34,15 @@ export async function GET(request: NextRequest) {
     const stockWarehouseFilter: Prisma.ProductStockWhereInput = {
       warehouse_id: warehouseIdFilter,
     };
+    // A refund never changes the original Sale row (status stays
+    // "completed", total_amount stays the pre-refund amount — there's no
+    // "refunded" SaleStatus), so every revenue aggregate below must net out
+    // SaleRefund.total_amount itself, dated by when the refund was actually
+    // issued (created_at), not the original sale_date, since that's when
+    // the money actually left the register.
+    const refundWarehouseFilter: Prisma.SaleRefundWhereInput = {
+      sale: saleWarehouseFilter,
+    };
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -55,6 +64,10 @@ export async function GET(request: NextRequest) {
       },
       _count: true,
     });
+    const todayRefunds = await prisma.saleRefund.aggregate({
+      where: { created_at: { gte: today, lt: tomorrow }, ...refundWarehouseFilter },
+      _sum: { total_amount: true },
+    });
 
     // Get yesterday's sales for comparison
     const yesterday = new Date(today);
@@ -72,10 +85,17 @@ export async function GET(request: NextRequest) {
         total_amount: true,
       },
     });
+    const yesterdayRefunds = await prisma.saleRefund.aggregate({
+      where: { created_at: { gte: yesterday, lt: today }, ...refundWarehouseFilter },
+      _sum: { total_amount: true },
+    });
 
     // Calculate sales trend
-    const todayTotal = Number(todaySales._sum.total_amount || 0);
-    const yesterdayTotal = Number(yesterdaySales._sum.total_amount || 0);
+    const todayTotal =
+      Number(todaySales._sum.total_amount || 0) - Number(todayRefunds._sum.total_amount || 0);
+    const yesterdayTotal =
+      Number(yesterdaySales._sum.total_amount || 0) -
+      Number(yesterdayRefunds._sum.total_amount || 0);
     const salesTrend = yesterdayTotal > 0
       ? ((todayTotal - yesterdayTotal) / yesterdayTotal * 100).toFixed(1)
       : "0";
@@ -162,6 +182,30 @@ export async function GET(request: NextRequest) {
       take: 5,
     });
 
+    // Nets refunds (issued within the same 30-day window) out of each of the
+    // selected top-5 products' revenue/quantity — same "a refund never
+    // touches the original Sale/SaleItem row" reasoning as todayRefunds
+    // above, just joined through SaleRefundItem -> SaleItem to get back to
+    // product_id.
+    const topProductRefundItems = await prisma.saleRefundItem.findMany({
+      where: {
+        sale_item: { product_id: { in: topProducts.map((p) => p.product_id) } },
+        sale_refund: {
+          created_at: { gte: thirtyDaysAgo },
+          ...refundWarehouseFilter,
+        },
+      },
+      select: { amount: true, quantity: true, sale_item: { select: { product_id: true } } },
+    });
+    const refundedByProduct = new Map<string, { amount: number; quantity: number }>();
+    for (const refundItem of topProductRefundItems) {
+      const productId = refundItem.sale_item.product_id;
+      const entry = refundedByProduct.get(productId) ?? { amount: 0, quantity: 0 };
+      entry.amount += Number(refundItem.amount);
+      entry.quantity += Number(refundItem.quantity);
+      refundedByProduct.set(productId, entry);
+    }
+
     // Get product details for top products
     const topProductsWithDetails = await Promise.all(
       topProducts.map(async (item) => {
@@ -176,13 +220,14 @@ export async function GET(request: NextRequest) {
         });
         const current_stock =
           product?.stock.reduce((sum, s) => sum + Number(s.current_stock), 0) ?? 0;
+        const refunded = refundedByProduct.get(item.product_id);
         return {
           id: product?.id,
           name_i18n: product?.name_i18n,
           code: product?.code,
           current_stock,
-          totalQuantity: Number(item._sum.quantity || 0),
-          totalRevenue: Number(item._sum.total_amount || 0),
+          totalQuantity: Number(item._sum.quantity || 0) - (refunded?.quantity || 0),
+          totalRevenue: Number(item._sum.total_amount || 0) - (refunded?.amount || 0),
         };
       })
     );
@@ -209,13 +254,19 @@ export async function GET(request: NextRequest) {
           },
           _count: true,
         });
+        const dayRefunds = await prisma.saleRefund.aggregate({
+          where: { created_at: { gte: date, lt: nextDate }, ...refundWarehouseFilter },
+          _sum: { total_amount: true },
+        });
 
         return {
           // format() reads the Date's local getters — toISOString() would
           // convert to UTC first, shifting the label a day off from the
           // query's own (local-midnight) day boundaries above.
           date: format(date, "yyyy-MM-dd"),
-          total: Number(daySales._sum.total_amount || 0),
+          total:
+            Number(daySales._sum.total_amount || 0) -
+            Number(dayRefunds._sum.total_amount || 0),
           count: daySales._count,
         };
       })

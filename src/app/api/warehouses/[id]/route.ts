@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, hasPermission, hasWarehouseAccess } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 
 // GET /api/warehouses/[id] - ดึงข้อมูลคลังสินค้าตาม ID
@@ -16,6 +16,15 @@ export async function GET(
     }
 
     const { id } = await params;
+
+    // Same scoping as the list route — a non-admin caller may only look up
+    // a branch they're actually assigned to, not any warehouse by id.
+    if (!hasPermission(session, "settings.view") && !hasWarehouseAccess(session, id)) {
+      return NextResponse.json(
+        { error: "Forbidden: no access to this warehouse" },
+        { status: 403 },
+      );
+    }
 
     const warehouse = await prisma.warehouse.findUnique({ where: { id } });
 

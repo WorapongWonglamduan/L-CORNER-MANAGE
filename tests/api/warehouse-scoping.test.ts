@@ -6,6 +6,8 @@ import { GET as listSales } from "@/app/api/sales/route";
 import { GET as getSale, PUT as putSale, DELETE as voidSale } from "@/app/api/sales/[id]/route";
 import { GET as listMovements } from "@/app/api/inventory/movements/route";
 import { GET as listTransfers } from "@/app/api/inventory/transfers/route";
+import { GET as listWarehouses } from "@/app/api/warehouses/route";
+import { GET as getWarehouse } from "@/app/api/warehouses/[id]/route";
 import { fakeSession, seedBasics, resetDb } from "../helpers/fixtures";
 import type { Session } from "next-auth";
 
@@ -174,5 +176,48 @@ describe("Warehouse scoping across branches", () => {
       t.to_warehouse_id,
     ]);
     expect(ids.flat()).not.toContain(otherWarehouseId);
+  });
+
+  // GET /api/warehouses previously returned every warehouse (address, GPS
+  // coordinates, promptpay_id included) to any authenticated user regardless
+  // of role or branch assignment — a cashier or manager without
+  // settings.view could see every other branch's data. Only settings.view
+  // (admin-level) callers should see the unrestricted list.
+  it("GET /api/warehouses only returns the caller's assigned branch for a non-admin", async () => {
+    const res = await listWarehouses(new NextRequest("http://localhost/api/warehouses?pageSize=100"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const ids = body.items.map((w: { id: string }) => w.id);
+    expect(ids).toContain(fx.warehouseId);
+    expect(ids).not.toContain(otherWarehouseId);
+  });
+
+  it("GET /api/warehouses returns every branch for a settings.view (admin) caller", async () => {
+    mockedAuth.mockResolvedValue(
+      fakeSession({
+        userId: fx.userId,
+        warehouseIds: [fx.warehouseId],
+        permissions: ["settings.view"],
+      }),
+    );
+    const res = await listWarehouses(new NextRequest("http://localhost/api/warehouses?pageSize=100"));
+    const body = await res.json();
+    const ids = body.items.map((w: { id: string }) => w.id);
+    expect(ids).toContain(fx.warehouseId);
+    expect(ids).toContain(otherWarehouseId);
+  });
+
+  it("GET /api/warehouses/[id] denies a non-admin looking up another branch by id", async () => {
+    const ownRes = await getWarehouse(
+      new NextRequest(`http://localhost/api/warehouses/${fx.warehouseId}`),
+      { params: Promise.resolve({ id: fx.warehouseId }) },
+    );
+    expect(ownRes.status).toBe(200);
+
+    const otherRes = await getWarehouse(
+      new NextRequest(`http://localhost/api/warehouses/${otherWarehouseId}`),
+      { params: Promise.resolve({ id: otherWarehouseId }) },
+    );
+    expect(otherRes.status).toBe(403);
   });
 });

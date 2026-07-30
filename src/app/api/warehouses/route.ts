@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 
 // GET /api/warehouses - ดึงรายการคลังสินค้า
@@ -19,6 +19,16 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
 
     const where: Prisma.WarehouseWhereInput = {};
+
+    // Every non-admin caller (POS branch picker, product-form warehouse
+    // picker, etc.) already filters the response down to the user's own
+    // assigned branches client-side — but the full list, including every
+    // branch's address/GPS/promptpay_id, was reaching the browser first.
+    // Enforce the same scoping server-side; only settings.view (admin-level)
+    // callers, who manage warehouses themselves, get the unrestricted list.
+    if (!hasPermission(session, "settings.view")) {
+      where.id = { in: session.user.warehouse_ids ?? [] };
+    }
 
     if (isActive !== null && isActive !== undefined) {
       where.is_active = isActive === "true";
