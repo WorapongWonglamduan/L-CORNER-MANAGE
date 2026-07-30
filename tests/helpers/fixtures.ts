@@ -134,8 +134,10 @@ export async function resetDb() {
   await prisma.recipeIngredient.deleteMany();
   await prisma.recipe.deleteMany();
   await prisma.productMedia.deleteMany();
+  await prisma.media.deleteMany();
   await prisma.product.deleteMany();
   await prisma.productType.deleteMany();
+  await prisma.category.deleteMany();
   await prisma.unit.deleteMany();
   await prisma.userWarehouse.deleteMany();
   await prisma.userRole.deleteMany();
@@ -143,4 +145,7 @@ export async function resetDb() {
   await prisma.warehouse.deleteMany();
   await prisma.user.deleteMany();
   await prisma.promotion.deleteMany();
+  // AppSettings is a singleton config row (id "singleton"), not
+  // per-test fixture data — deliberately not wiped here, unlike
+  // everything else in this function.
 }
