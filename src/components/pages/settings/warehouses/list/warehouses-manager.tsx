@@ -8,7 +8,7 @@ import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynami
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useWarehousesManager } from "./helper";
-import { getWarehouseFormConfig } from "./form/config";
+import { getWarehouseFormConfig } from "../form/config";
 import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 

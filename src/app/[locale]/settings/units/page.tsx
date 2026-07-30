@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import UnitsContent from '@/components/pages/settings/units'
+import UnitsContent from "@/components/pages/settings/units/list"
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params

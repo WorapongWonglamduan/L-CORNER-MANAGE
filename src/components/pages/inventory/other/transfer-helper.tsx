@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { toast } from "@/lib/toast";
-import type { Warehouse } from "./helper";
+import type { Warehouse } from "../list/helper";
 
 export interface TransferFormData {
   product_id: string;

@@ -5,13 +5,14 @@ import { Sidebar } from "@/components/sidebar";
 import { Eye, Ban } from "lucide-react";
 import { useSalesManager } from "./helper";
 import { Button } from "@/components/ui/button";
-import { SalesDetailsModal } from "./sales-details-modal";
+import { SalesDetailsModal } from "../other/sales-details-modal";
 import { Pagination } from "@/components/ui/pagination";
 import {
   DynamicFilterBar,
   type FilterFieldConfig,
 } from "@/components/ui/dynamic-filter-bar";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { usePermission } from "@/hooks/usePermission";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
@@ -99,6 +100,99 @@ export default function SalesContent() {
     );
   };
 
+  const columns: DataTableColumn<(typeof sales)[0]>[] = [
+    {
+      key: "orderNumber",
+      header: t("orderNumber"),
+      cell: (sale) => (
+        <div className="text-sm font-medium text-gray-900 dark:text-white">
+          {sale.sale_number}
+        </div>
+      ),
+    },
+    {
+      key: "date",
+      header: t("date"),
+      cell: (sale) => (
+        <div className="text-sm text-gray-600 dark:text-gray-300">
+          {format(new Date(sale.sale_date), "dd/MM/yyyy HH:mm")}
+        </div>
+      ),
+    },
+    {
+      key: "warehouse",
+      header: t("warehouse"),
+      cell: (sale) => (
+        <div className="text-sm text-gray-900 dark:text-white">
+          {sale.warehouse?.name_i18n?.[locale as "th" | "en"] ?? "-"}
+        </div>
+      ),
+    },
+    {
+      key: "customer",
+      header: t("customer"),
+      cell: () => (
+        <div className="text-sm text-gray-900 dark:text-white">{t("walkIn")}</div>
+      ),
+    },
+    {
+      key: "total",
+      header: t("total"),
+      cell: (sale) => (
+        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+          ฿{Number(sale.total_amount).toLocaleString()}
+        </div>
+      ),
+    },
+    {
+      key: "paymentMethod",
+      header: t("paymentMethod"),
+      cell: (sale) => (
+        <div className="text-sm text-gray-600 dark:text-gray-300">
+          {getPaymentMethodLabel(sale.payment_method)}
+        </div>
+      ),
+    },
+    {
+      key: "paymentStatus",
+      header: t("paymentStatus"),
+      cell: (sale) => getPaymentStatusBadge(sale.payment_status),
+    },
+    {
+      key: "status",
+      header: t("status"),
+      cell: (sale) => getStatusBadge(sale.status),
+    },
+    {
+      key: "actions",
+      header: t("actions"),
+      cell: (sale) => (
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => handleViewDetails(sale)}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Eye className="w-4 h-4" />
+            {t("viewDetails")}
+          </Button>
+          {canVoid && sale.status !== "cancelled" && sale.refunds.length === 0 && (
+            <Button
+              onClick={() => handleVoid(sale)}
+              variant="destructive"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Ban className="w-4 h-4" />
+              {t("voidSale")}
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex">
       <Sidebar />
@@ -178,113 +272,7 @@ export default function SalesContent() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-600">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("orderNumber")}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("date")}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("warehouse")}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("customer")}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("total")}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("paymentMethod")}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("paymentStatus")}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("status")}
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {t("actions")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {sales.map((sale) => (
-                      <tr
-                        key={sale.id}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {sale.sale_number}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600 dark:text-gray-300">
-                            {format(
-                              new Date(sale.sale_date),
-                              "dd/MM/yyyy HH:mm",
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-white">
-                            {sale.warehouse?.name_i18n?.[locale as "th" | "en"] ?? "-"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-white">
-                            {t("walkIn")}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                            ฿{Number(sale.total_amount).toLocaleString()}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600 dark:text-gray-300">
-                            {getPaymentMethodLabel(sale.payment_method)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getPaymentStatusBadge(sale.payment_status)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(sale.status)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              onClick={() => handleViewDetails(sale)}
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2"
-                            >
-                              <Eye className="w-4 h-4" />
-                              {t("viewDetails")}
-                            </Button>
-                            {canVoid && sale.status !== "cancelled" && sale.refunds.length === 0 && (
-                              <Button
-                                onClick={() => handleVoid(sale)}
-                                variant="destructive"
-                                size="sm"
-                                className="flex items-center gap-2"
-                              >
-                                <Ban className="w-4 h-4" />
-                                {t("voidSale")}
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable columns={columns} data={sales} rowKey={(sale) => sale.id} />
 
               {/* Pagination */}
               <Pagination

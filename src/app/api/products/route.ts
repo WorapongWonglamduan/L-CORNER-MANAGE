@@ -196,18 +196,17 @@ export async function GET(request: NextRequest) {
         _count.recipe_ingredients === 0 &&
         _count.toppings_as_ingredient === 0 &&
         _count.transfers === 0;
-      let available_quantity = 0;
+      // Default: FINISHED_GOOD, INGREDIENT, CONTAINER, and any other type
+      // just sell/consume directly from their own current_stock — only
+      // SEMI_FINISHED overrides this below with a recipe-based figure.
+      let available_quantity = stockTotals.current_stock;
 
-      // FINISHED_GOOD: ใช้ current_stock ของตัวเอง
-      if (product.product_type.type === PRODUCTS_TYPES.FINISHED_GOOD) {
-        available_quantity = stockTotals.current_stock;
-      }
       // SEMI_FINISHED: คำนวณจากวัตถุดิบในสูตร — เฉพาะวัตถุดิบที่ track_stock
       // เท่านั้น ให้ตรงกับตอนตัดสต็อกจริง (sales/route.ts's deductProductStock)
       // ซึ่งไม่บังคับเช็คสต็อกพอ/ไม่พอสำหรับวัตถุดิบที่ track_stock=false —
       // ถ้าเอาวัตถุดิบนั้นมาคิดด้วย ตัวเลขที่โชว์จะดูเหมือนเป็นเพดานที่บังคับ
       // ทั้งที่จริงระบบปล่อยให้ขายเกินเพดานนั้นได้
-      else if (product.product_type.type === PRODUCTS_TYPES.SEMI_FINISHED) {
+      if (product.product_type.type === PRODUCTS_TYPES.SEMI_FINISHED) {
         const defaultRecipe = product.recipes[0];
 
         if (defaultRecipe && defaultRecipe.ingredients.length > 0) {
@@ -250,19 +249,25 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Filter by stock status if specified
+    // Filter by stock status if specified. Uses available_quantity, not the
+    // raw current_stock sum — for a SEMI_FINISHED product those two can
+    // differ a lot (current_stock only reflects units pre-made via
+    // /api/production, which a made-fresh-per-order shop may never use, so
+    // it can sit at 0 while available_quantity — how many more servings
+    // the remaining ingredients allow — is high). Filtering by the raw
+    // sum would call a fully-sellable item "out of stock".
     let filteredProducts = productsWithAvailability;
     if (stockStatus) {
       filteredProducts = productsWithAvailability.filter((product) => {
-        const currentStock = Number(product.current_stock) || 0;
+        const availableQuantity = Number(product.available_quantity) || 0;
         const threshold = Number(product.low_stock_threshold) || 0;
 
         if (stockStatus === "out") {
-          return currentStock <= 0;
+          return availableQuantity <= 0;
         } else if (stockStatus === "low") {
-          return currentStock > 0 && currentStock <= threshold;
+          return availableQuantity > 0 && availableQuantity <= threshold;
         } else if (stockStatus === "normal") {
-          return currentStock > threshold;
+          return availableQuantity > threshold;
         }
         return true;
       });

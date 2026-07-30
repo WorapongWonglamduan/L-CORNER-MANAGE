@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToppingsManager, Topping } from "./helper";
-import { getToppingFormConfig } from "./form/config";
+import { getToppingFormConfig } from "../form/config";
 import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 import { toast } from "@/lib/toast";

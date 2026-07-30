@@ -6,6 +6,12 @@ import { useTranslations, useLocale } from "next-intl";
 import { formatDate } from "@/utils/date";
 import { Pagination } from "@/components/ui/pagination";
 
+interface WarehouseRef {
+  id: string;
+  code: string;
+  name_i18n: { th: string; en: string };
+}
+
 interface StockMovement {
   id: string;
   movement_type: string;
@@ -17,6 +23,11 @@ interface StockMovement {
   note: string | null;
   transaction_date: string;
   created_at: string;
+  warehouse: WarehouseRef | null;
+  // Present only for movement_type === "transfer" — the single warehouse
+  // field above only tells you which side of the transfer this particular
+  // row is; this carries both ends.
+  transfer: { from_warehouse: WarehouseRef; to_warehouse: WarehouseRef } | null;
 }
 
 interface StockHistoryModalProps {
@@ -36,8 +47,9 @@ export function StockHistoryModal({
   product,
 }: StockHistoryModalProps) {
   const t = useTranslations("inventory.history");
+  const tTransfer = useTranslations("inventory.transfer");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
+  const locale = useLocale() as "th" | "en";
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -141,6 +153,29 @@ export function StockHistoryModal({
                           {t(movement.direction === "in" ? "in" : "out")}
                         </span>
                       </div>
+
+                      {/* Branch */}
+                      {movement.warehouse && (
+                        <p className="text-sm text-gray-700 dark:text-gray-200 mb-2">
+                          <span className="font-medium">{t("branch")}:</span>{" "}
+                          {movement.warehouse.code} - {movement.warehouse.name_i18n[locale]}
+                        </p>
+                      )}
+
+                      {/* Transfer: show both ends, not just the single
+                          warehouse field above (which is only this row's
+                          own side of the transfer). */}
+                      {movement.movement_type === "transfer" && movement.transfer && (
+                        <p className="text-sm text-gray-700 dark:text-gray-200 mb-2">
+                          <span className="font-medium">{tTransfer("fromWarehouse")}:</span>{" "}
+                          {movement.transfer.from_warehouse.code} -{" "}
+                          {movement.transfer.from_warehouse.name_i18n[locale]}
+                          {" → "}
+                          <span className="font-medium">{tTransfer("toWarehouse")}:</span>{" "}
+                          {movement.transfer.to_warehouse.code} -{" "}
+                          {movement.transfer.to_warehouse.name_i18n[locale]}
+                        </p>
+                      )}
 
                       {/* Reason */}
                       <p className="text-sm text-gray-700 dark:text-gray-200 mb-2">

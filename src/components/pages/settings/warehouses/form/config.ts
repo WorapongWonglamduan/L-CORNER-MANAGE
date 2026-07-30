@@ -1,5 +1,5 @@
 import type { FieldConfig } from "@/components/dynamic-form/types";
-import { WarehouseFormData } from "../helper";
+import { WarehouseFormData } from "../list/helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 import { isMapsShortLink, parseMapsLink } from "@/lib/parse-maps-link";
 import { toast } from "@/lib/toast";

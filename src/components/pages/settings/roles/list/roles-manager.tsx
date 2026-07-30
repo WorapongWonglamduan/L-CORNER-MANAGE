@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useRolesManager } from "./helper";
-import { getRoleFormConfig } from "./form/config";
+import { getRoleFormConfig } from "../form/config";
 import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 import { ALL_PERMISSIONS } from "@/constants/permissions";

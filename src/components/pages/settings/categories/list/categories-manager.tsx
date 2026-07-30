@@ -8,7 +8,7 @@ import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynami
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useCategoriesManager } from "./helper";
-import { getCategoryFormConfig } from "./form/config";
+import { getCategoryFormConfig } from "../form/config";
 
 export default function CategoriesManager() {
   const { t, table, filters, pagination, actions, modal, form, ConfirmDialog } =

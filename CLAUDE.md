@@ -23,3 +23,24 @@ native element or a duplicate implementation.
 - If nothing existing fits, extend/generalize the existing shared component
   (as done for `DateField`, and for `emptyOptionLabel`/`hideEmptyOption` on
   `Input.tsx`) rather than building a parallel one-off.
+
+## Page folder structure
+
+Each entity lives under `src/components/pages/<entity>/`. Split it into
+subfolders by view/route instead of dropping every file at the top level:
+
+- `list/` — the list page (`index.tsx`), its data hook (`helper.tsx`), and
+  any list-only components (row action buttons, visibility toggles, etc.).
+- `form/` — the create/edit page or dialog (`index.tsx`/`helper.tsx`) and the
+  dynamic-form `config.ts` used by `useEntityForm`/`EntityDialog` (see
+  above). Only needed when the entity has a dedicated create/edit
+  route/dialog.
+- `detail/` — a dedicated detail/view route (`index.tsx` + `helper.tsx`), if
+  the entity has one.
+- `other/` — anything that doesn't fit list/form/detail: standalone modals,
+  secondary dialogs, etc.
+
+Omit whichever subfolders don't apply to that entity — e.g. a list-only
+entity doesn't need a `form/` folder. Reference layouts: `products/` (list +
+form + detail) and `sales/` (list + other, since sales are created via POS,
+not a form on this page).

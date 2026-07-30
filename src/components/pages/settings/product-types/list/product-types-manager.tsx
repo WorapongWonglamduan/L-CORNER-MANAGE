@@ -8,7 +8,7 @@ import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynami
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { useProductTypesManager } from "./helper";
-import { getProductTypeFormConfig } from "./form/config";
+import { getProductTypeFormConfig } from "../form/config";
 
 export default function ProductTypesManager() {
   const {

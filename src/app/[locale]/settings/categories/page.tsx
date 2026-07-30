@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import CategoriesContent from "@/components/pages/settings/categories";
+import CategoriesContent from "@/components/pages/settings/categories/list";
 
 export async function generateMetadata({
   params,

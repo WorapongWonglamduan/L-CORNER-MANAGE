@@ -1,5 +1,5 @@
 import type { FieldConfig } from "@/components/dynamic-form/types";
-import { ToppingFormData } from "../helper";
+import { ToppingFormData } from "../list/helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 import { I18nText, Locale } from "@/types/i18n";
 

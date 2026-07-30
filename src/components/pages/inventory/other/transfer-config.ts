@@ -1,7 +1,7 @@
 import type { FieldConfig } from "@/components/dynamic-form/types";
 import { INPUT_TYPES } from "@/constants/input-types";
 import type { TransferFormData } from "./transfer-helper";
-import type { Warehouse } from "./helper";
+import type { Warehouse } from "../list/helper";
 import type { Locale } from "@/types/i18n";
 
 interface TransferProduct {

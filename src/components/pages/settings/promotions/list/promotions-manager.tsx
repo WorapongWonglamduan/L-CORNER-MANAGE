@@ -7,7 +7,7 @@ import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynami
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
 import { usePromotionsManager } from "./helper";
-import { getPromotionFormConfig } from "./form/config";
+import { getPromotionFormConfig } from "../form/config";
 import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 import type { Promotion } from "./helper";

@@ -18,6 +18,13 @@ export interface Product {
   code: string;
   name_i18n: I18nText;
   current_stock: string;
+  // For a SEMI_FINISHED product this is computed from remaining recipe
+  // ingredients (how many more servings can be made), not the raw
+  // current_stock sum — same figure the POS page's "เหลือ" badge shows.
+  // For every other product type it's just current_stock again. This is
+  // the number that actually reflects what's sellable right now, so it's
+  // what the UI displays/filters by, not current_stock directly.
+  available_quantity: number;
   min_stock_level: string;
   low_stock_threshold: string;
   track_stock: boolean;
@@ -96,7 +103,7 @@ export function useInventoryManager() {
   };
 
   const getStockStatus = (product: Product) => {
-    const currentStock = Number(product.current_stock);
+    const currentStock = Number(product.available_quantity);
     const threshold = Number(product.low_stock_threshold);
 
     if (currentStock <= 0) {

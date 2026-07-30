@@ -83,8 +83,51 @@ export async function GET(request: NextRequest) {
       prisma.stockMovement.count({ where }),
     ]);
 
+    // StockMovement has no defined Prisma relation for warehouse_id or
+    // reference_id (a loose polymorphic reference_type/reference_id pair,
+    // not a real FK relation) — resolved here in application code instead
+    // of a schema change. Every movement only ever shows the single branch
+    // it happened at otherwise; a "transfer" movement specifically needs
+    // both sides (from -> to), which only StockTransfer itself records.
+    const warehouseIds = [...new Set(movements.map((m) => m.warehouse_id))];
+    const transferIds = [
+      ...new Set(
+        movements
+          .filter((m) => m.reference_type === "transfer" && m.reference_id)
+          .map((m) => m.reference_id as string),
+      ),
+    ];
+
+    const [movementWarehouses, transfers] = await Promise.all([
+      prisma.warehouse.findMany({
+        where: { id: { in: warehouseIds } },
+        select: { id: true, code: true, name_i18n: true },
+      }),
+      transferIds.length > 0
+        ? prisma.stockTransfer.findMany({
+            where: { id: { in: transferIds } },
+            select: {
+              id: true,
+              from_warehouse: { select: { id: true, code: true, name_i18n: true } },
+              to_warehouse: { select: { id: true, code: true, name_i18n: true } },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+    const warehouseById = new Map(movementWarehouses.map((w) => [w.id, w]));
+    const transferById = new Map(transfers.map((t) => [t.id, t]));
+
+    const items = movements.map((movement) => ({
+      ...movement,
+      warehouse: warehouseById.get(movement.warehouse_id) ?? null,
+      transfer:
+        movement.reference_type === "transfer" && movement.reference_id
+          ? transferById.get(movement.reference_id) ?? null
+          : null,
+    }));
+
     return NextResponse.json({
-      items: movements,
+      items,
       total,
       page,
       pageSize,

@@ -1,5 +1,5 @@
 import type { FieldConfig } from "@/components/dynamic-form/types";
-import { PromotionFormData } from "../helper";
+import { PromotionFormData } from "../list/helper";
 import { INPUT_TYPES } from "@/constants/input-types";
 
 export const getPromotionFormConfig = (

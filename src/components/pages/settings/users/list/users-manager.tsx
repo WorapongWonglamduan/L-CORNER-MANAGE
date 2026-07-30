@@ -33,7 +33,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useUsersManager, AppUser } from "./helper";
-import { getUserFormConfig } from "./form/config";
+import { getUserFormConfig } from "../form/config";
 import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
 import { toast } from "@/lib/toast";

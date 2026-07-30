@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
 import { useStockTransfer } from "./transfer-helper";
 import { getTransferFormConfig } from "./transfer-config";
-import type { Warehouse } from "./helper";
+import type { Warehouse } from "../list/helper";
 import type { Locale } from "@/types/i18n";
 
 interface TransferModalProps {
