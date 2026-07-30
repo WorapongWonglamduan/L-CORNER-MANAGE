@@ -448,11 +448,24 @@ export async function GET(request: NextRequest) {
       where.sale_number = { contains: searchQuery, mode: "insensitive" };
     }
 
+    // status/status is now a real Prisma enum (SaleStatus/PaymentStatus) —
+    // a query param is just a string until validated against the same
+    // allow-list PUT /api/sales/[id] uses, so a bad value here is a clean
+    // 400 instead of Prisma's own runtime enum-validation error.
     if (status) {
+      if (status !== "completed" && status !== "cancelled") {
+        return NextResponse.json({ error: `Invalid status: ${status}` }, { status: 400 });
+      }
       where.status = status;
     }
 
     if (paymentStatus) {
+      if (paymentStatus !== "paid" && paymentStatus !== "unpaid") {
+        return NextResponse.json(
+          { error: `Invalid paymentStatus: ${paymentStatus}` },
+          { status: 400 },
+        );
+      }
       where.payment_status = paymentStatus;
     }
 

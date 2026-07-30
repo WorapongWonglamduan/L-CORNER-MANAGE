@@ -6,6 +6,28 @@ datasource db {
   provider = "postgresql"
 }
 
+// Real DB-level constraints for a few string fields that used to rely
+// entirely on application-level allow-lists (validation gaps in exactly
+// these three were real bugs fixed this session: PUT /api/sales/[id]'s
+// status/payment_status, and POST/PUT /api/promotions' discount_type).
+// The app-level checks stay in place too — they produce a clean 400
+// instead of a raw Prisma validation error — this is defense in depth,
+// not a replacement.
+enum SaleStatus {
+  completed
+  cancelled
+}
+
+enum PaymentStatus {
+  paid
+  unpaid
+}
+
+enum DiscountType {
+  percentage
+  fixed
+}
+
 model User {
   id         String   @id @default(uuid())
   username   String   @unique
@@ -304,21 +326,21 @@ model ProductTopping {
 // Customer model removed - using walk-in sales only
 
 model Sale {
-  id              String   @id @default(uuid())
-  sale_number     String   @unique
-  sale_date       DateTime @default(now())
+  id              String        @id @default(uuid())
+  sale_number     String        @unique
+  sale_date       DateTime      @default(now())
   warehouse_id    String
-  subtotal        Decimal  @db.Decimal(15, 2)
-  discount_amount Decimal  @default(0) @db.Decimal(15, 2)
-  tax_rate        Decimal  @default(0) @db.Decimal(5, 2)
-  tax_amount      Decimal  @default(0) @db.Decimal(15, 2)
-  total_amount    Decimal  @db.Decimal(15, 2)
+  subtotal        Decimal       @db.Decimal(15, 2)
+  discount_amount Decimal       @default(0) @db.Decimal(15, 2)
+  tax_rate        Decimal       @default(0) @db.Decimal(5, 2)
+  tax_amount      Decimal       @default(0) @db.Decimal(15, 2)
+  total_amount    Decimal       @db.Decimal(15, 2)
   payment_method  String?
-  payment_status  String   @default("paid")
-  status          String   @default("completed")
+  payment_status  PaymentStatus @default(paid)
+  status          SaleStatus    @default(completed)
   created_by      String?
-  note            String?  @db.Text
-  created_at      DateTime @default(now())
+  note            String?       @db.Text
+  created_at      DateTime      @default(now())
 
   // Promotion applied at checkout. `promotion_code` is a snapshot of the code
   // actually used, kept even if the Promotion is later edited/deactivated.
@@ -433,17 +455,17 @@ model SaleItemTopping {
 // Promotion code applied at POS checkout. Supports percentage or fixed-amount
 // discounts, an optional usage cap, and an optional expiry date.
 model Promotion {
-  id             String    @id @default(uuid())
-  code           String    @unique
+  id             String       @id @default(uuid())
+  code           String       @unique
   name_i18n      Json
-  discount_type  String // "percentage" | "fixed"
-  discount_value Decimal   @db.Decimal(15, 2)
+  discount_type  DiscountType
+  discount_value Decimal      @db.Decimal(15, 2)
   max_uses       Int?
-  used_count     Int       @default(0)
+  used_count     Int          @default(0)
   expires_at     DateTime?
-  is_active      Boolean   @default(true)
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @updatedAt
+  is_active      Boolean      @default(true)
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
 
   sales Sale[]
 
@@ -455,7 +477,15 @@ model ProductType {
   name_i18n  Json
   code       String   @unique
   icon       String?
-  type       String   @default("product") // "raw_material", "product", "semi_finished", "finished_good"
+  // Stale comment fixed: actual values are PRODUCTS_TYPES in
+  // src/constants/input-types.ts — "product" | "semi_finished" |
+  // "container" | "finished_good" | "ingredient" (this comment used to
+  // say "raw_material" and omitted "container"/"ingredient" entirely).
+  // Left as a plain string rather than converting to an enum in this
+  // pass — it's compared across many more route files than status/
+  // payment_status/discount_type were, and deserves its own dedicated
+  // verification pass rather than bundling it in here.
+  type       String   @default("product")
   sort_order Int      @default(0)
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
