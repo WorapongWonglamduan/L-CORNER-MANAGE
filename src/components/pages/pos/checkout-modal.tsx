@@ -671,6 +671,21 @@ export function CheckoutModal({
               <p className="text-2xl font-bold text-primary">
                 ฿{discountedTotal.toLocaleString()}
               </p>
+              {/* qr_payload is a real URL for link-based gateways (PayPal's
+                  approval page) but a raw EMV payload string for the manual
+                  PromptPay flow — only the former is worth showing as a
+                  clickable link, e.g. to test on the same machine without a
+                  second device to scan with. */}
+              {gatewayIntent.qr_payload?.startsWith("http") && (
+                <a
+                  href={gatewayIntent.qr_payload}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary underline break-all text-center"
+                >
+                  {gatewayIntent.qr_payload}
+                </a>
+              )}
               {gatewayIntent.status === "pending" && (
                 <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   <Loader2 className="w-4 h-4 animate-spin" />

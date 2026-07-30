@@ -182,6 +182,21 @@ export default function POSDisplayContent() {
             <p className="text-base sm:text-lg text-gray-300 mb-4 md:mb-6">
               {t("scanInstruction")}
             </p>
+            {/* qrPayload is a real URL for link-based gateways (PayPal's
+                approval page) but a raw EMV payload string for the manual
+                PromptPay flow — only the former is worth showing as a
+                clickable link, e.g. for testing on the same machine
+                without a second device to scan with. */}
+            {payment.qrPayload?.startsWith("http") && (
+              <a
+                href={payment.qrPayload}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-sm text-primary-light underline break-all mb-4 md:mb-6"
+              >
+                {payment.qrPayload}
+              </a>
+            )}
             <div className="inline-flex items-center gap-2 bg-black/20 px-4 py-2 rounded-full">
               <span className="w-2 h-2 rounded-full bg-primary-light motion-safe:animate-pulse" />
               <span className="text-sm text-gray-400">{t("waitingConfirm")}</span>
