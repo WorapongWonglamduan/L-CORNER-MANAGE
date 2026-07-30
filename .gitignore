@@ -40,6 +40,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# User-uploaded product images (src/lib/image-upload.ts) — runtime data,
+# not source. Persisted via the uploads_data Docker volume in production
+# (docker-compose.yml), never committed here.
+/public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
