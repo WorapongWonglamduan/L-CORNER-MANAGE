@@ -123,12 +123,17 @@ export function CheckoutModal({
   }, [paymentMethod, promptpayId, discountedTotal]);
 
   // Mirrors the QR (or lack thereof) onto the customer-facing display while
-  // this modal is open. Guarded by `isProcessing`: once confirm is clicked,
-  // `onConfirm` clears the cart on success, which zeroes the `cartTotal`
-  // prop this effect depends on (via qrPayload/discountedTotal) *before*
-  // the modal has actually closed — without the guard that re-fires this
-  // effect mid-confirm with a bogus "awaiting ฿0" push, stomping on the
-  // "payment succeeded" state the parent sets moments earlier. Deliberately
+  // this modal is open — either the manual PromptPay payload (qrPayload) or
+  // a real gateway-issued QR image (Omise's gatewayIntent.qr_image_url,
+  // while still "pending"). Guarded by `isProcessing`: once confirm is
+  // clicked, `onConfirm`/finalizeSuccessfulSale clears the cart on success,
+  // which zeroes the `cartTotal` prop this effect depends on (via
+  // qrPayload/discountedTotal) *before* the modal has actually closed —
+  // without the guard that re-fires this effect mid-confirm with a bogus
+  // "awaiting ฿0" push, stomping on the "payment succeeded" state the
+  // parent sets moments earlier. This is safe for the Omise flow too: by
+  // the time gatewayIntent carries a QR, the initial startGatewayCheckout
+  // call has already resolved and isProcessing is back to false. Deliberately
   // does NOT reset to null on close either — the same success screen must
   // survive the close. Cancelling instead resets explicitly, see
   // handleClose below.
@@ -140,6 +145,16 @@ export function CheckoutModal({
         qrPayload,
         amount: discountedTotal,
       });
+    } else if (
+      paymentMethod === OMISE_PROMPTPAY &&
+      gatewayIntent?.status === "pending" &&
+      gatewayIntent.qr_image_url
+    ) {
+      onDisplayStateChange({
+        status: "awaiting_qr",
+        qrImageUrl: gatewayIntent.qr_image_url,
+        amount: discountedTotal,
+      });
     } else {
       onDisplayStateChange(null);
     }
@@ -148,6 +163,7 @@ export function CheckoutModal({
     isProcessing,
     paymentMethod,
     qrPayload,
+    gatewayIntent,
     discountedTotal,
     onDisplayStateChange,
   ]);

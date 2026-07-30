@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useTranslations, useLocale } from "next-intl";
 import { ShoppingBag, Check } from "lucide-react";
 import QRCode from "react-qr-code";
+import Image from "next/image";
 import type { Locale } from "@/types/i18n";
 import type { DisplayPaymentState } from "@/components/pages/pos/helper";
 
@@ -138,7 +139,19 @@ export default function POSDisplayContent() {
         </div>
         <div className="flex-1 flex items-center justify-center gap-16">
           <div className="bg-white p-6 rounded-2xl shadow-2xl shrink-0">
-            <QRCode value={payment.qrPayload} size={240} />
+            {payment.qrImageUrl ? (
+              <div className="relative w-60 h-60">
+                <Image
+                  src={payment.qrImageUrl}
+                  alt={t("scanInstruction")}
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <QRCode value={payment.qrPayload ?? ""} size={240} />
+            )}
           </div>
           <div className="text-left max-w-xs">
             <p className="text-xl text-gray-400 mb-2">{t("amountDue")}</p>
