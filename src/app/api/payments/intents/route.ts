@@ -16,6 +16,22 @@ import { reconcileIntent } from "@/lib/payments/reconcile";
 // see expireIfStale() in reconcile.ts.
 const INTENT_EXPIRY_MS = 15 * 60 * 1000;
 
+// Every driver charges THB by default — this app's prices, PaymentIntent
+// amounts, and Sale totals are all THB, and there is no currency-conversion
+// step anywhere in this codebase. PAYPAL_CURRENCY exists ONLY as an escape
+// hatch for sandbox testing: PayPal's sandbox rejects THB charges for many
+// account/region combinations ("in accordance with international
+// regulations, this transaction has been rejected"), and PayPal itself
+// restricts real THB settlement into Thai accounts. Setting this to "usd"
+// charges the THB amount's face value as dollars with NO conversion (e.g. a
+// ฿75 order charges $75) — that's fine for proving the create → approve →
+// capture flow works end-to-end against sandbox, but is NOT a real amount
+// and must never be set when PAYPAL_CLIENT_ID/SECRET point at a real
+// PayPal account.
+const DRIVER_CURRENCY: Record<string, string> = {
+  paypal: process.env.PAYPAL_CURRENCY || "thb",
+};
+
 // POST /api/payments/intents - starts a gateway-backed checkout. Same
 // permission/warehouse-access shape as POST /api/sales (this is the
 // gateway-payment equivalent of that route, not a separate feature with its
@@ -92,7 +108,7 @@ export async function POST(request: NextRequest) {
     try {
       chargeResult = await paymentDriver.createCharge({
         amount,
-        currency: "thb",
+        currency: DRIVER_CURRENCY[driver] || "thb",
         method,
         cardToken: card_token,
         metadata: { paymentIntentId: intent.id },

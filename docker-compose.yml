@@ -75,6 +75,9 @@ services:
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
       PAYPAL_API_BASE: ${PAYPAL_API_BASE:-}
+      # Sandbox-testing escape hatch only — see env.template. Must stay
+      # unset (defaults to "thb") for any real PayPal account.
+      PAYPAL_CURRENCY: ${PAYPAL_CURRENCY:-}
     volumes:
       # Uploaded product images are written at runtime under
       # public/uploads/<year>/<month>/... (src/lib/image-upload.ts) — without
