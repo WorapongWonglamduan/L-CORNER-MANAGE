@@ -5,11 +5,11 @@ import { readFile } from "fs/promises";
 import sharp from "sharp";
 import { uploadImage, deleteImage, validateImage, ImageUploadError } from "@/lib/image-upload";
 
-// Real end-to-end check (sharp resize + LocalStorageDriver together, not
+// Real end-to-end check (sharp read + LocalStorageDriver together, not
 // mocked) that the storage-driver refactor didn't break the actual upload
-// path — a genuine PNG buffer in, real files under public/uploads/ out.
+// path — a genuine PNG buffer in, a real file under public/uploads/ out.
 //
-// Cleanup is deliberately per-file via deleteImage() with the exact paths
+// Cleanup is deliberately per-file via deleteImage() with the exact path
 // each test's own upload returned — never a folder-level rm(). A test here
 // once recursively deleted the whole public/uploads/ directory in
 // afterEach, wiping every real uploaded product image on disk (recovered
@@ -38,29 +38,42 @@ describe("uploadImage / deleteImage (local driver, end-to-end)", () => {
     await expect(validateImage(file)).rejects.toThrow(ImageUploadError);
   });
 
-  it("saves original + thumbnail + medium as real files and reports correct URLs", async () => {
-    const file = await makeTestFile();
-    // "test-only-<random-ish>" folder name — sanitizeFolder allows any
+  it("saves a single original file under a per-upload UUID folder, keeping the original filename", async () => {
+    const file = await makeTestFile("รูปสินค้า test (1).png");
+    // "vitest-image-upload-spec" — sanitizeFolder allows any
     // [a-zA-Z0-9_-]+ string, this just has to be distinctive enough that
     // it can never collide with a real product's upload folder.
     const result = await uploadImage(file, { folder: "vitest-image-upload-spec" });
 
     try {
+      // <uuid>/<original-filename> — no "original/thumbnail/medium"
+      // subfolders anymore, since only one variant is ever generated.
       expect(result.filePath).toMatch(
-        /^\/uploads\/\d{4}\/\d{2}\/vitest-image-upload-spec\/original\/.+\.png$/,
+        /^\/uploads\/\d{4}\/\d{2}\/vitest-image-upload-spec\/[0-9a-f-]{36}\/.+\.png$/,
       );
-      expect(result.thumbnailPath).toMatch(/\/thumbnail\//);
-      expect(result.mediumPath).toMatch(/\/medium\//);
+      expect(result.storedFilename).toBe("รูปสินค้า test (1).png");
+      expect(result.filePath).toContain("รูปสินค้า test (1).png");
       expect(result.width).toBe(20);
       expect(result.height).toBe(20);
 
-      for (const url of [result.filePath, result.thumbnailPath, result.mediumPath]) {
-        const fullPath = path.join(process.cwd(), "public", url!);
-        expect(existsSync(fullPath)).toBe(true);
-        expect((await readFile(fullPath)).length).toBeGreaterThan(0);
-      }
+      const fullPath = path.join(process.cwd(), "public", result.filePath);
+      expect(existsSync(fullPath)).toBe(true);
+      expect((await readFile(fullPath)).length).toBeGreaterThan(0);
     } finally {
-      await deleteImage(result.filePath, result.thumbnailPath, result.mediumPath);
+      await deleteImage(result.filePath);
+    }
+  });
+
+  it("sanitizes an unsafe filename instead of writing outside its UUID folder", async () => {
+    const file = await makeTestFile("../../../etc/passwd.png");
+    const result = await uploadImage(file, { folder: "vitest-image-upload-spec" });
+    try {
+      // Only the last path segment survives, path separators stripped —
+      // stays inside its own UUID folder, never escapes it.
+      expect(result.filePath).not.toContain("..");
+      expect(result.storedFilename).toBe("passwd.png");
+    } finally {
+      await deleteImage(result.filePath);
     }
   });
 
@@ -69,24 +82,38 @@ describe("uploadImage / deleteImage (local driver, end-to-end)", () => {
     // Falls back to "general" — same guard as image-upload.ts's
     // SAFE_FOLDER — which is also the default folder real uploads land in,
     // so this test must clean up only the exact file it created (via
-    // deleteImage with the exact returned paths), never anything folder-wide.
+    // deleteImage with the exact returned path), never anything folder-wide.
     const result = await uploadImage(file, { folder: "../../../etc" });
     try {
-      expect(result.filePath).toMatch(/^\/uploads\/\d{4}\/\d{2}\/general\/original\//);
+      expect(result.filePath).toMatch(/^\/uploads\/\d{4}\/\d{2}\/general\//);
     } finally {
-      await deleteImage(result.filePath, result.thumbnailPath, result.mediumPath);
+      await deleteImage(result.filePath);
     }
   });
 
-  it("deleteImage removes all three variants a real upload created", async () => {
+  it("deleteImage removes the file a real upload created", async () => {
     const file = await makeTestFile();
     const result = await uploadImage(file, { folder: "vitest-image-upload-spec" });
 
-    await deleteImage(result.filePath, result.thumbnailPath, result.mediumPath);
+    await deleteImage(result.filePath);
 
-    for (const url of [result.filePath, result.thumbnailPath, result.mediumPath]) {
-      const fullPath = path.join(process.cwd(), "public", url!);
-      expect(existsSync(fullPath)).toBe(false);
-    }
+    const fullPath = path.join(process.cwd(), "public", result.filePath);
+    expect(existsSync(fullPath)).toBe(false);
+  });
+
+  it("deleteImage still cleans up thumbnail/medium files from before this app version", async () => {
+    // Simulates an old Media row uploaded before thumbnail/medium
+    // generation was removed — deleteImage must still take and clean up
+    // those paths if given them, since real historical rows still have them.
+    const file = await makeTestFile();
+    const original = await uploadImage(file, { folder: "vitest-image-upload-spec" });
+    const thumbnail = await uploadImage(await makeTestFile(), {
+      folder: "vitest-image-upload-spec",
+    });
+
+    await deleteImage(original.filePath, thumbnail.filePath, null);
+
+    expect(existsSync(path.join(process.cwd(), "public", original.filePath))).toBe(false);
+    expect(existsSync(path.join(process.cwd(), "public", thumbnail.filePath))).toBe(false);
   });
 });

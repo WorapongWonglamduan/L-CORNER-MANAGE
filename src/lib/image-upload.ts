@@ -7,8 +7,6 @@ export interface UploadedImage {
   filename: string
   storedFilename: string
   filePath: string
-  thumbnailPath?: string
-  mediumPath?: string
   fileSize: number
   mimeType: string
   width?: number
@@ -18,19 +16,11 @@ export interface UploadedImage {
 export interface ImageUploadOptions {
   folder?: string
   maxSize?: number // in bytes
-  generateThumbnail?: boolean
-  generateMedium?: boolean
-  thumbnailSize?: number
-  mediumSize?: number
 }
 
 const DEFAULT_OPTIONS: ImageUploadOptions = {
   folder: 'general',
   maxSize: 5 * 1024 * 1024, // 5MB
-  generateThumbnail: true,
-  generateMedium: true,
-  thumbnailSize: 200,
-  mediumSize: 800,
 }
 
 const ALLOWED_MIME_TYPES = [
@@ -61,10 +51,28 @@ function sanitizeFolder(folder: string): string {
   return SAFE_FOLDER.test(folder) ? folder : 'general'
 }
 
+// The original filename is preserved (not replaced by a generated UUID) so
+// it stays human-readable in the bucket/disk — but it's client-supplied,
+// so the same path-traversal concern as `folder` applies once it's used
+// directly as a storage key segment: strip any directory components first
+// (defends against a crafted "../../etc/passwd"-style name), then replace
+// anything that isn't a safe filename character. Collision-safety comes
+// from the UUID folder each upload gets (see uploadImage), not from this.
+// Allows letters/digits/Thai script, spaces, and the punctuation that
+// shows up in ordinary real-world filenames (Windows' own "photo (1).jpg"
+// duplicate-download pattern, "product_shot-final.jpg", etc.) — anything
+// else (path separators, control characters, quotes, ...) is replaced.
+const SAFE_FILENAME_CHARS = new RegExp(`[^a-zA-Z0-9._\\-() \\u0E00-\\u0E7F]`, 'g')
+
+function sanitizeFilename(name: string): string {
+  const lastSegment = name.split(/[\\/]/).pop() || 'file'
+  return lastSegment.replace(SAFE_FILENAME_CHARS, '_') || 'file'
+}
+
 /**
  * Storage key prefix for the current year/month, e.g.
  * "uploads/2026/07/general" — shared by both storage drivers, which each
- * append "/original|thumbnail|medium/<uuid>.<ext>" to it.
+ * append "/<uuid>/<original-filename>" to it.
  */
 export function getUploadKeyPrefix(folder: string = 'general'): string {
   const now = new Date()
@@ -101,10 +109,15 @@ export async function validateImage(
 }
 
 /**
- * Upload and process image — resizes via sharp into up to 3 variants and
- * saves each through the active StorageDriver (local disk by default, or
- * Cloudflare R2 when STORAGE_DRIVER=r2). Resize logic here never touches
- * the filesystem/network directly; only the driver does.
+ * Upload and process image — saves the original file as-is (no
+ * thumbnail/medium resizing: nothing in the app ever read those, only the
+ * original was ever displayed anywhere, so generating them was pure
+ * wasted work and storage) through the active StorageDriver (local disk
+ * by default, or Cloudflare R2 when STORAGE_DRIVER=r2). Stores it under a
+ * per-upload UUID folder with its original filename kept intact, e.g.
+ * "uploads/2026/07/general/<uuid>/<original-filename>.jpg" — the UUID
+ * folder guarantees no collision between two uploads sharing the same
+ * filename, without needing to rename the file itself.
  */
 export async function uploadImage(
   file: File,
@@ -116,11 +129,9 @@ export async function uploadImage(
   await validateImage(file, opts)
 
   const driver = getStorageDriver()
-
-  // Generate unique filename
-  const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
-  const storedFilename = `${uuidv4()}${ext}`
   const keyPrefix = getUploadKeyPrefix(opts.folder!)
+  const uploadId = uuidv4()
+  const storedFilename = sanitizeFilename(file.name)
 
   // Convert File to Buffer
   const bytes = await file.arrayBuffer()
@@ -129,58 +140,26 @@ export async function uploadImage(
   // Get image metadata
   const metadata = await sharp(buffer).metadata()
 
-  // Save original image
-  const originalUrl = await driver.put(buffer, `${keyPrefix}/original/${storedFilename}`, file.type)
+  const url = await driver.put(buffer, `${keyPrefix}/${uploadId}/${storedFilename}`, file.type)
 
-  const result: UploadedImage = {
+  return {
     id: uuidv4(),
     filename: file.name,
     storedFilename,
-    filePath: originalUrl,
+    filePath: url,
     fileSize: file.size,
     mimeType: file.type,
     width: metadata.width,
     height: metadata.height,
   }
-
-  // Generate thumbnail
-  if (opts.generateThumbnail) {
-    const thumbnailBuffer = await sharp(buffer)
-      .resize(opts.thumbnailSize, opts.thumbnailSize, {
-        fit: 'cover',
-        position: 'center',
-      })
-      .toBuffer()
-    result.thumbnailPath = await driver.put(
-      thumbnailBuffer,
-      `${keyPrefix}/thumbnail/${storedFilename}`,
-      file.type,
-    )
-  }
-
-  // Generate medium size
-  if (opts.generateMedium) {
-    const mediumBuffer = await sharp(buffer)
-      .resize(opts.mediumSize, opts.mediumSize, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .toBuffer()
-    result.mediumPath = await driver.put(
-      mediumBuffer,
-      `${keyPrefix}/medium/${storedFilename}`,
-      file.type,
-    )
-  }
-
-  return result
 }
 
 /**
- * Delete image files — takes the exact URLs a Media row has stored (not
- * derived by string-replacing "/original/" in filePath, which only ever
- * worked by coincidence of the local driver's own path shape and silently
- * skipped variants for any other storage layout).
+ * Delete image files — takes the exact URL a Media row has stored.
+ * thumbnailPath/mediumPath are accepted for backward compatibility with
+ * rows uploaded before this file dropped thumbnail/medium generation
+ * (their files may still exist and need cleaning up); new uploads never
+ * set them.
  */
 export async function deleteImage(
   filePath: string,

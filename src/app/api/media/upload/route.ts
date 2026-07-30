@@ -26,12 +26,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Upload and process image
-    const uploadedImage = await uploadImage(file, {
-      folder,
-      generateThumbnail: true,
-      generateMedium: true,
-    })
+    // Upload and process image — single variant only (original), no
+    // thumbnail/medium: nothing in the app ever displayed those, only the
+    // original was ever read anywhere, so generating them was pure wasted
+    // work and storage.
+    const uploadedImage = await uploadImage(file, { folder })
 
     // Save to database
     const media = await prisma.media.create({
@@ -43,8 +42,6 @@ export async function POST(request: NextRequest) {
         mime_type: uploadedImage.mimeType,
         width: uploadedImage.width,
         height: uploadedImage.height,
-        thumbnail_path: uploadedImage.thumbnailPath,
-        medium_path: uploadedImage.mediumPath,
         entity_type: entityType,
         entity_id: entityId,
         folder,
@@ -56,8 +53,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       id: media.id,
       file_path: media.file_path,
-      thumbnail_path: media.thumbnail_path,
-      medium_path: media.medium_path,
       url: media.file_path,
       width: media.width,
       height: media.height,
