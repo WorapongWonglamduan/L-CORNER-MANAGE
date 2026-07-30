@@ -76,6 +76,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
+    if (parent_id) {
+      const parentExists = await prisma.category.findUnique({ where: { id: parent_id } });
+      if (!parentExists) {
+        return NextResponse.json({ error: "Parent category not found" }, { status: 400 });
+      }
+    }
+
     const category = await prisma.category.create({
       data: {
         name_i18n,

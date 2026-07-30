@@ -69,6 +69,30 @@ function sanitizeFilename(name: string): string {
   return lastSegment.replace(SAFE_FILENAME_CHARS, '_') || 'file'
 }
 
+// `validateImage`'s MIME check only looks at the client-supplied
+// `file.type` header, which is trivially spoofable — nothing stops a
+// request from declaring "image/png" while the filename says "x.html" and
+// the bytes are a real PNG with attacker-controlled HTML/script appended
+// after the IEND chunk (sharp, like most image decoders, only reads the
+// image container it recognizes and ignores trailing bytes). Both storage
+// drivers serve files back by extension (Next's static handler derives
+// Content-Type from it, not from any stored MIME field), so the stored
+// extension must always reflect what sharp actually decoded — never the
+// client's filename — or that trailing payload gets served with a
+// browser-executable Content-Type.
+const CANONICAL_EXTENSION_BY_FORMAT: Record<string, string> = {
+  jpeg: '.jpg',
+  png: '.png',
+  webp: '.webp',
+  gif: '.gif',
+}
+
+function replaceExtension(filename: string, extension: string): string {
+  const lastDot = filename.lastIndexOf('.')
+  const base = lastDot > 0 ? filename.slice(0, lastDot) : filename
+  return `${base}${extension}`
+}
+
 /**
  * Storage key prefix for the current year/month, e.g.
  * "uploads/2026/07/general" — shared by both storage drivers, which each
@@ -128,17 +152,31 @@ export async function uploadImage(
   // Validate image
   await validateImage(file, opts)
 
-  const driver = getStorageDriver()
-  const keyPrefix = getUploadKeyPrefix(opts.folder!)
-  const uploadId = uuidv4()
-  const storedFilename = sanitizeFilename(file.name)
-
   // Convert File to Buffer
   const bytes = await file.arrayBuffer()
   const buffer = Buffer.from(bytes)
 
-  // Get image metadata
-  const metadata = await sharp(buffer).metadata()
+  // Get image metadata — also the authoritative check on what this file
+  // actually is, independent of the client-supplied MIME header.
+  let metadata: sharp.Metadata
+  try {
+    metadata = await sharp(buffer).metadata()
+  } catch {
+    throw new ImageUploadError('File is not a valid image', 'INVALID_IMAGE_CONTENT')
+  }
+
+  const extension = metadata.format ? CANONICAL_EXTENSION_BY_FORMAT[metadata.format] : undefined
+  if (!extension) {
+    throw new ImageUploadError(
+      `Detected image format "${metadata.format}" is not allowed`,
+      'INVALID_IMAGE_CONTENT',
+    )
+  }
+
+  const driver = getStorageDriver()
+  const keyPrefix = getUploadKeyPrefix(opts.folder!)
+  const uploadId = uuidv4()
+  const storedFilename = replaceExtension(sanitizeFilename(file.name), extension)
 
   const url = await driver.put(buffer, `${keyPrefix}/${uploadId}/${storedFilename}`, file.type)
 

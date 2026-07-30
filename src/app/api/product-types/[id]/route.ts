@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 // GET /api/product-types/[id] - ดึงข้อมูลประเภทสินค้าตาม ID
 export async function GET(
@@ -68,9 +69,10 @@ export async function PUT(
     }
 
     // Validate type if provided
-    if (type && !["raw_material", "product", "semi_finished", "finished_good"].includes(type)) {
+    const validTypes = Object.values(PRODUCTS_TYPES) as string[];
+    if (type && !validTypes.includes(type)) {
       return NextResponse.json(
-        { error: "Type must be 'raw_material', 'product', 'semi_finished', or 'finished_good'" },
+        { error: `Type must be one of: ${validTypes.join(", ")}` },
         { status: 400 }
       );
     }

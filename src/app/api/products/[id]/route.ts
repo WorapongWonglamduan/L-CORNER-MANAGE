@@ -187,22 +187,95 @@ export async function PUT(
 
     // Use transaction to update product and recipes
     const product = await prisma.$transaction(async (tx) => {
-      // Replace recipes when: the product is no longer semi_finished (always
-      // clear stale recipes), or new recipes were explicitly provided.
-      if (!isSemiFinished || recipes !== undefined) {
-        // First, delete all recipe ingredients for this product's recipes
+      // The product-edit form always round-trips a freshly-built `recipes`
+      // array on every save of a semi-finished product — including a plain
+      // price/name edit that never touched the recipe section. Deleting and
+      // recreating the Recipe row on every such save would give it a brand
+      // new id, and since SaleItem.recipe_id -> Recipe is nullable with
+      // ON DELETE SET NULL, that silently erases the recipe reference from
+      // every past sale that used it — defeating the exact history
+      // protection DELETE /api/recipes/[id] was hardened with. Update the
+      // existing recipe row IN PLACE (same id) instead; only ingredients are
+      // replaced (RecipeIngredient has no history pointing at it directly).
+      if (!isSemiFinished) {
+        // Type changed away from semi_finished — no recipe applies anymore.
         await tx.recipeIngredient.deleteMany({
-          where: {
-            recipe: {
-              product_id: id,
-            },
-          },
+          where: { recipe: { product_id: id } },
         });
-
-        // Then delete the recipes
-        await tx.recipe.deleteMany({
+        await tx.recipe.deleteMany({ where: { product_id: id } });
+      } else if (recipes !== undefined) {
+        const existingRecipes = await tx.recipe.findMany({
           where: { product_id: id },
         });
+
+        if (!recipes || recipes.length === 0) {
+          // Recipe explicitly cleared by the caller.
+          await tx.recipeIngredient.deleteMany({
+            where: { recipe: { product_id: id } },
+          });
+          await tx.recipe.deleteMany({ where: { product_id: id } });
+        } else {
+          const incoming = recipes[0] as RecipeInput;
+          const targetRecipe =
+            existingRecipes.find((r) => r.is_default) ?? existingRecipes[0];
+
+          let recipeId: string;
+          if (targetRecipe) {
+            await tx.recipe.update({
+              where: { id: targetRecipe.id },
+              data: {
+                name_i18n: incoming.name_i18n as unknown as Prisma.InputJsonValue,
+                is_default: incoming.is_default ?? true,
+                serving_qty: incoming.serving_qty || 1,
+                serving_unit_id: incoming.serving_unit_id || null,
+              },
+            });
+            recipeId = targetRecipe.id;
+            await tx.recipeIngredient.deleteMany({
+              where: { recipe_id: recipeId },
+            });
+          } else {
+            const created = await tx.recipe.create({
+              data: {
+                product_id: id,
+                name_i18n: incoming.name_i18n as unknown as Prisma.InputJsonValue,
+                is_default: incoming.is_default ?? true,
+                serving_qty: incoming.serving_qty || 1,
+                serving_unit_id: incoming.serving_unit_id || null,
+              },
+            });
+            recipeId = created.id;
+          }
+
+          // The UI only ever manages one recipe per product — clean up any
+          // others so this stays the single source of truth going forward.
+          const extraRecipeIds = existingRecipes
+            .filter((r) => r.id !== recipeId)
+            .map((r) => r.id);
+          if (extraRecipeIds.length > 0) {
+            await tx.recipeIngredient.deleteMany({
+              where: { recipe_id: { in: extraRecipeIds } },
+            });
+            await tx.recipe.deleteMany({
+              where: { id: { in: extraRecipeIds } },
+            });
+          }
+
+          if (incoming.ingredients && incoming.ingredients.length > 0) {
+            await tx.recipeIngredient.createMany({
+              data: incoming.ingredients.map((ing) => ({
+                recipe_id: recipeId,
+                ingredient_id: ing.ingredient_id,
+                quantity: ing.quantity,
+                unit_id: ing.unit_id,
+                is_optional: ing.is_optional ?? false,
+                note_i18n: ing.note_i18n
+                  ? (ing.note_i18n as unknown as Prisma.InputJsonValue)
+                  : Prisma.JsonNull,
+              })),
+            });
+          }
+        }
       }
 
       // Update product
@@ -221,34 +294,6 @@ export async function PUT(
           track_stock,
           selling_price: selling_price ?? undefined,
           cost_price: cost_price ?? undefined,
-
-          // Create new recipes if provided (only ever valid when semi_finished,
-          // enforced above)
-          recipes:
-            isSemiFinished && recipes?.length > 0
-              ? {
-                  create: recipes.map((recipe: RecipeInput) => ({
-                    name_i18n: recipe.name_i18n,
-                    is_default: recipe.is_default ?? true,
-                    serving_qty: recipe.serving_qty || 1,
-                    serving_unit_id: recipe.serving_unit_id || null,
-
-                    // Nested create for recipe ingredients
-                    ingredients:
-                      recipe.ingredients && recipe.ingredients.length > 0
-                        ? {
-                            create: recipe.ingredients.map((ing) => ({
-                              ingredient_id: ing.ingredient_id,
-                              quantity: ing.quantity,
-                              unit_id: ing.unit_id,
-                              is_optional: ing.is_optional ?? false,
-                              note_i18n: ing.note_i18n || null,
-                            })),
-                          }
-                        : undefined,
-                  })),
-                }
-              : undefined,
         },
         include: {
           category: true,

@@ -43,7 +43,7 @@ export async function DELETE(
   try {
     // Check authentication
     const session = await auth()
-    const denied = requirePermission(session, 'products.update')
+    const denied = requirePermission(session, 'products.delete')
     if (denied) return denied
 
     const { id } = await params

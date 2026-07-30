@@ -88,6 +88,26 @@ export async function PUT(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Nothing in this app can undo either of these once they land — no
+    // in-app path back to an is_active:false or roleless admin account, so
+    // catching them here (rather than trusting the UI to grey out the
+    // option) is the only backstop against a single careless self-edit
+    // locking every admin function for everyone.
+    if (id === session?.user?.id) {
+      if (is_active === false) {
+        return NextResponse.json(
+          { error: "Cannot deactivate your own account" },
+          { status: 400 },
+        );
+      }
+      if (role_ids !== undefined && Array.isArray(role_ids) && role_ids.length === 0) {
+        return NextResponse.json(
+          { error: "Cannot remove all of your own roles" },
+          { status: 400 },
+        );
+      }
+    }
+
     // Defense in depth alongside the same check in roles/route.ts and
     // roles/[id]/route.ts: even if a role's own permission set is locked
     // down correctly, assigning an EXISTING broader role (e.g. the seeded
@@ -201,6 +221,13 @@ export async function DELETE(
     if (denied) return denied;
 
     const { id } = await params;
+
+    if (id === session?.user?.id) {
+      return NextResponse.json(
+        { error: "Cannot deactivate your own account" },
+        { status: 400 },
+      );
+    }
 
     const existing = await prisma.user.findUnique({ where: { id } });
     if (!existing) {

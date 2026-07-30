@@ -101,6 +101,36 @@ describe("uploadImage / deleteImage (local driver, end-to-end)", () => {
     expect(existsSync(fullPath)).toBe(false);
   });
 
+  it("forces the stored extension to match the real decoded image format, not the client's filename", async () => {
+    // A real PNG whose declared filename claims to be HTML — Next's static
+    // handler derives Content-Type from the file EXTENSION on disk, not
+    // from any DB-stored MIME field, so storing this under "x.html" would
+    // serve a browser-executable Content-Type for whatever bytes an
+    // attacker appended after the PNG's real image data.
+    const file = await makeTestFile("evil.html");
+    const result = await uploadImage(file, { folder: "vitest-image-upload-spec" });
+    try {
+      expect(result.storedFilename).toBe("evil.png");
+      expect(result.filePath).toMatch(/\.png$/);
+      expect(result.filePath).not.toMatch(/\.html$/);
+    } finally {
+      await deleteImage(result.filePath);
+    }
+  });
+
+  it("rejects a file whose declared MIME type doesn't match its actual decoded content", async () => {
+    // Passes the header check (image/png is allow-listed) but the bytes
+    // aren't a real image at all — sharp must fail to decode it, and that
+    // must reject the upload rather than store garbage under a trusted
+    // extension.
+    const file = new File([new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])], "fake.png", {
+      type: "image/png",
+    });
+    await expect(uploadImage(file, { folder: "vitest-image-upload-spec" })).rejects.toThrow(
+      ImageUploadError,
+    );
+  });
+
   it("deleteImage still cleans up thumbnail/medium files from before this app version", async () => {
     // Simulates an old Media row uploaded before thumbnail/medium
     // generation was removed — deleteImage must still take and clean up
