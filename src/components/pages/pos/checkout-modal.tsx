@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { CreditCard, Banknote, Tag, QrCode } from "lucide-react";
+import { CreditCard, Banknote, Tag, QrCode, Loader2 } from "lucide-react";
 import generatePayload from "promptpay-qr";
 import QRCode from "react-qr-code";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import {
@@ -19,6 +20,22 @@ import { useTranslations } from "next-intl";
 import { toast } from "@/lib/toast";
 import type { DisplayPaymentState } from "./helper";
 
+// A distinct selection value from PAYMENT_METHODS.QR — that one stays the
+// existing client-generated, unconfirmed PromptPay payload (no gateway,
+// works with zero setup). This one goes through POST /api/payments/intents
+// and only becomes a real Sale once Omise actually confirms the payment —
+// see helper.tsx's startGatewayCheckout/finalizeSuccessfulSale.
+const OMISE_PROMPTPAY = "omise_promptpay" as const;
+type SelectablePaymentMethod = PaymentMethod | typeof OMISE_PROMPTPAY;
+
+interface PaymentIntentView {
+  id: string;
+  status: "pending" | "succeeded" | "failed" | "expired";
+  qr_image_url?: string | null;
+  failure_reason?: string | null;
+  sale?: { id: string; sale_number?: string; total_amount?: number } | null;
+}
+
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,6 +44,19 @@ interface CheckoutModalProps {
   promptpayId?: string | null;
   onDisplayStateChange?: (state: DisplayPaymentState) => void;
   onConfirm: (paymentMethod: string, promotionCode?: string) => Promise<void>;
+  /** Starts a gateway-backed payment (e.g. Omise PromptPay) — returns the
+   * created PaymentIntent, resolved or still pending. The button itself is
+   * only shown when NEXT_PUBLIC_OMISE_PUBLIC_KEY is configured, regardless
+   * of whether this prop is wired up. */
+  onStartGatewayCheckout?: (
+    driver: string,
+    method: string,
+    options: { promotionCode?: string },
+  ) => Promise<PaymentIntentView>;
+  /** Runs the same success side effects (toast/print/cart-clear/refetch) as
+   * a direct cash/card/manual-QR checkout, once a gateway payment actually
+   * resolves to a real Sale. */
+  onGatewaySaleCreated?: (sale: { id: string; sale_number?: string; total_amount?: number }) => Promise<void>;
 }
 
 interface PromoValidation {
@@ -35,10 +65,12 @@ interface PromoValidation {
 }
 
 interface CheckoutFormValues {
-  paymentMethod: PaymentMethod;
+  paymentMethod: SelectablePaymentMethod;
   amountPaid: string;
   promoCodeInput: string;
 }
+
+const GATEWAY_POLL_INTERVAL_MS = 3000;
 
 export function CheckoutModal({
   isOpen,
@@ -48,6 +80,8 @@ export function CheckoutModal({
   promptpayId,
   onDisplayStateChange,
   onConfirm,
+  onStartGatewayCheckout,
+  onGatewaySaleCreated,
 }: CheckoutModalProps) {
   const t = useTranslations("pos");
   const tCommon = useTranslations("common");
@@ -55,6 +89,23 @@ export function CheckoutModal({
   const [promoValidation, setPromoValidation] = useState<PromoValidation | null>(null);
   const [promoError, setPromoError] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
+
+  // NEXT_PUBLIC_* vars are inlined into the client bundle at build time —
+  // reading it here (rather than threading a prop through) is enough to
+  // decide whether to even show the button, independent of whether the
+  // server-side OMISE_SECRET_KEY is also set (if it isn't, createCharge
+  // itself will fail with a clear error once actually attempted).
+  const omiseConfigured = !!process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY;
+
+  const [gatewayIntent, setGatewayIntent] = useState<PaymentIntentView | null>(null);
+  const gatewayPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopGatewayPolling = () => {
+    if (gatewayPollRef.current) {
+      clearInterval(gatewayPollRef.current);
+      gatewayPollRef.current = null;
+    }
+  };
+  useEffect(() => stopGatewayPolling, []);
 
   const { control, watch, setValue } = useForm<CheckoutFormValues>({
     defaultValues: { paymentMethod: PAYMENT_METHODS.CASH, amountPaid: "", promoCodeInput: "" },
@@ -112,6 +163,7 @@ export function CheckoutModal({
   // onClose() called after a successful confirm, which must leave the
   // display's success screen alone.
   const handleClose = () => {
+    stopGatewayPolling();
     if (justSucceededRef.current) {
       justSucceededRef.current = false;
       onClose();
@@ -119,6 +171,56 @@ export function CheckoutModal({
     }
     onDisplayStateChange?.(null);
     onClose();
+  };
+
+  // Note: closing the modal here only stops CLIENT-SIDE polling — the
+  // PaymentIntent record itself, and any Omise charge already created for
+  // it, still exist server-side. A customer who scans and pays after this
+  // point would still have their money captured, but nothing automatically
+  // resumes tracking it (no re-open-and-poll flow in this pass) — a known,
+  // accepted gap for v1, matching how abandoning the existing manual-QR
+  // flow already relies on the cashier's own judgment.
+  const stopGatewayCheckout = () => {
+    stopGatewayPolling();
+    setGatewayIntent(null);
+  };
+
+  // Reset gateway state whenever the modal is closed.
+  useEffect(() => {
+    if (!isOpen) {
+      stopGatewayCheckout();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const pollGatewayIntent = (intentId: string) => {
+    stopGatewayPolling();
+    gatewayPollRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/payments/intents/${intentId}`);
+        const data: PaymentIntentView & { error?: string } = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || t("cannotSave"));
+        }
+        setGatewayIntent(data);
+
+        if (data.status === "succeeded" && data.sale) {
+          stopGatewayPolling();
+          await onGatewaySaleCreated?.(data.sale);
+          justSucceededRef.current = true;
+          onClose();
+        } else if (data.status === "failed" || data.status === "expired") {
+          stopGatewayPolling();
+        }
+      } catch (error) {
+        stopGatewayPolling();
+        toast.error(
+          t("paymentError", {
+            message: error instanceof Error ? error.message : t("cannotSave"),
+          }),
+        );
+      }
+    }, GATEWAY_POLL_INTERVAL_MS);
   };
 
   // Auto-fill amount when modal opens, payment method changes to cash, or the
@@ -175,6 +277,34 @@ export function CheckoutModal({
       return;
     }
 
+    if (paymentMethod === OMISE_PROMPTPAY) {
+      if (!onStartGatewayCheckout) return;
+      setIsProcessing(true);
+      try {
+        const intent = await onStartGatewayCheckout("omise", "promptpay", {
+          promotionCode: promoValidation?.code,
+        });
+        setGatewayIntent(intent);
+        if (intent.status === "succeeded" && intent.sale) {
+          await onGatewaySaleCreated?.(intent.sale);
+          justSucceededRef.current = true;
+          onClose();
+        } else if (intent.status === "pending") {
+          pollGatewayIntent(intent.id);
+        }
+      } catch (error) {
+        console.error("Gateway payment error:", error);
+        toast.error(
+          t("paymentError", {
+            message: error instanceof Error ? error.message : t("cannotSave"),
+          }),
+        );
+      } finally {
+        setIsProcessing(false);
+      }
+      return;
+    }
+
     setIsProcessing(true);
     try {
       await onConfirm(paymentMethod, promoValidation?.code);
@@ -192,6 +322,8 @@ export function CheckoutModal({
       setIsProcessing(false);
     }
   };
+
+  const isGatewayWaiting = gatewayIntent?.status === "pending";
 
   const quickAmounts = [
     { label: "Exact", value: Number(discountedTotal.toFixed(2)) },
@@ -301,7 +433,7 @@ export function CheckoutModal({
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
               {t("paymentMethod")}
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className={`grid gap-3 ${omiseConfigured ? "grid-cols-4" : "grid-cols-3"}`}>
               <button
                 onClick={() => setValue("paymentMethod", PAYMENT_METHODS.CASH)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
@@ -368,13 +500,37 @@ export function CheckoutModal({
                   {t("qr")}
                 </span>
               </button>
+
+              {omiseConfigured && (
+                <button
+                  onClick={() => setValue("paymentMethod", OMISE_PROMPTPAY)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === OMISE_PROMPTPAY
+                      ? "border-primary bg-primary/5"
+                      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                  }`}
+                >
+                  <QrCode
+                    className={`w-8 h-8 ${
+                      paymentMethod === OMISE_PROMPTPAY ? "text-primary" : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                  <span
+                    className={`font-semibold text-center text-sm ${
+                      paymentMethod === OMISE_PROMPTPAY ? "text-primary" : "text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    {t("omisePromptpay")}
+                  </span>
+                </button>
+              )}
             </div>
             {paymentMethod === PAYMENT_METHODS.QR && !promptpayId && (
               <p className="mt-2 text-sm text-red-600">{t("qrNotConfigured")}</p>
             )}
           </div>
 
-          {/* QR PromptPay */}
+          {/* QR PromptPay (manual, unconfirmed) */}
           {paymentMethod === PAYMENT_METHODS.QR && qrPayload && (
             <div className="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
               <div className="bg-white p-4 rounded-xl">
@@ -384,6 +540,40 @@ export function CheckoutModal({
               <p className="text-2xl font-bold text-primary">
                 ฿{discountedTotal.toLocaleString()}
               </p>
+            </div>
+          )}
+
+          {/* Omise PromptPay — real QR from the gateway, shown once
+              Confirm has actually started the charge; polls until Omise
+              confirms it (see pollGatewayIntent above). */}
+          {paymentMethod === OMISE_PROMPTPAY && gatewayIntent && (
+            <div className="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+              {gatewayIntent.qr_image_url && (
+                <div className="bg-white p-4 rounded-xl relative w-54 h-54">
+                  <Image
+                    src={gatewayIntent.qr_image_url}
+                    alt={t("qrScanInstruction")}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+              )}
+              <p className="text-sm text-gray-600 dark:text-gray-300">{t("qrScanInstruction")}</p>
+              <p className="text-2xl font-bold text-primary">
+                ฿{discountedTotal.toLocaleString()}
+              </p>
+              {gatewayIntent.status === "pending" && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("waitingForGatewayPayment")}
+                </div>
+              )}
+              {(gatewayIntent.status === "failed" || gatewayIntent.status === "expired") && (
+                <p className="text-sm text-red-600">
+                  {gatewayIntent.failure_reason || t("gatewayPaymentFailed")}
+                </p>
+              )}
             </div>
           )}
 
@@ -453,27 +643,40 @@ export function CheckoutModal({
         </div>
 
         <DialogFooter className="shrink-0 border-t border-gray-200 dark:border-gray-600 p-6 sm:justify-stretch">
-          <div className="flex gap-3 w-full">
+          {isGatewayWaiting ? (
+            // Confirm already fired the real charge — there's nothing left
+            // to "confirm" again while waiting on the gateway. This only
+            // stops CLIENT-SIDE polling (see stopGatewayCheckout above).
             <Button
-              onClick={() => handleClose()}
+              onClick={stopGatewayCheckout}
               variant="outline"
-              className="flex-1 py-6 text-lg font-semibold"
-              disabled={isProcessing}
+              className="w-full py-6 text-lg font-semibold"
             >
-              {tCommon("cancel")}
+              {t("backToPaymentMethods")}
             </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={
-                isProcessing ||
-                (paymentMethod === "cash" &&
-                  (!amountPaid || Number(amountPaid) < discountedTotal))
-              }
-              className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold"
-            >
-              {isProcessing ? t("processing") : t("confirm")}
-            </Button>
-          </div>
+          ) : (
+            <div className="flex gap-3 w-full">
+              <Button
+                onClick={() => handleClose()}
+                variant="outline"
+                className="flex-1 py-6 text-lg font-semibold"
+                disabled={isProcessing}
+              >
+                {tCommon("cancel")}
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                disabled={
+                  isProcessing ||
+                  (paymentMethod === "cash" &&
+                    (!amountPaid || Number(amountPaid) < discountedTotal))
+                }
+                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold"
+              >
+                {isProcessing ? t("processing") : t("confirm")}
+              </Button>
+            </div>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

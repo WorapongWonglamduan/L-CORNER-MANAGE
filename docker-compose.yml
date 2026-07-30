@@ -64,6 +64,13 @@ services:
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
       R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
       R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
+      # Payment gateways (src/lib/payments) — see env.template. Note:
+      # NEXT_PUBLIC_OMISE_PUBLIC_KEY must also be set at `docker build` time
+      # (as a build ARG), not just here — Next.js inlines NEXT_PUBLIC_* vars
+      # into the client bundle during the build, not at container runtime.
+      OMISE_SECRET_KEY: ${OMISE_SECRET_KEY:-}
+      OMISE_PUBLIC_KEY: ${OMISE_PUBLIC_KEY:-}
+      OMISE_WEBHOOK_SECRET: ${OMISE_WEBHOOK_SECRET:-}
     volumes:
       # Uploaded product images are written at runtime under
       # public/uploads/<year>/<month>/... (src/lib/image-upload.ts) — without

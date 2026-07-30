@@ -627,7 +627,12 @@
     "promoApplied": "ใช้โค้ด {code} แล้ว",
     "promoDiscount": "ส่วนลด",
     "subtotalBeforeDiscount": "ยอดก่อนหักส่วนลด",
-    "processing": "กำลังดำเนินการ..."
+    "processing": "กำลังดำเนินการ...",
+    "omisePromptpay": "PromptPay (Omise)",
+    "omiseNotConfigured": "ยังไม่ได้ตั้งค่า Omise บนเซิร์ฟเวอร์",
+    "waitingForGatewayPayment": "กำลังรอการชำระเงิน...",
+    "gatewayPaymentFailed": "การชำระเงินไม่สำเร็จ",
+    "backToPaymentMethods": "กลับไปเลือกวิธีชำระเงิน"
   },
   "sales": {
     "title": "รายการขาย",

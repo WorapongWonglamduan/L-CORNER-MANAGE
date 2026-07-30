@@ -121,6 +121,9 @@ export async function currentStock(productId: string, warehouseId: string) {
  * order. Filters by nothing — the test DB only ever holds fixture data, so
  * a full wipe between tests is simpler and safer than tracking ids. */
 export async function resetDb() {
+  // References both Sale (optional) and Warehouse (required) — must go
+  // before either is deleted below.
+  await prisma.paymentIntent.deleteMany();
   await prisma.saleRefundItem.deleteMany();
   await prisma.saleRefund.deleteMany();
   await prisma.saleItemTopping.deleteMany();
