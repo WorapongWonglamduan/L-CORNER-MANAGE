@@ -122,6 +122,7 @@ export function ImageUpload({
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 384px"
+              unoptimized
             />
             {!disabled && !uploading && (
               <button
