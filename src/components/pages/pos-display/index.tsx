@@ -138,9 +138,12 @@ export default function POSDisplayContent() {
           </p>
         </div>
         <div className="flex-1 flex items-center justify-center gap-16">
-          <div className="bg-white p-6 rounded-2xl shadow-2xl shrink-0">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl shrink-0">
             {payment.qrImageUrl ? (
-              <div className="relative w-60 h-60">
+              // Sized larger than the checkout modal's own QR (240px) —
+              // this screen is meant to be read from normal standing
+              // distance across a counter, not held in the hand.
+              <div className="relative w-96 h-96">
                 <Image
                   src={payment.qrImageUrl}
                   alt={t("scanInstruction")}
@@ -150,7 +153,7 @@ export default function POSDisplayContent() {
                 />
               </div>
             ) : (
-              <QRCode value={payment.qrPayload ?? ""} size={240} />
+              <QRCode value={payment.qrPayload ?? ""} size={384} />
             )}
           </div>
           <div className="text-left max-w-xs">
