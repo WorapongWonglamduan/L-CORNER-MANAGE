@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { CreditCard, Banknote, Tag, QrCode, Wallet, Loader2 } from "lucide-react";
+import { CreditCard, Banknote, Tag, QrCode, Wallet, Globe, Loader2 } from "lucide-react";
 import generatePayload from "promptpay-qr";
 import QRCode from "react-qr-code";
 import Image from "next/image";
@@ -23,34 +23,39 @@ import type { DisplayPaymentState } from "./helper";
 // Distinct selection values from PAYMENT_METHODS.QR — that one stays the
 // existing client-generated, unconfirmed PromptPay payload (no gateway,
 // works with zero setup). These go through POST /api/payments/intents and
-// only become a real Sale once Omise actually confirms the payment — see
-// helper.tsx's startGatewayCheckout/finalizeSuccessfulSale.
+// only become a real Sale once the gateway actually confirms the payment —
+// see helper.tsx's startGatewayCheckout/finalizeSuccessfulSale.
 const OMISE_PROMPTPAY = "omise_promptpay" as const;
 const OMISE_TRUEMONEY_QR = "omise_truemoney_qr" as const;
+const PAYPAL_QR = "paypal_qr" as const;
 type SelectablePaymentMethod =
   | PaymentMethod
   | typeof OMISE_PROMPTPAY
-  | typeof OMISE_TRUEMONEY_QR;
+  | typeof OMISE_TRUEMONEY_QR
+  | typeof PAYPAL_QR;
 
-// Maps each selectable Omise-gateway option to the `method` string sent to
-// POST /api/payments/intents (and from there straight through to
-// OmiseDriver.createCharge) — both are source-based QR charges with the
-// identical response shape, so everything past this lookup treats them the
-// same (see the isOmiseGatewayMethod checks below).
-const OMISE_GATEWAY_METHODS: Record<string, string> = {
-  [OMISE_PROMPTPAY]: "promptpay",
-  [OMISE_TRUEMONEY_QR]: "truemoney_qr",
+// Maps each selectable gateway-checkout option to the (driver, method) pair
+// sent to POST /api/payments/intents. All three currently resolve to a
+// pending intent carrying either a gateway-hosted QR image (Omise) or a raw
+// payload for a client-rendered QR (PayPal's approval URL) — see
+// PaymentIntentView below and the render block further down, which treats
+// all of them the same via isGatewayMethod.
+const GATEWAY_CHECKOUT_OPTIONS: Record<string, { driver: string; method: string }> = {
+  [OMISE_PROMPTPAY]: { driver: "omise", method: "promptpay" },
+  [OMISE_TRUEMONEY_QR]: { driver: "omise", method: "truemoney_qr" },
+  [PAYPAL_QR]: { driver: "paypal", method: "paypal" },
 };
-function isOmiseGatewayMethod(
+function isGatewayMethod(
   method: SelectablePaymentMethod,
-): method is typeof OMISE_PROMPTPAY | typeof OMISE_TRUEMONEY_QR {
-  return method in OMISE_GATEWAY_METHODS;
+): method is typeof OMISE_PROMPTPAY | typeof OMISE_TRUEMONEY_QR | typeof PAYPAL_QR {
+  return method in GATEWAY_CHECKOUT_OPTIONS;
 }
 
 interface PaymentIntentView {
   id: string;
   status: "pending" | "succeeded" | "failed" | "expired";
   qr_image_url?: string | null;
+  qr_payload?: string | null;
   failure_reason?: string | null;
   sale?: { id: string; sale_number?: string; total_amount?: number } | null;
 }
@@ -115,6 +120,12 @@ export function CheckoutModal({
   // server-side OMISE_SECRET_KEY is also set (if it isn't, createCharge
   // itself will fail with a clear error once actually attempted).
   const omiseConfigured = !!process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY;
+  // PayPal's Orders API is pure server-to-server (no client-side tokenizing
+  // SDK involved in this QR-redirect flow), so there's no public key to read
+  // here — this flag exists purely to gate the button's visibility, mirrored
+  // by the real PAYPAL_CLIENT_ID/PAYPAL_CLIENT_SECRET check server-side in
+  // PayPalDriver's constructor.
+  const paypalConfigured = process.env.NEXT_PUBLIC_PAYPAL_ENABLED === "true";
 
   const [gatewayIntent, setGatewayIntent] = useState<PaymentIntentView | null>(null);
   const gatewayPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -165,13 +176,14 @@ export function CheckoutModal({
         amount: discountedTotal,
       });
     } else if (
-      isOmiseGatewayMethod(paymentMethod) &&
+      isGatewayMethod(paymentMethod) &&
       gatewayIntent?.status === "pending" &&
-      gatewayIntent.qr_image_url
+      (gatewayIntent.qr_image_url || gatewayIntent.qr_payload)
     ) {
       onDisplayStateChange({
         status: "awaiting_qr",
-        qrImageUrl: gatewayIntent.qr_image_url,
+        qrImageUrl: gatewayIntent.qr_image_url ?? undefined,
+        qrPayload: gatewayIntent.qr_payload ?? undefined,
         amount: discountedTotal,
       });
     } else {
@@ -312,15 +324,14 @@ export function CheckoutModal({
       return;
     }
 
-    if (isOmiseGatewayMethod(paymentMethod)) {
+    if (isGatewayMethod(paymentMethod)) {
       if (!onStartGatewayCheckout) return;
       setIsProcessing(true);
       try {
-        const intent = await onStartGatewayCheckout(
-          "omise",
-          OMISE_GATEWAY_METHODS[paymentMethod],
-          { promotionCode: promoValidation?.code },
-        );
+        const { driver, method } = GATEWAY_CHECKOUT_OPTIONS[paymentMethod];
+        const intent = await onStartGatewayCheckout(driver, method, {
+          promotionCode: promoValidation?.code,
+        });
         setGatewayIntent(intent);
         if (intent.status === "succeeded" && intent.sale) {
           await onGatewaySaleCreated?.(intent.sale);
@@ -589,6 +600,30 @@ export function CheckoutModal({
                   </span>
                 </button>
               )}
+
+              {paypalConfigured && (
+                <button
+                  onClick={() => setValue("paymentMethod", PAYPAL_QR)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === PAYPAL_QR
+                      ? "border-primary bg-primary/5"
+                      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                  }`}
+                >
+                  <Globe
+                    className={`w-8 h-8 ${
+                      paymentMethod === PAYPAL_QR ? "text-primary" : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                  <span
+                    className={`font-semibold text-center text-sm ${
+                      paymentMethod === PAYPAL_QR ? "text-primary" : "text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    {t("paypal")}
+                  </span>
+                </button>
+              )}
             </div>
             {paymentMethod === PAYMENT_METHODS.QR && !promptpayId && (
               <p className="mt-2 text-sm text-red-600">{t("qrNotConfigured")}</p>
@@ -608,12 +643,14 @@ export function CheckoutModal({
             </div>
           )}
 
-          {/* Omise PromptPay / TrueMoney QR — real QR from the gateway,
-              shown once Confirm has actually started the charge; polls
-              until Omise confirms it (see pollGatewayIntent above). */}
-          {isOmiseGatewayMethod(paymentMethod) && gatewayIntent && (
+          {/* Omise PromptPay / TrueMoney QR / PayPal — real QR from the
+              gateway (an image for Omise, a client-rendered QR of the
+              approval URL for PayPal), shown once Confirm has actually
+              started the charge; polls until the gateway confirms it (see
+              pollGatewayIntent above). */}
+          {isGatewayMethod(paymentMethod) && gatewayIntent && (
             <div className="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
-              {gatewayIntent.qr_image_url && (
+              {gatewayIntent.qr_image_url ? (
                 <div className="bg-white p-4 rounded-xl relative w-54 h-54">
                   <Image
                     src={gatewayIntent.qr_image_url}
@@ -623,6 +660,12 @@ export function CheckoutModal({
                     unoptimized
                   />
                 </div>
+              ) : (
+                gatewayIntent.qr_payload && (
+                  <div className="bg-white p-4 rounded-xl">
+                    <QRCode value={gatewayIntent.qr_payload} size={200} />
+                  </div>
+                )
               )}
               <p className="text-sm text-gray-600 dark:text-gray-300">{t("qrScanInstruction")}</p>
               <p className="text-2xl font-bold text-primary">

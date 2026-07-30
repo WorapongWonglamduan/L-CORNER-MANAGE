@@ -17,9 +17,15 @@ export type ChargeStatus = "succeeded" | "pending" | "failed";
 export interface ChargeResult {
   gatewayReference: string;
   status: ChargeStatus;
-  /** Present for QR-based methods (e.g. PromptPay) — the image to show the
-   * customer while the payment is pending. */
+  /** Present for QR-image methods (e.g. Omise's PromptPay/TrueMoney QR) — a
+   * gateway-hosted image to render directly, shown while the payment is
+   * pending. Mutually exclusive with `qrPayload` below. */
   qrImageUrl?: string;
+  /** Present for redirect-link methods (e.g. PayPal's customer-approval
+   * URL) — a raw string for the client to render as its own QR code (via
+   * react-qr-code), since the gateway hands back a URL rather than a
+   * pre-rendered image. Mutually exclusive with `qrImageUrl` above. */
+  qrPayload?: string;
   failureReason?: string;
 }
 

@@ -30,6 +30,19 @@ const { createCharge, getChargeStatus, FakeOmiseDriver } = vi.hoisted(() => {
 });
 vi.mock("@/lib/payments/omise-driver", () => ({ OmiseDriver: FakeOmiseDriver }));
 
+const { paypalCreateCharge, paypalGetChargeStatus, FakePayPalDriver } = vi.hoisted(() => {
+  const paypalCreateCharge = vi.fn();
+  const paypalGetChargeStatus = vi.fn();
+  class FakePayPalDriver {
+    createCharge = paypalCreateCharge;
+    getChargeStatus = paypalGetChargeStatus;
+    verifyWebhookSignature = vi.fn().mockReturnValue(false);
+    parseWebhookEvent = vi.fn().mockReturnValue(null);
+  }
+  return { paypalCreateCharge, paypalGetChargeStatus, FakePayPalDriver };
+});
+vi.mock("@/lib/payments/paypal-driver", () => ({ PayPalDriver: FakePayPalDriver }));
+
 const mockedAuth = vi.mocked(auth as unknown as () => Promise<Session | null>);
 
 function intentRequest(body: unknown) {
@@ -54,6 +67,8 @@ describe("POST /api/payments/intents + GET /api/payments/intents/[id]", () => {
     );
     createCharge.mockReset();
     getChargeStatus.mockReset();
+    paypalCreateCharge.mockReset();
+    paypalGetChargeStatus.mockReset();
     _resetPaymentDriversForTests();
   });
 
@@ -133,6 +148,60 @@ describe("POST /api/payments/intents + GET /api/payments/intents/[id]", () => {
     expect(body.method).toBe("truemoney_qr");
     expect(body.qr_image_url).toBe("https://api.omise.co/qr/truemoney-fake.png");
     expect(body.sale_id).toBeNull();
+  });
+
+  it("returns a pending intent with qr_payload (not qr_image_url) for the paypal driver", async () => {
+    paypalCreateCharge.mockResolvedValue({
+      gatewayReference: "order_test_123",
+      status: "pending",
+      qrPayload: "https://www.paypal.com/checkoutnow?token=order_test_123",
+    });
+
+    const res = await createIntent(
+      intentRequest({
+        warehouse_id: fx.warehouseId,
+        items: [{ product_id: fx.productId, quantity: 1 }],
+        driver: "paypal",
+        method: "paypal",
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.status).toBe("pending");
+    expect(body.driver).toBe("paypal");
+    expect(body.qr_payload).toBe("https://www.paypal.com/checkoutnow?token=order_test_123");
+    expect(body.qr_image_url).toBeNull();
+    expect(body.sale_id).toBeNull();
+  });
+
+  it("GET poll captures and finalizes a PayPal order once the payer has approved it", async () => {
+    paypalCreateCharge.mockResolvedValue({
+      gatewayReference: "order_test_456",
+      status: "pending",
+      qrPayload: "https://www.paypal.com/checkoutnow?token=order_test_456",
+    });
+    const createRes = await createIntent(
+      intentRequest({
+        warehouse_id: fx.warehouseId,
+        items: [{ product_id: fx.productId, quantity: 2 }],
+        driver: "paypal",
+        method: "paypal",
+      }),
+    );
+    const created = await createRes.json();
+    expect(created.status).toBe("pending");
+
+    paypalGetChargeStatus.mockResolvedValue({ status: "succeeded" });
+
+    const pollRes = await pollIntent(
+      new NextRequest(`http://localhost/api/payments/intents/${created.id}`),
+      { params: Promise.resolve({ id: created.id }) },
+    );
+    const polled = await pollRes.json();
+    expect(polled.status).toBe("succeeded");
+    expect(polled.sale.id).toBe(polled.sale_id);
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(8); // 10 - 2
   });
 
   it("rejects a request for a warehouse the caller has no access to", async () => {
