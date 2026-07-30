@@ -18,6 +18,16 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # prisma.config.ts builds its datasource URL from these at module-load
+    # time (env() throws if any is unset) — the `--url` flag below overrides
+    # the URL prisma actually connects with, but doesn't stop the config file
+    # itself from being evaluated first.
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5435
+      DB_DATABASE: l_corner_pos_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
     services:
       postgres:
         image: postgres:17-alpine
@@ -39,6 +49,9 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # db push alone doesn't regenerate the client here, and @prisma/client
+      # is unusable (no .prisma/client/default) until this has run.
+      - run: npx prisma generate
       - run: npx prisma db push --url="postgresql://postgres:postgres@localhost:5435/l_corner_pos_test?schema=public"
       - run: npm test
 
