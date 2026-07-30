@@ -13,6 +13,7 @@
 - When `develop` is ready to ship, that's a separate PR: `develop` → `main`.
 - No branch protection is enforced on GitHub yet — this is a convention to
   follow, not a hard block.
+- Write PR titles/descriptions in Thai.
 
 ## Reuse existing components before writing new ones
 
