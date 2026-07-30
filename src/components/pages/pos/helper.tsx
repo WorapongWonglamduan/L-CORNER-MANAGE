@@ -427,6 +427,51 @@ export function usePOSManager() {
     setCart((prev) => prev.filter((item) => item.lineId !== lineId));
   }, []);
 
+  // A cart line's price/stock cap is only ever checked against `products`
+  // at the moment it's added or adjusted — if a product's price changes (or
+  // its stock drops) while the line just sits in the cart, nothing re-checks
+  // it, so the checkout total / QR amount could quietly diverge from what
+  // `/api/sales` will actually charge (that endpoint always uses the live
+  // `selling_price`, never the client's). Called right before checkout opens
+  // to close that window; looks products up by id directly since the cart
+  // may hold items the current page/search/category filter no longer shows.
+  const syncCartWithLiveCatalog = useCallback(async () => {
+    const productIds = Array.from(
+      new Set(cartRef.current.map((item) => item.productId)),
+    );
+    if (productIds.length === 0 || !warehouseId) return;
+    try {
+      const params = new URLSearchParams({
+        ids: productIds.join(","),
+        pageSize: productIds.length.toString(),
+        warehouseId,
+      });
+      const response = await fetch(`/api/products?${params}`);
+      if (!response.ok) return;
+      const data = await response.json();
+      const latest: Product[] = data.items || [];
+      setCart((prev) =>
+        prev
+          .map((item) => {
+            const product = latest.find((p) => p.id === item.productId);
+            // Not returned at all — deleted, deactivated, or no longer
+            // stocked at this warehouse. Drop the line rather than keep
+            // charging a price/stock figure that's no longer valid.
+            if (!product) return { ...item, quantity: 0 };
+            const available = Number(product.available_quantity) || 0;
+            return {
+              ...item,
+              price: Number(product.selling_price) || 0,
+              quantity: Math.min(item.quantity, available),
+            };
+          })
+          .filter((item) => item.quantity > 0),
+      );
+    } catch (error) {
+      console.error("Error syncing cart with live catalog:", error);
+    }
+  }, [warehouseId]);
+
   const clearCart = useCallback(() => {
     setCart([]);
   }, []);
@@ -630,6 +675,7 @@ export function usePOSManager() {
       lineTotal,
       total: cartTotal,
       itemCount: cartItemCount,
+      syncWithLiveCatalog: syncCartWithLiveCatalog,
     },
     checkout,
     display: {

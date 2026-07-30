@@ -59,6 +59,11 @@ export default function POSContent() {
     }
   };
 
+  const handleOpenCheckout = async () => {
+    await cart.syncWithLiveCatalog();
+    setIsCheckoutModalOpen(true);
+  };
+
   return (
     <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex overflow-hidden">
       <Sidebar />
@@ -327,7 +332,7 @@ export default function POSContent() {
               </div>
 
               <Button
-                onClick={() => setIsCheckoutModalOpen(true)}
+                onClick={handleOpenCheckout}
                 className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-6 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all"
               >
                 {t("checkout")}
@@ -353,7 +358,7 @@ export default function POSContent() {
               </div>
             </div>
             <Button
-              onClick={() => setIsCheckoutModalOpen(true)}
+              onClick={handleOpenCheckout}
               className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-bold rounded-xl shadow-lg"
             >
               {t("checkout")}

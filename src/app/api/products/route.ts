@@ -37,6 +37,10 @@ export async function GET(request: NextRequest) {
     // at all, or rows exist but every one is inactive. Mutually exclusive
     // with warehouseId (an admin audit view, not a branch scope).
     const unassigned = searchParams.get("unassigned") === "true";
+    // Looks up an exact set of products regardless of the current
+    // page/search/category — used by the POS cart to re-fetch live
+    // price/stock for whatever's already sitting in the cart.
+    const idsParam = searchParams.get("ids");
 
     if (warehouseId) {
       const deniedWarehouse = requireWarehouseAccess(session, warehouseId);
@@ -64,6 +68,11 @@ export async function GET(request: NextRequest) {
 
     if (isActive !== null && isActive !== undefined) {
       where.is_active = isActive === "true";
+    }
+
+    if (idsParam) {
+      const ids = idsParam.split(",").map((id) => id.trim()).filter(Boolean);
+      where.id = { in: ids };
     }
 
     if (categoryId) {
