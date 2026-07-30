@@ -5,6 +5,8 @@ import { X, TrendingUp, TrendingDown, Calendar, FileText } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { formatDate } from "@/utils/date";
 import { Pagination } from "@/components/ui/pagination";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface WarehouseRef {
   id: string;
@@ -113,17 +115,9 @@ export function StockHistoryModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-300">{tCommon("loading")}</p>
-              </div>
-            </div>
+            <LoadingSpinner label={tCommon("loading")} />
           ) : movements.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" />
-              <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noHistory")}</p>
-            </div>
+            <EmptyState icon={FileText} label={t("noHistory")} bordered={false} />
           ) : (
             <div className="space-y-4">
               {movements.map((movement) => (

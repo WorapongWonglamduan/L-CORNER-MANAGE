@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { Pagination } from "@/components/ui/pagination";
 import { PRODUCTS_TYPES, INPUT_TYPES } from "@/constants/input-types";
 import { DynamicFormFields } from "@/components/dynamic-form/dynamic-form-fields";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface POSFilterValues {
   searchQuery: string;
@@ -155,12 +156,7 @@ export default function POSContent() {
                 </p>
               </div>
             ) : catalog.loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-gray-600 dark:text-gray-300 text-lg">{t("loading")}</p>
-                </div>
-              </div>
+              <LoadingSpinner label={t("loading")} className="py-20 text-lg" />
             ) : catalog.products.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">

@@ -4,9 +4,14 @@ import dynamic from "next/dynamic";
 import { Plus, Warehouse as WarehouseIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
+import { DynamicFilterBar, getSearchAndActiveFilterFields } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EntityCardGrid, EntityCard } from "@/components/ui/entity-card-grid";
+import { DetailRow } from "@/components/ui/detail-row";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useWarehousesManager } from "./helper";
 import { getWarehouseFormConfig } from "../form/config";
 import { useLocale, useTranslations } from "next-intl";
@@ -56,18 +61,7 @@ export default function WarehousesManager() {
   const watchedLatitude = formWatch("latitude");
   const watchedLongitude = formWatch("longitude");
 
-  const filterFields: FilterFieldConfig[] = [
-    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
-    {
-      name: "isActive",
-      type: "select",
-      placeholder: tCommon("allStatus"),
-      options: [
-        { value: "true", label: t("active") },
-        { value: "false", label: t("inactive") },
-      ],
-    },
-  ];
+  const filterFields = getSearchAndActiveFilterFields(t, tCommon);
 
   return (
     <div className="space-y-4">
@@ -91,25 +85,14 @@ export default function WarehousesManager() {
       />
 
       {loading && warehouses.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
-          </div>
-        </div>
+        <LoadingSpinner label={t("loading")} />
       ) : warehouses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-          <WarehouseIcon className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
-          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
-        </div>
+        <EmptyState icon={WarehouseIcon} label={t("noData")} />
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <EntityCardGrid>
             {warehouses.map((warehouse) => (
-              <div
-                key={warehouse.id}
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
-              >
+              <EntityCard key={warehouse.id}>
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2">
@@ -142,24 +125,20 @@ export default function WarehousesManager() {
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("status")}:
-                    </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        warehouse.is_active
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {warehouse.is_active ? t("active") : t("inactive")}
-                    </span>
-                  </div>
+                  <DetailRow
+                    label={t("status")}
+                    value={
+                      <StatusBadge
+                        active={warehouse.is_active}
+                        activeLabel={t("active")}
+                        inactiveLabel={t("inactive")}
+                      />
+                    }
+                  />
                 </div>
-              </div>
+              </EntityCard>
             ))}
-          </div>
+          </EntityCardGrid>
 
           {warehouses.length > 0 && (
             <div className="mt-6">

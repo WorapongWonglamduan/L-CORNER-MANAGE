@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StockAdjustmentModal } from "../other/stock-adjustment-modal";
 import { StockHistoryModal } from "../other/stock-history-modal";
 import { TransferModal } from "../other/transfer-modal";
@@ -298,17 +300,9 @@ export default function InventoryContent() {
         {/* Products Table */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
           {loading && products.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-300">{tCommon("loading")}</p>
-              </div>
-            </div>
+            <LoadingSpinner label={tCommon("loading")} />
           ) : products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" />
-              <p className="text-gray-600 dark:text-gray-300 text-lg">{tCommon("noData")}</p>
-            </div>
+            <EmptyState icon={Package} label={tCommon("noData")} bordered={false} />
           ) : (
             <>
               <DataTable

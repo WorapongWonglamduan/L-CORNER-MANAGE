@@ -16,8 +16,11 @@ import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/pagination";
 import {
   DynamicFilterBar,
-  type FilterFieldConfig,
+  getSearchAndActiveFilterFields,
 } from "@/components/ui/dynamic-filter-bar";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ProductActionButtons } from "./product-action-buttons";
 import { WarehouseVisibilityModal } from "./warehouse-visibility-modal";
 import { useProductsManager, UNASSIGNED_WAREHOUSE_VALUE } from "./helper";
@@ -51,18 +54,7 @@ export default function ProductsManager() {
     name: string;
   } | null>(null);
 
-  const filterFields: FilterFieldConfig[] = [
-    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
-    {
-      name: "isActive",
-      type: "select",
-      placeholder: tCommon("allStatus"),
-      options: [
-        { value: "true", label: t("active") },
-        { value: "false", label: t("inactive") },
-      ],
-    },
-  ];
+  const filterFields = getSearchAndActiveFilterFields(t, tCommon);
 
   const getCategoryLabel = (
     category:
@@ -131,17 +123,9 @@ export default function ProductsManager() {
       </div>
 
       {loading && products.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
-          </div>
-        </div>
+        <LoadingSpinner label={t("loading")} />
       ) : products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-          <Package className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
-          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
-        </div>
+        <EmptyState icon={Package} label={t("noData")} />
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -215,15 +199,11 @@ export default function ProductsManager() {
                           <span className="text-xs text-white/90 font-mono bg-white/15 px-2 py-0.5 rounded">
                             {product.code}
                           </span>
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              product.is_active
-                                ? "bg-green-400/90 text-green-900 dark:bg-green-900/30 dark:text-green-300"
-                                : "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            {product.is_active ? "ใช้งาน" : "ปิด"}
-                          </span>
+                          <StatusBadge
+                            active={product.is_active}
+                            activeLabel={t("active")}
+                            inactiveLabel={t("inactive")}
+                          />
                         </div>
                       </div>
                     </div>

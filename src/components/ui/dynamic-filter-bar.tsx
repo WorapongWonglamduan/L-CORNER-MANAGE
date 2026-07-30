@@ -220,3 +220,23 @@ export function DynamicFilterBar({
     </div>
   );
 }
+
+/** The "search text + active/inactive select" filter pair every master-data
+ * list manager (products, categories, units, ...) repeats identically. */
+export function getSearchAndActiveFilterFields(
+  t: (key: string) => string,
+  tCommon: (key: string) => string,
+): FilterFieldConfig[] {
+  return [
+    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
+    {
+      name: "isActive",
+      type: "select",
+      placeholder: tCommon("allStatus"),
+      options: [
+        { value: "true", label: t("active") },
+        { value: "false", label: t("inactive") },
+      ],
+    },
+  ];
+}

@@ -5,9 +5,14 @@ import { useForm } from "react-hook-form";
 import { Plus, IceCreamCone, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
-import { DynamicFilterBar, type FilterFieldConfig } from "@/components/ui/dynamic-filter-bar";
+import { DynamicFilterBar, getSearchAndActiveFilterFields } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
 import { EntityDialog } from "@/components/ui/entity-dialog";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EntityCardGrid, EntityCard } from "@/components/ui/entity-card-grid";
+import { DetailRow } from "@/components/ui/detail-row";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import {
   Dialog,
@@ -57,18 +62,7 @@ export default function ToppingsManager() {
     refetch,
   } = useToppingsManager();
 
-  const filterFields: FilterFieldConfig[] = [
-    { name: "search", type: "text", placeholder: t("searchPlaceholder") },
-    {
-      name: "isActive",
-      type: "select",
-      placeholder: tCommon("allStatus"),
-      options: [
-        { value: "true", label: t("active") },
-        { value: "false", label: t("inactive") },
-      ],
-    },
-  ];
+  const filterFields = getSearchAndActiveFilterFields(t, tCommon);
 
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
   const [availabilityTopping, setAvailabilityTopping] =
@@ -148,25 +142,14 @@ export default function ToppingsManager() {
       />
 
       {loading && toppings.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
-          </div>
-        </div>
+        <LoadingSpinner label={t("loading")} />
       ) : toppings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-          <IceCreamCone className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
-          <p className="text-gray-600 dark:text-gray-300 text-lg">{t("noData")}</p>
-        </div>
+        <EmptyState icon={IceCreamCone} label={t("noData")} />
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <EntityCardGrid>
             {toppings.map((topping) => (
-              <div
-                key={topping.id}
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-5 hover:shadow-xl transition-all hover:border-primary group relative"
-              >
+              <EntityCard key={topping.id}>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-primary/10 group-hover:bg-primary/20 transition-colors shrink-0 flex items-center justify-center">
@@ -199,48 +182,30 @@ export default function ToppingsManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between py-2.5">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("ingredient")}:
-                    </span>
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {topping.ingredient?.name_i18n[locale] || "-"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("quantityPerServing")}:
-                    </span>
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {Number(topping.quantity_per_serving).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("availableProducts")}:
-                    </span>
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {topping.available_on.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2.5 border-t border-gray-100 dark:border-gray-700">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("status")}:
-                    </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        topping.is_active
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {topping.is_active ? t("active") : t("inactive")}
-                    </span>
-                  </div>
+                  <DetailRow
+                    label={t("ingredient")}
+                    value={topping.ingredient?.name_i18n[locale] || "-"}
+                    bordered={false}
+                  />
+                  <DetailRow
+                    label={t("quantityPerServing")}
+                    value={Number(topping.quantity_per_serving).toLocaleString()}
+                  />
+                  <DetailRow label={t("availableProducts")} value={topping.available_on.length} />
+                  <DetailRow
+                    label={t("status")}
+                    value={
+                      <StatusBadge
+                        active={topping.is_active}
+                        activeLabel={t("active")}
+                        inactiveLabel={t("inactive")}
+                      />
+                    }
+                  />
                 </div>
-              </div>
+              </EntityCard>
             ))}
-          </div>
+          </EntityCardGrid>
 
           {toppings.length > 0 && (
             <div className="mt-6">

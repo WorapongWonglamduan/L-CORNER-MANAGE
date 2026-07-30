@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dynamic-filter-bar";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { usePermission } from "@/hooks/usePermission";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
@@ -245,12 +246,7 @@ export default function SalesContent() {
         {/* Sales Table */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
           {loading && sales.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-300">{t("loading")}</p>
-              </div>
-            </div>
+            <LoadingSpinner label={t("loading")} />
           ) : sales.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="text-gray-400 dark:text-gray-500 mb-4">
