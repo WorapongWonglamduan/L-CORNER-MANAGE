@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { Plus, IceCreamCone, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
@@ -13,19 +11,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EntityCardGrid, EntityCard } from "@/components/ui/entity-card-grid";
 import { DetailRow } from "@/components/ui/detail-row";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Input, INPUT_TYPES } from "@/components/ui/Input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { RelationPickerDialog } from "@/components/ui/relation-picker-dialog";
+import { useRelationPicker } from "@/hooks/useRelationPicker";
 import { useToppingsManager, Topping } from "./helper";
 import { getToppingFormConfig } from "../form/config";
 import { useLocale, useTranslations } from "next-intl";
 import type { Locale } from "@/types/i18n";
-import { toast } from "@/lib/toast";
 
 export default function ToppingsManager() {
   const locale = useLocale() as Locale;
@@ -64,61 +55,14 @@ export default function ToppingsManager() {
 
   const filterFields = getSearchAndActiveFilterFields(t, tCommon);
 
-  const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
-  const [availabilityTopping, setAvailabilityTopping] =
-    useState<Topping | null>(null);
-  const [savingAvailability, setSavingAvailability] = useState(false);
-  const { watch, setValue, reset } = useForm<{ selectedProductIds: string[] }>({
-    defaultValues: { selectedProductIds: [] },
+  const availabilityPicker = useRelationPicker<Topping>({
+    buildEndpoint: (topping) => `/api/toppings/${topping.id}`,
+    bodyKey: "product_ids",
+    getInitialIds: (topping) => topping.available_on.map((a) => a.product_id),
+    onSaved: refetch,
+    savedMessage: t("save"),
+    errorFallback: t("saving"),
   });
-  const selectedProductIds = watch("selectedProductIds");
-
-  const handleOpenAvailability = (topping: Topping) => {
-    setAvailabilityTopping(topping);
-    reset({ selectedProductIds: topping.available_on.map((a) => a.product_id) });
-    setAvailabilityDialogOpen(true);
-  };
-
-  const handleCloseAvailability = () => {
-    setAvailabilityDialogOpen(false);
-    setAvailabilityTopping(null);
-    reset({ selectedProductIds: [] });
-  };
-
-  const toggleProductId = (id: string) => {
-    setValue(
-      "selectedProductIds",
-      selectedProductIds.includes(id)
-        ? selectedProductIds.filter((p) => p !== id)
-        : [...selectedProductIds, id],
-    );
-  };
-
-  const handleSaveAvailability = async () => {
-    if (!availabilityTopping) return;
-    try {
-      setSavingAvailability(true);
-      const response = await fetch(`/api/toppings/${availabilityTopping.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_ids: selectedProductIds }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || t("saving"));
-      }
-
-      toast.success(t("save"));
-      handleCloseAvailability();
-      refetch();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t("saving");
-      toast.error(message);
-    } finally {
-      setSavingAvailability(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -166,7 +110,7 @@ export default function ToppingsManager() {
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => handleOpenAvailability(topping)}
+                      onClick={() => availabilityPicker.open(topping)}
                       className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
                       title={t("availableProducts")}
                     >
@@ -239,67 +183,24 @@ export default function ToppingsManager() {
         maxWidth="2xl"
       />
 
-      <Dialog
-        open={availabilityDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) handleCloseAvailability();
-        }}
-      >
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-primary text-xl font-bold">
-              {t("availableProducts")}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-            {availableProducts.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-                {t("noData")}
-              </p>
-            ) : (
-              availableProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <Input
-                    inputType={INPUT_TYPES.CHECKBOX}
-                    checked={selectedProductIds.includes(product.id)}
-                    onCheckedChange={() => toggleProductId(product.id)}
-                  />
-                  <span
-                    className="text-sm text-gray-900 dark:text-white cursor-pointer"
-                    onClick={() => toggleProductId(product.id)}
-                  >
-                    {product.name_i18n[locale]}{" "}
-                    <span className="text-gray-500 dark:text-gray-400">({product.code})</span>
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-
-          <DialogFooter className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseAvailability}
-              disabled={savingAvailability}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveAvailability}
-              disabled={savingAvailability}
-              className="bg-gradient-to-r from-primary to-primary-light text-white"
-            >
-              {savingAvailability ? t("saving") : t("save")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RelationPickerDialog
+        isOpen={availabilityPicker.isOpen}
+        title={t("availableProducts")}
+        items={availableProducts.map((product) => ({
+          id: product.id,
+          label: product.name_i18n[locale],
+          sublabel: product.code,
+        }))}
+        selectedIds={availabilityPicker.selectedIds}
+        onToggle={availabilityPicker.toggle}
+        onClose={availabilityPicker.close}
+        onSave={availabilityPicker.save}
+        saving={availabilityPicker.saving}
+        emptyLabel={t("noData")}
+        cancelLabel={t("cancel")}
+        saveLabel={t("save")}
+        savingLabel={t("saving")}
+      />
 
       <ConfirmDialog />
     </div>
