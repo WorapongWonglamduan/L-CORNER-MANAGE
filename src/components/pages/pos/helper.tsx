@@ -544,6 +544,65 @@ export function usePOSManager() {
     };
   }, []);
 
+  // Everything that happens once a Sale actually exists, regardless of
+  // which path created it — the direct POST /api/sales below (cash/manual-
+  // card/manual-QR), or a gateway payment finalized via
+  // POST /api/payments/intents or GET /api/payments/intents/[id] (see
+  // checkout-modal.tsx's Omise flow). Kept as one function so both paths
+  // toast/print/clear/refetch identically instead of two copies drifting.
+  const finalizeSuccessfulSale = useCallback(
+    async (result: { id: string; sale_number?: string; total_amount?: number }) => {
+      toast.success(
+        t("paymentSuccess", {
+          count: cartItemCount,
+          saleNumber: result.sale_number || "N/A",
+        }),
+      );
+
+      // Flashes a thank-you screen on the customer display for every
+      // payment method (not just QR) so a cash/card sale doesn't jump
+      // straight from "here's your order" to a blank idle screen either.
+      if (displaySuccessTimeoutRef.current) {
+        clearTimeout(displaySuccessTimeoutRef.current);
+      }
+      setDisplayPaymentState({
+        status: "success",
+        amount: Number(result.total_amount) || cartTotal,
+        saleNumber: result.sale_number || "",
+      });
+      displaySuccessTimeoutRef.current = setTimeout(() => {
+        setDisplayPaymentState(null);
+      }, DISPLAY_SUCCESS_DURATION_MS);
+
+      // Fire-and-forget: publishes to an in-memory bus with zero
+      // listeners when no printer-agent tab is open, which is a no-op,
+      // not an error — a sale must never be blocked by a printer problem.
+      fetch("/api/pos/print-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          warehouse_id: warehouseId,
+          job: {
+            id: crypto.randomUUID(),
+            saleId: result.id,
+            saleNumber: result.sale_number,
+            createdAt: new Date().toISOString(),
+            payload: result,
+          },
+        }),
+      }).catch((error) => {
+        console.error("Error publishing print job:", error);
+      });
+
+      idempotencyKeyRef.current = null;
+      clearCart();
+
+      // Refetch products to update stock
+      await fetchProducts();
+    },
+    [warehouseId, cartTotal, cartItemCount, t, clearCart, fetchProducts],
+  );
+
   const checkout = useCallback(
     async (paymentMethod: string, promotionCode?: string) => {
       try {
@@ -588,53 +647,7 @@ export function usePOSManager() {
         }
 
         const result = await response.json();
-        toast.success(
-          t("paymentSuccess", {
-            count: cartItemCount,
-            saleNumber: result.sale_number || "N/A",
-          }),
-        );
-
-        // Flashes a thank-you screen on the customer display for every
-        // payment method (not just QR) so a cash/card sale doesn't jump
-        // straight from "here's your order" to a blank idle screen either.
-        if (displaySuccessTimeoutRef.current) {
-          clearTimeout(displaySuccessTimeoutRef.current);
-        }
-        setDisplayPaymentState({
-          status: "success",
-          amount: Number(result.total_amount) || cartTotal,
-          saleNumber: result.sale_number || "",
-        });
-        displaySuccessTimeoutRef.current = setTimeout(() => {
-          setDisplayPaymentState(null);
-        }, DISPLAY_SUCCESS_DURATION_MS);
-
-        // Fire-and-forget: publishes to an in-memory bus with zero
-        // listeners when no printer-agent tab is open, which is a no-op,
-        // not an error — a sale must never be blocked by a printer problem.
-        fetch("/api/pos/print-jobs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            warehouse_id: warehouseId,
-            job: {
-              id: crypto.randomUUID(),
-              saleId: result.id,
-              saleNumber: result.sale_number,
-              createdAt: new Date().toISOString(),
-              payload: result,
-            },
-          }),
-        }).catch((error) => {
-          console.error("Error publishing print job:", error);
-        });
-
-        idempotencyKeyRef.current = null;
-        clearCart();
-
-        // Refetch products to update stock
-        await fetchProducts();
+        await finalizeSuccessfulSale(result);
 
         return result;
       } catch (error) {
@@ -642,7 +655,58 @@ export function usePOSManager() {
         throw error;
       }
     },
-    [cart, warehouseId, cartTotal, cartItemCount, t, clearCart, fetchProducts],
+    [cart, warehouseId, finalizeSuccessfulSale],
+  );
+
+  // Starts a gateway-backed checkout (see checkout-modal.tsx's Omise
+  // flow) — mirrors checkout()'s item-mapping, but hands off to
+  // POST /api/payments/intents instead of POST /api/sales, since no Sale
+  // exists yet until the gateway actually confirms the payment. Deliberately
+  // does NOT clear the cart or touch idempotencyKeyRef here — that only
+  // happens once finalizeSuccessfulSale actually runs (synchronously for a
+  // card charge, or later via polling for PromptPay), so an abandoned/failed
+  // gateway attempt leaves the cart exactly as the cashier left it.
+  const startGatewayCheckout = useCallback(
+    async (
+      driver: string,
+      method: string,
+      options: { cardToken?: string; promotionCode?: string } = {},
+    ) => {
+      if (!warehouseId) {
+        throw new Error("ไม่พบข้อมูลคลังสินค้า กรุณาติดต่อผู้ดูแลระบบ");
+      }
+
+      const items = cart.map((item) => ({
+        product_id: item.productId,
+        quantity: item.quantity,
+        toppings: item.toppings.map((topping) => ({
+          topping_id: topping.id,
+          quantity: 1,
+        })),
+      }));
+
+      const response = await fetch("/api/payments/intents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          warehouse_id: warehouseId,
+          items,
+          payment_method: method,
+          promotion_code: options.promotionCode || undefined,
+          note: "",
+          driver,
+          method,
+          card_token: options.cardToken,
+        }),
+      });
+
+      const intent = await response.json();
+      if (!response.ok) {
+        throw new Error(intent.error || "Failed to start payment");
+      }
+      return intent;
+    },
+    [cart, warehouseId],
   );
 
   return {
@@ -678,6 +742,8 @@ export function usePOSManager() {
       syncWithLiveCatalog: syncCartWithLiveCatalog,
     },
     checkout,
+    startGatewayCheckout,
+    finalizeSuccessfulSale,
     display: {
       paymentState: displayPaymentState,
       setPaymentState: setDisplayPaymentState,

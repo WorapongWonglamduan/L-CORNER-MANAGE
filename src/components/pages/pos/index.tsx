@@ -22,8 +22,18 @@ interface POSFilterValues {
 }
 
 export default function POSContent() {
-  const { catalog, cart, checkout, display, locale, pagination, warehouse, filterForm } =
-    usePOSManager();
+  const {
+    catalog,
+    cart,
+    checkout,
+    startGatewayCheckout,
+    finalizeSuccessfulSale,
+    display,
+    locale,
+    pagination,
+    warehouse,
+    filterForm,
+  } = usePOSManager();
 
   const currentWarehouse = warehouse.warehouses.find(
     (w) => w.id === warehouse.warehouseId,
@@ -372,6 +382,8 @@ export default function POSContent() {
         promptpayId={currentWarehouse?.promptpay_id}
         onDisplayStateChange={display.setPaymentState}
         onConfirm={handleCheckout}
+        onStartGatewayCheckout={startGatewayCheckout}
+        onGatewaySaleCreated={finalizeSuccessfulSale}
       />
 
       {/* Topping Customization Modal */}

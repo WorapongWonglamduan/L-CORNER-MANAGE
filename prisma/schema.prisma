@@ -143,6 +143,7 @@ model Warehouse {
   transfers_out   StockTransfer[] @relation("TransferFrom")
   transfers_in    StockTransfer[] @relation("TransferTo")
   user_warehouses UserWarehouse[]
+  payment_intents PaymentIntent[]
 
   @@map("warehouses")
 }
@@ -354,16 +355,62 @@ model Sale {
   // Null for any request that doesn't send one (fully optional).
   idempotency_key String? @unique
 
-  warehouse       Warehouse    @relation(fields: [warehouse_id], references: [id])
-  created_by_user User?        @relation("SaleCreatedBy", fields: [created_by], references: [id])
-  promotion       Promotion?   @relation(fields: [promotion_id], references: [id])
+  warehouse       Warehouse      @relation(fields: [warehouse_id], references: [id])
+  created_by_user User?          @relation("SaleCreatedBy", fields: [created_by], references: [id])
+  promotion       Promotion?     @relation(fields: [promotion_id], references: [id])
   items           SaleItem[]
   refunds         SaleRefund[]
+  payment_intent  PaymentIntent?
 
   @@index([warehouse_id])
   @@index([created_by])
   @@index([promotion_id])
   @@map("sales")
+}
+
+enum PaymentIntentStatus {
+  pending
+  succeeded
+  failed
+  expired
+}
+
+// Represents a gateway payment (Omise/2C2P/PayPal/...) between "checkout
+// started" and "Sale actually created" — the two are no longer the same
+// instant once payment can be asynchronous (a card charge can be
+// synchronous, but PromptPay/wallet-style methods only confirm seconds to
+// minutes later via a webhook). `status`/`sale_id` here are a best-effort
+// cache for the polling UI, NOT the source of truth for "was this paid" —
+// that's still `Sale` existing at all (via `Sale.idempotency_key =
+// PaymentIntent.id`), exactly as it is for cash/manual-QR today. See
+// src/lib/payments/reconcile.ts.
+model PaymentIntent {
+  id                       String              @id @default(uuid())
+  driver                   String // "omise" | "2c2p" | "paypal" | "truemoney" | "rabbit_line_pay"
+  method                   String // "card" | "promptpay" | ...
+  warehouse_id             String
+  amount                   Decimal             @db.Decimal(15, 2)
+  status                   PaymentIntentStatus @default(pending)
+  gateway_reference        String?             @unique
+  qr_image_url             String?
+  // Raw checkout body (items/discount/promotion_code/note/payment_method) —
+  // re-resolved against LIVE prices/stock/promotion state every time a Sale
+  // is actually created from it, never trusted as a stale snapshot.
+  cart_snapshot            Json
+  sale_id                  String?             @unique
+  failure_reason           String?             @db.Text
+  raw_last_webhook_payload Json?
+  created_by               String?
+  created_at               DateTime            @default(now())
+  updated_at               DateTime            @updatedAt
+  expires_at               DateTime?
+
+  warehouse Warehouse @relation(fields: [warehouse_id], references: [id])
+  sale      Sale?     @relation(fields: [sale_id], references: [id])
+
+  @@index([warehouse_id])
+  @@index([created_by])
+  @@map("payment_intents")
 }
 
 model SaleItem {

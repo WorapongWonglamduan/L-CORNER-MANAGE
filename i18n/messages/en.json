@@ -98,7 +98,14 @@
     "page": "Page",
     "of": "of",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "dateRangePresets": {
+      "today": "Today",
+      "last7Days": "1 Week",
+      "last1Month": "1 Month",
+      "last1Year": "1 Year",
+      "custom": "Custom"
+    }
   },
   "connectivity": {
     "offlineTitle": "No Internet Connection",
@@ -613,7 +620,12 @@
     "promoApplied": "Applied code {code}",
     "promoDiscount": "Discount",
     "subtotalBeforeDiscount": "Subtotal before discount",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "omisePromptpay": "PromptPay (Omise)",
+    "omiseNotConfigured": "Omise isn't configured on this server yet",
+    "waitingForGatewayPayment": "Waiting for payment...",
+    "gatewayPaymentFailed": "Payment failed",
+    "backToPaymentMethods": "Back to payment methods"
   },
   "sales": {
     "title": "Sales Orders",

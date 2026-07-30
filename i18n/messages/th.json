@@ -105,7 +105,14 @@
     "page": "หน้า",
     "of": "จาก",
     "previous": "ก่อนหน้า",
-    "next": "ถัดไป"
+    "next": "ถัดไป",
+    "dateRangePresets": {
+      "today": "วันนี้",
+      "last7Days": "1 สัปดาห์",
+      "last1Month": "1 เดือน",
+      "last1Year": "1 ปี",
+      "custom": "กำหนดเอง"
+    }
   },
   "connectivity": {
     "offlineTitle": "ไม่มีการเชื่อมต่ออินเทอร์เน็ต",
@@ -620,7 +627,12 @@
     "promoApplied": "ใช้โค้ด {code} แล้ว",
     "promoDiscount": "ส่วนลด",
     "subtotalBeforeDiscount": "ยอดก่อนหักส่วนลด",
-    "processing": "กำลังดำเนินการ..."
+    "processing": "กำลังดำเนินการ...",
+    "omisePromptpay": "PromptPay (Omise)",
+    "omiseNotConfigured": "ยังไม่ได้ตั้งค่า Omise บนเซิร์ฟเวอร์",
+    "waitingForGatewayPayment": "กำลังรอการชำระเงิน...",
+    "gatewayPaymentFailed": "การชำระเงินไม่สำเร็จ",
+    "backToPaymentMethods": "กลับไปเลือกวิธีชำระเงิน"
   },
   "sales": {
     "title": "รายการขาย",
