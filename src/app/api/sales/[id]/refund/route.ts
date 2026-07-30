@@ -81,13 +81,13 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const items: RefundItemInput[] = Array.isArray(body.items) ? body.items : [];
+    const rawItems: RefundItemInput[] = Array.isArray(body.items) ? body.items : [];
     const reason: string | null = body.reason || null;
 
-    if (items.length === 0) {
+    if (rawItems.length === 0) {
       return NextResponse.json({ error: "items is required" }, { status: 400 });
     }
-    for (const req of items) {
+    for (const req of rawItems) {
       if (!(Number(req.quantity) > 0)) {
         return NextResponse.json(
           { error: `Invalid refund quantity for ${req.sale_item_id}: ${req.quantity}` },
@@ -96,12 +96,26 @@ export async function POST(
       }
     }
 
-    // Sale existence/status/warehouse-access are checked once upfront —
-    // none of them change based on a concurrent refund request, so there's
-    // nothing to re-validate for those inside the retry loop below.
+    // Collapse duplicate sale_item_id entries into one summed quantity —
+    // the remaining-quantity check below only reads each SaleItem's
+    // already-refunded total ONCE per transaction attempt, so two entries
+    // for the same sale_item_id in a single request would otherwise both
+    // independently pass against that same stale "remaining" figure and
+    // over-refund/over-restore stock beyond what was ever sold.
+    const items: RefundItemInput[] = Array.from(
+      rawItems.reduce((map, req) => {
+        map.set(req.sale_item_id, (map.get(req.sale_item_id) || 0) + Number(req.quantity));
+        return map;
+      }, new Map<string, number>()),
+    ).map(([sale_item_id, quantity]) => ({ sale_item_id, quantity }));
+
+    // Existence/warehouse-access are checked once upfront — they don't
+    // change based on a concurrent request. `status`, however, DOES: a
+    // concurrent void can flip it, so it's re-checked inside the
+    // transaction below instead of trusted from here.
     const sale = await prisma.sale.findUnique({
       where: { id },
-      select: { id: true, sale_number: true, status: true, warehouse_id: true },
+      select: { id: true, sale_number: true, status: true, warehouse_id: true, promotion_id: true },
     });
     if (!sale) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
@@ -130,6 +144,27 @@ export async function POST(
       try {
         const refund = await prisma.$transaction(
           async (tx) => {
+            // Re-checked inside the transaction: a concurrent void could
+            // have flipped this sale to "cancelled" between the upfront
+            // check above and this attempt actually committing. Voiding
+            // restores stock for every item's full quantity with no idea a
+            // refund might land on top of that — so refunding a sale that a
+            // concurrent void just cancelled would double-restore stock and
+            // leave the sale in an inconsistent cancelled-but-refunded
+            // state. This re-read participates in the same Serializable
+            // transaction as the void's own checks, so it either sees the
+            // committed cancellation or gets a conflict and retries.
+            const liveSale = await tx.sale.findUnique({
+              where: { id: sale.id },
+              select: { status: true },
+            });
+            if (!liveSale || liveSale.status !== "completed") {
+              throw new RefundError(
+                `Cannot refund a sale with status "${liveSale?.status ?? "not found"}"`,
+                400,
+              );
+            }
+
             // Re-read inside the transaction, not reused from before it —
             // the whole point of Serializable here is that this has to be
             // the value Postgres will actually conflict-check against.
@@ -178,6 +213,30 @@ export async function POST(
               // refund is worth.
               const unitAmount = Number(saleItem.total_amount) / originalQty;
               resolved.push({ saleItem, quantity, amount: unitAmount * quantity });
+            }
+
+            // A void releases the promotion redemption it used (see
+            // DELETE /api/sales/[id]) so a cancelled sale doesn't
+            // permanently consume the code's usage limit — a refund that
+            // ends up returning EVERY item's full quantity is the same
+            // "customer got everything back" outcome and must release it
+            // too, or a max_uses:1 code becomes permanently unusable the
+            // moment a fully-refunded sale is processed as a refund instead
+            // of a void. A partial refund (some quantity still kept) does
+            // NOT release it — the discount still applied to what's kept.
+            const isFullyRefundedAfterThis = saleItems.every((si) => {
+              const existingRefunded = si.refund_items.reduce(
+                (sum, ri) => sum + Number(ri.quantity),
+                0,
+              );
+              const thisRequest = resolved.find((r) => r.saleItem.id === si.id)?.quantity ?? 0;
+              return existingRefunded + thisRequest >= Number(si.quantity);
+            });
+            if (isFullyRefundedAfterThis && sale.promotion_id) {
+              await tx.promotion.update({
+                where: { id: sale.promotion_id },
+                data: { used_count: { decrement: 1 } },
+              });
             }
 
             const refundNumber = await generateRefundNumber(tx);

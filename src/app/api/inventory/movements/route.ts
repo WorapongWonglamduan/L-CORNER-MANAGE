@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parsePageSize } from "@/lib/pagination";
 import { auth } from "@/auth";
 import { requirePermission, requireWarehouseAccess } from "@/lib/permissions";
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("start_date");
     const endDate = searchParams.get("end_date");
     const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "20");
+    const pageSize = parsePageSize(searchParams, 20);
 
     if (warehouseId) {
       const deniedWarehouse = requireWarehouseAccess(session, warehouseId);

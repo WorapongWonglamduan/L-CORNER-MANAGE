@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parsePageSize } from "@/lib/pagination";
 import { auth } from "@/auth";
 import { requirePermission, hasPermission } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "10");
+    const pageSize = parsePageSize(searchParams);
     const isActive = searchParams.get("isActive");
     const search = searchParams.get("search") || "";
 

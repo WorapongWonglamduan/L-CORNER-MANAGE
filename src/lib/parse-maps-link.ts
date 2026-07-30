@@ -17,6 +17,22 @@ export function isMapsShortLink(url: string): boolean {
   }
 }
 
+// Where a legitimate short link is actually allowed to redirect TO — the
+// short-link hosts themselves (a short link can redirect to another short
+// link) plus google.com and its subdomains, since that's where a resolved
+// Maps link always lands (www.google.com/maps/..., maps.google.com/...).
+// `fetch(url, {redirect:"follow"})` would otherwise follow an attacker's
+// redirect chain to an arbitrary internal/external host with only the
+// FIRST hop ever checked against an allow-list — this is the check applied
+// to every hop instead.
+export function isAllowedRedirectHost(hostname: string): boolean {
+  return (
+    MAPS_SHORT_LINK_HOSTS.includes(hostname) ||
+    hostname === "google.com" ||
+    hostname.endsWith(".google.com")
+  );
+}
+
 const isValidLatLong = (lat: number, lng: number) =>
   Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 

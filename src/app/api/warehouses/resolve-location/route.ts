@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
-import { isMapsShortLink, parseMapsLink } from "@/lib/parse-maps-link";
+import { isMapsShortLink, isAllowedRedirectHost, parseMapsLink } from "@/lib/parse-maps-link";
+
+const MAX_REDIRECTS = 5;
+
+// Follows a redirect chain one hop at a time (`redirect: "manual"`),
+// checking EVERY hop's hostname against the allow-list — `fetch(url,
+// {redirect: "follow"})` only lets the caller see/validate the final URL,
+// so an attacker-controlled intermediate hop (if one were ever reachable)
+// would otherwise be followed to an arbitrary host with no check at all.
+async function resolveRedirectChain(startUrl: string): Promise<string> {
+  let current = startUrl;
+  for (let hop = 0; hop < MAX_REDIRECTS; hop++) {
+    const response = await fetch(current, { redirect: "manual" });
+    if (response.status < 300 || response.status >= 400) {
+      return current;
+    }
+    const location = response.headers.get("location");
+    if (!location) return current;
+    const next = new URL(location, current).toString();
+    if (!isAllowedRedirectHost(new URL(next).hostname)) {
+      throw new Error("REDIRECT_HOST_NOT_ALLOWED");
+    }
+    current = next;
+  }
+  return current;
+}
 
 // POST /api/warehouses/resolve-location - follows a Google Maps short link's
 // redirect server-side and extracts lat/long from the resolved URL. The
@@ -23,8 +48,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(url, { redirect: "follow" });
-    const resolvedUrl = response.url;
+    let resolvedUrl: string;
+    try {
+      resolvedUrl = await resolveRedirectChain(url);
+    } catch (error) {
+      if (error instanceof Error && error.message === "REDIRECT_HOST_NOT_ALLOWED") {
+        return NextResponse.json(
+          { error: "Redirect chain led to a host outside the allowed list" },
+          { status: 400 },
+        );
+      }
+      throw error;
+    }
 
     const coords = parseMapsLink(resolvedUrl);
     if (!coords) {

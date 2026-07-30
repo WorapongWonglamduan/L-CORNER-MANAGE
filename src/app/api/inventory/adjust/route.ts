@@ -55,6 +55,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // `!quantity` above only rejects zero/falsy — a negative number is
+    // truthy in JS and would otherwise sail through. For "in"/"out" the
+    // change magnitude must be positive (direction comes from the mode,
+    // not the sign); a negative "in" would silently decrement stock with
+    // none of "out"'s own negative-stock guard, and a negative "out" would
+    // silently increment it while being logged as a stock decrease.
+    // "adjustment" sets an absolute count, so it must not be negative either
+    // — a warehouse can't hold negative physical stock.
+    if (adjustment_type === "adjustment" ? adjustmentQty < 0 : !(adjustmentQty > 0)) {
+      return NextResponse.json(
+        { error: "Quantity must be positive" },
+        { status: 400 }
+      );
+    }
+
     // Create stock movement record and update product stock in a transaction.
     // "in"/"out" use an atomic increment/decrement (a single UPDATE ...
     // [WHERE current_stock >= amount] statement) instead of read-then-write,
@@ -63,13 +78,34 @@ export async function POST(request: NextRequest) {
     // pass a negative-stock check that's already stale by the time either
     // writes). "adjustment" sets an absolute count, so it has no such race
     // to guard against — last write wins by design.
+    // Per the allow-list model (a product is only sellable/visible at a
+    // warehouse it's been explicitly assigned to, via the create-time
+    // checkbox or the "จัดการคลัง" modal — see PATCH
+    // /api/products/[id]/warehouses/[warehouseId]), this must never
+    // silently create a brand-new ProductStock row: that row defaults to
+    // is_active:true, so an adjustment on a never-assigned product/
+    // warehouse pair would grant it visibility there as a side effect of
+    // recording a stock count.
+    const existingStock = await prisma.productStock.findUnique({
+      where: { product_id_warehouse_id: { product_id, warehouse_id } },
+    });
+    if (!existingStock) {
+      return NextResponse.json(
+        { error: "Product is not assigned to this warehouse yet" },
+        { status: 400 },
+      );
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      const ensured = await tx.productStock.upsert({
+      // Re-read inside the transaction (not the pre-transaction
+      // `existingStock` above, which only proves the row exists) — the
+      // audit row's `quantity_before` must reflect what's actually true at
+      // the moment of this transaction, not a snapshot from before it
+      // started.
+      const current = await tx.productStock.findUniqueOrThrow({
         where: { product_id_warehouse_id: { product_id, warehouse_id } },
-        create: { product_id, warehouse_id, current_stock: 0 },
-        update: {},
       });
-      const currentStock = Number(ensured.current_stock);
+      const currentStock = Number(current.current_stock);
 
       let updatedProductStock;
       let direction: string;

@@ -205,6 +205,84 @@ describe("POST /api/sales/[id]/refund", () => {
     expect(await currentStock(fx.productId, fx.warehouseId)).toBe(98); // 95 + 3
   });
 
+  it("rejects duplicate sale_item_id entries within one request that together exceed what's refundable", async () => {
+    // The sale item has quantity 5. Two entries for the SAME sale_item_id
+    // in one request, each individually well within 5, but summing to 6 —
+    // must be collapsed and checked together, not validated independently
+    // against the same stale "5 remaining" snapshot.
+    const res = await refundSale(
+      refundRequest(saleId, {
+        items: [
+          { sale_item_id: saleItemId, quantity: 3 },
+          { sale_item_id: saleItemId, quantity: 3 },
+        ],
+      }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(res.status).toBe(400);
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(95); // untouched
+  });
+
+  it("allows duplicate sale_item_id entries that together stay within what's refundable", async () => {
+    const res = await refundSale(
+      refundRequest(saleId, {
+        items: [
+          { sale_item_id: saleItemId, quantity: 2 },
+          { sale_item_id: saleItemId, quantity: 2 },
+        ],
+      }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(res.status).toBe(201);
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(99); // 95 + 4
+  });
+
+  it("rejects refunding a sale that a concurrent void already cancelled", async () => {
+    const voidRes = await voidSale(
+      new NextRequest(`http://localhost/api/sales/${saleId}`, { method: "DELETE" }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(voidRes.status).toBe(200);
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(100); // void restored all 5
+
+    const refundRes = await refundSale(
+      refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 1 }] }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(refundRes.status).toBe(400);
+
+    // Must not have double-restored on top of what the void already did.
+    expect(await currentStock(fx.productId, fx.warehouseId)).toBe(100);
+  });
+
+  it("never lets a void and a refund race into a double stock restore", async () => {
+    // Same class of race as the concurrent-refund/concurrent-void tests
+    // above, but across the two different endpoints: without re-checking
+    // status inside the refund's own transaction, a refund racing a void
+    // could read "completed" before the void commits and still restore
+    // stock on top of what the void restores.
+    const [voidRes, refundRes] = await Promise.all([
+      voidSale(new NextRequest(`http://localhost/api/sales/${saleId}`, { method: "DELETE" }), {
+        params: Promise.resolve({ id: saleId }),
+      }),
+      refundSale(
+        refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 2 }] }),
+        { params: Promise.resolve({ id: saleId }) },
+      ),
+    ]);
+
+    const statuses = [voidRes.status, refundRes.status].sort();
+    // Exactly one wins — either the void cancels it first (refund then sees
+    // "not completed"), or the refund commits first (void then sees
+    // "already has refunds"). Never both succeeding.
+    expect(statuses).toEqual([200, 400]);
+
+    // Whichever won, stock must reflect exactly ONE restoration of the 5
+    // sold units — never 5 (void) + 2 (refund) = 7, and never double-counted.
+    const stock = await currentStock(fx.productId, fx.warehouseId);
+    expect(stock === 100 || stock === 97).toBe(true);
+  });
+
   it("never lets two concurrent voids double-restore the same sale's stock", async () => {
     // Same class of bug as the refund race above, but in DELETE (void):
     // without Serializable + retry, both requests could read "completed"
@@ -224,5 +302,107 @@ describe("POST /api/sales/[id]/refund", () => {
     expect(await currentStock(fx.productId, fx.warehouseId)).toBe(100); // 95 + 5, not +10
     const sale = await prisma.sale.findUnique({ where: { id: saleId } });
     expect(sale?.status).toBe("cancelled");
+  });
+});
+
+// A void releases the promotion redemption it used, so a cancelled sale
+// doesn't permanently consume a max_uses:1 code's only use — a refund that
+// returns every item's full quantity is the same "customer got everything
+// back" outcome and must release it too, or the code becomes permanently
+// unusable the moment a fully-refunded sale is processed as a refund
+// instead of a void.
+describe("POST /api/sales/[id]/refund - promotion usage release", () => {
+  let fx: Awaited<ReturnType<typeof seedBasics>>;
+  let saleId: string;
+  let saleItemId: string;
+  let promotionId: string;
+
+  beforeEach(async () => {
+    fx = await seedBasics(100);
+    mockedAuth.mockResolvedValue(
+      fakeSession({
+        userId: fx.userId,
+        warehouseIds: [fx.warehouseId],
+        permissions: ["sales.create", "sales.refund", "sales.view"],
+      }),
+    );
+
+    const promotion = await prisma.promotion.create({
+      data: {
+        // Uppercase — POST /api/sales normalizes the incoming code to
+        // uppercase before looking it up, so a lowercase-hex UUID slice
+        // here would never match.
+        code: `PROMO-${fx.userId.slice(0, 8).toUpperCase()}`,
+        name_i18n: { th: "โปรโมชั่นทดสอบ", en: "Test Promo" },
+        discount_type: "fixed",
+        discount_value: 10,
+        max_uses: 1,
+      },
+    });
+    promotionId = promotion.id;
+
+    // Sale creation itself claims the promotion's only use (used_count 0 -> 1).
+    const createRes = await createSale(
+      new NextRequest("http://localhost/api/sales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          warehouse_id: fx.warehouseId,
+          items: [{ product_id: fx.productId, quantity: 5 }],
+          payment_method: "cash",
+          promotion_code: promotion.code,
+        }),
+      }),
+    );
+    const sale = await createRes.json();
+    saleId = sale.id;
+    saleItemId = sale.items[0].id;
+    expect((await prisma.promotion.findUnique({ where: { id: promotionId } }))?.used_count).toBe(1);
+  });
+
+  afterEach(async () => {
+    await resetDb();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("releases the promotion's used_count once every item is fully refunded", async () => {
+    const res = await refundSale(
+      refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 5 }] }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(res.status).toBe(201);
+
+    const promotion = await prisma.promotion.findUnique({ where: { id: promotionId } });
+    expect(promotion?.used_count).toBe(0);
+  });
+
+  it("does NOT release the promotion's used_count for a partial refund", async () => {
+    const res = await refundSale(
+      refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 2 }] }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(res.status).toBe(201);
+
+    const promotion = await prisma.promotion.findUnique({ where: { id: promotionId } });
+    expect(promotion?.used_count).toBe(1);
+  });
+
+  it("releases used_count when full refund happens across two partial refunds", async () => {
+    const r1 = await refundSale(
+      refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 2 }] }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(r1.status).toBe(201);
+    expect((await prisma.promotion.findUnique({ where: { id: promotionId } }))?.used_count).toBe(1);
+
+    const r2 = await refundSale(
+      refundRequest(saleId, { items: [{ sale_item_id: saleItemId, quantity: 3 }] }),
+      { params: Promise.resolve({ id: saleId }) },
+    );
+    expect(r2.status).toBe(201);
+    expect((await prisma.promotion.findUnique({ where: { id: promotionId } }))?.used_count).toBe(0);
   });
 });
