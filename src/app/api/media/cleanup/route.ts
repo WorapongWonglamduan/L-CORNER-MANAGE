@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
-import { unlink } from "fs/promises";
-import { existsSync } from "fs";
-import path from "path";
+import { deleteImage } from "@/lib/image-upload";
 
 /**
  * API endpoint to cleanup orphan media files
@@ -47,26 +45,21 @@ export async function DELETE() {
     for (const media of orphanMedia) {
       console.log(`Deleting: ${media.filename} (${media.id})`);
 
-      // Delete files from filesystem
-      const filesToDelete = [
-        media.file_path,
-        media.thumbnail_path,
-        media.medium_path,
-      ].filter(Boolean) as string[];
-
-      for (const filePath of filesToDelete) {
-        const fullPath = path.join(process.cwd(), "public", filePath);
-        if (existsSync(fullPath)) {
-          try {
-            await unlink(fullPath);
-            deletedFiles++;
-            console.log(`  ✓ Deleted file: ${filePath}`);
-          } catch (error) {
-            const errorMsg = `Failed to delete file: ${filePath}`;
-            console.log(`  ✗ ${errorMsg}`, error);
-            errors.push(errorMsg);
-          }
-        }
+      // Goes through the active StorageDriver (local disk or R2) rather
+      // than fs.unlink directly — this used to only ever delete local
+      // files, so switching STORAGE_DRIVER to r2 would have silently left
+      // every orphaned file behind in the bucket forever while still
+      // deleting the DB record.
+      try {
+        await deleteImage(media.file_path, media.thumbnail_path, media.medium_path);
+        deletedFiles += [media.file_path, media.thumbnail_path, media.medium_path].filter(
+          Boolean,
+        ).length;
+        console.log(`  ✓ Deleted files for: ${media.filename}`);
+      } catch (error) {
+        const errorMsg = `Failed to delete files for: ${media.filename}`;
+        console.log(`  ✗ ${errorMsg}`, error);
+        errors.push(errorMsg);
       }
 
       // Delete media record

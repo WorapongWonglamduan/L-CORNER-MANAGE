@@ -59,7 +59,7 @@ export async function DELETE(
     }
 
     // Delete files
-    await deleteImage(media.file_path)
+    await deleteImage(media.file_path, media.thumbnail_path, media.medium_path)
 
     // Delete from database
     await prisma.media.delete({

@@ -1,8 +1,6 @@
-import { writeFile, mkdir, unlink } from 'fs/promises'
-import { existsSync } from 'fs'
-import path from 'path'
 import sharp from 'sharp'
 import { v4 as uuidv4 } from 'uuid'
+import { getStorageDriver } from '@/lib/storage'
 
 export interface UploadedImage {
   id: string
@@ -51,10 +49,12 @@ export class ImageUploadError extends Error {
 }
 
 // `folder` comes straight from client-supplied form data (see
-// media/upload/route.ts) and is joined into a filesystem path below —
-// without this allow-list, a value like `../../../../etc` would let any
-// authenticated products.create holder write image files outside
-// public/uploads entirely.
+// media/upload/route.ts) and is joined into a storage key below — without
+// this allow-list, a value like `../../../../etc` could let any
+// authenticated products.create holder write files outside the intended
+// uploads tree (a real path-traversal risk on the local driver; R2 keys
+// aren't filesystem paths, but there's no reason to trust the input more
+// there either).
 const SAFE_FOLDER = /^[a-zA-Z0-9_-]+$/
 
 function sanitizeFolder(folder: string): string {
@@ -62,22 +62,16 @@ function sanitizeFolder(folder: string): string {
 }
 
 /**
- * Get upload directory path for current year/month
+ * Storage key prefix for the current year/month, e.g.
+ * "uploads/2026/07/general" — shared by both storage drivers, which each
+ * append "/original|thumbnail|medium/<uuid>.<ext>" to it.
  */
-export function getUploadPath(folder: string = 'general'): string {
+export function getUploadKeyPrefix(folder: string = 'general'): string {
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
 
-  return path.join(process.cwd(), 'public', 'uploads', String(year), month, sanitizeFolder(folder))
-}
-
-/**
- * Get relative URL path for uploaded image
- */
-export function getImageUrl(filePath: string): string {
-  // Remove 'public' from path to get URL
-  return filePath.replace(/^.*public/, '')
+  return `uploads/${year}/${month}/${sanitizeFolder(folder)}`
 }
 
 /**
@@ -107,7 +101,10 @@ export async function validateImage(
 }
 
 /**
- * Upload and process image
+ * Upload and process image — resizes via sharp into up to 3 variants and
+ * saves each through the active StorageDriver (local disk by default, or
+ * Cloudflare R2 when STORAGE_DRIVER=r2). Resize logic here never touches
+ * the filesystem/network directly; only the driver does.
  */
 export async function uploadImage(
   file: File,
@@ -118,18 +115,12 @@ export async function uploadImage(
   // Validate image
   await validateImage(file, opts)
 
+  const driver = getStorageDriver()
+
   // Generate unique filename
-  const ext = path.extname(file.name)
+  const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
   const storedFilename = `${uuidv4()}${ext}`
-  
-  // Get upload directory
-  const uploadDir = getUploadPath(opts.folder!)
-  const originalDir = path.join(uploadDir, 'original')
-  
-  // Create directories if they don't exist
-  if (!existsSync(originalDir)) {
-    await mkdir(originalDir, { recursive: true })
-  }
+  const keyPrefix = getUploadKeyPrefix(opts.folder!)
 
   // Convert File to Buffer
   const bytes = await file.arrayBuffer()
@@ -137,16 +128,15 @@ export async function uploadImage(
 
   // Get image metadata
   const metadata = await sharp(buffer).metadata()
-  
+
   // Save original image
-  const originalPath = path.join(originalDir, storedFilename)
-  await writeFile(originalPath, buffer)
+  const originalUrl = await driver.put(buffer, `${keyPrefix}/original/${storedFilename}`, file.type)
 
   const result: UploadedImage = {
     id: uuidv4(),
     filename: file.name,
     storedFilename,
-    filePath: getImageUrl(originalPath),
+    filePath: originalUrl,
     fileSize: file.size,
     mimeType: file.type,
     width: metadata.width,
@@ -155,82 +145,55 @@ export async function uploadImage(
 
   // Generate thumbnail
   if (opts.generateThumbnail) {
-    const thumbnailDir = path.join(uploadDir, 'thumbnail')
-    if (!existsSync(thumbnailDir)) {
-      await mkdir(thumbnailDir, { recursive: true })
-    }
-
-    const thumbnailPath = path.join(thumbnailDir, storedFilename)
-    await sharp(buffer)
+    const thumbnailBuffer = await sharp(buffer)
       .resize(opts.thumbnailSize, opts.thumbnailSize, {
         fit: 'cover',
         position: 'center',
       })
-      .toFile(thumbnailPath)
-
-    result.thumbnailPath = getImageUrl(thumbnailPath)
+      .toBuffer()
+    result.thumbnailPath = await driver.put(
+      thumbnailBuffer,
+      `${keyPrefix}/thumbnail/${storedFilename}`,
+      file.type,
+    )
   }
 
   // Generate medium size
   if (opts.generateMedium) {
-    const mediumDir = path.join(uploadDir, 'medium')
-    if (!existsSync(mediumDir)) {
-      await mkdir(mediumDir, { recursive: true })
-    }
-
-    const mediumPath = path.join(mediumDir, storedFilename)
-    await sharp(buffer)
+    const mediumBuffer = await sharp(buffer)
       .resize(opts.mediumSize, opts.mediumSize, {
         fit: 'inside',
         withoutEnlargement: true,
       })
-      .toFile(mediumPath)
-
-    result.mediumPath = getImageUrl(mediumPath)
+      .toBuffer()
+    result.mediumPath = await driver.put(
+      mediumBuffer,
+      `${keyPrefix}/medium/${storedFilename}`,
+      file.type,
+    )
   }
 
   return result
 }
 
 /**
- * Delete image files
+ * Delete image files — takes the exact URLs a Media row has stored (not
+ * derived by string-replacing "/original/" in filePath, which only ever
+ * worked by coincidence of the local driver's own path shape and silently
+ * skipped variants for any other storage layout).
  */
-export async function deleteImage(filePath: string): Promise<void> {
+export async function deleteImage(
+  filePath: string,
+  thumbnailPath?: string | null,
+  mediumPath?: string | null,
+): Promise<void> {
+  const driver = getStorageDriver()
   try {
-    // Delete original
-    const fullPath = path.join(process.cwd(), 'public', filePath)
-    if (existsSync(fullPath)) {
-      await unlink(fullPath)
-    }
-
-    // Delete thumbnail
-    const thumbnailPath = fullPath.replace('/original/', '/thumbnail/')
-    if (existsSync(thumbnailPath)) {
-      await unlink(thumbnailPath)
-    }
-
-    // Delete medium
-    const mediumPath = fullPath.replace('/original/', '/medium/')
-    if (existsSync(mediumPath)) {
-      await unlink(mediumPath)
-    }
+    await driver.deleteByUrl(filePath)
+    if (thumbnailPath) await driver.deleteByUrl(thumbnailPath)
+    if (mediumPath) await driver.deleteByUrl(mediumPath)
   } catch (error) {
     console.error('Error deleting image:', error)
     throw new ImageUploadError('Failed to delete image files', 'DELETE_FAILED')
-  }
-}
-
-/**
- * Get image dimensions
- */
-export async function getImageDimensions(
-  filePath: string
-): Promise<{ width: number; height: number }> {
-  const fullPath = path.join(process.cwd(), 'public', filePath)
-  const metadata = await sharp(fullPath).metadata()
-  
-  return {
-    width: metadata.width || 0,
-    height: metadata.height || 0,
   }
 }

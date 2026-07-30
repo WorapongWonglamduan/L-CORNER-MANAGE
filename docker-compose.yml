@@ -54,6 +54,16 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3077}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      # "local" (default, uploads_data volume below) or "r2" — see
+      # env.template for what the R2_* vars need to be. Left unset/empty
+      # is harmless when STORAGE_DRIVER=local; src/lib/storage only reads
+      # them when actually asked to use the r2 driver.
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
+      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
     volumes:
       # Uploaded product images are written at runtime under
       # public/uploads/<year>/<month>/... (src/lib/image-upload.ts) — without
