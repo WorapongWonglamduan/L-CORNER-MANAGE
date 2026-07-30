@@ -98,7 +98,14 @@
     "page": "Page",
     "of": "of",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "dateRangePresets": {
+      "today": "Today",
+      "last7Days": "1 Week",
+      "last1Month": "1 Month",
+      "last1Year": "1 Year",
+      "custom": "Custom"
+    }
   },
   "connectivity": {
     "offlineTitle": "No Internet Connection",

@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { Search, RotateCcw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, INPUT_TYPES } from "@/components/ui/Input";
+import type { DateRangePresetOption } from "@/components/ui/date-range-picker";
 import { cn } from "@/lib/utils";
 
 export interface FilterFieldOption {
@@ -31,6 +32,8 @@ export interface FilterSelectField extends FilterFieldBase {
 
 export interface FilterDateRangeField extends FilterFieldBase {
   type: "date-range";
+  /** Quick-select chips (e.g. today/1 week/1 month) shown above the two date fields — clicking one applies the filter immediately instead of waiting for the search button. */
+  presets?: DateRangePresetOption[];
 }
 
 export type FilterFieldConfig =
@@ -139,6 +142,19 @@ export function DynamicFilterBar({
               setValue(`${field.name}From`, startDate);
               setValue(`${field.name}To`, endDate);
             }}
+            dateRangePresets={field.presets}
+            onDateRangePresetApply={
+              field.presets &&
+              (({ startDate, endDate }) => {
+                setValue(`${field.name}From`, startDate);
+                setValue(`${field.name}To`, endDate);
+                onApply({
+                  ...draft,
+                  [`${field.name}From`]: startDate,
+                  [`${field.name}To`]: endDate,
+                });
+              })
+            }
           />
         );
     }

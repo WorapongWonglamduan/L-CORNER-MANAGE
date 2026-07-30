@@ -14,7 +14,11 @@ import { useLocale } from "next-intl";
 import { th, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { INPUT_TYPES, InputType } from "@/constants/input-types";
-import { DateRangePicker, DateField } from "./date-range-picker";
+import {
+  DateRangePicker,
+  DateField,
+  type DateRangePresetOption,
+} from "./date-range-picker";
 import { ImageUpload } from "./image-upload";
 import { MultiImageUpload, ImageFile } from "./multi-image-upload";
 
@@ -44,6 +48,8 @@ export interface BaseInputProps {
   endPlaceholder?: string;
   dateRangeValue?: DateRangeValue;
   onDateRangeChange?: (value: DateRangeValue) => void;
+  dateRangePresets?: DateRangePresetOption[];
+  onDateRangePresetApply?: (value: DateRangeValue) => void;
   imageUploadFolder?: string;
   imageUploadEntityType?: string;
   imageUploadEntityId?: string;
@@ -111,6 +117,8 @@ export const Input = forwardRef<
           const {
             dateRangeValue = { startDate: "", endDate: "" },
             onDateRangeChange,
+            dateRangePresets,
+            onDateRangePresetApply,
             startPlaceholder = "วันที่เริ่มต้น",
             endPlaceholder = "วันที่สิ้นสุด",
           } = props as BaseInputProps;
@@ -134,6 +142,8 @@ export const Input = forwardRef<
               startPlaceholder={startPlaceholder}
               endPlaceholder={endPlaceholder}
               baseInputClass={baseInputClass}
+              presets={dateRangePresets}
+              onPresetApply={onDateRangePresetApply}
             />
           );
 
