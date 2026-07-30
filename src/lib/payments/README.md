@@ -78,6 +78,20 @@ real:
   in-person QR — settling THB into a Thai merchant's real PayPal account has
   its own restrictions outside sandbox, worth checking before relying on
   this in production.
+  **Verified hitting this restriction even in sandbox**: order creation and
+  the checkout redirect always succeed (confirmed directly against the API,
+  bypassing this app entirely), but approving/paying as the buyer reliably
+  ends at `sandbox.paypal.com/checkoutweb/genericError?code=...` with the
+  base64-decoded code `COMPLIANCE_VIOLATION` — reproduced across two
+  different sandbox Business accounts (one freshly created with a fully
+  filled-in, "Verified" business profile), THB and USD amounts, and both a
+  Thailand- and a US-country sandbox buyer account. The one constant across
+  every failing attempt was a **Thailand-country sandbox Business
+  (merchant) account** — this looks like PayPal's compliance engine
+  faithfully simulating the real restriction on settling into Thai
+  accounts, not anything fixable in this app's driver code. Untested:
+  whether a non-Thailand-country Business account avoids it (would no
+  longer represent this app's actual merchant, so wasn't pursued further).
 - **TrueMoney**: already covered via Omise — `omise-driver.ts`'s
   `createCharge` supports `method: "truemoney_qr"` (`source: { type:
   "truemoney_qr" }`), same `source.scannable_code.image.download_uri`
