@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
+import { Prisma } from "@prisma/client";
 
 // GET /api/warehouses/[id] - ดึงข้อมูลคลังสินค้าตาม ID
 export async function GET(
@@ -78,29 +79,48 @@ export async function PUT(
       }
     }
 
-    const warehouse = await prisma.$transaction(async (tx) => {
-      if (is_default === true) {
-        await tx.warehouse.updateMany({
-          where: { is_default: true, id: { not: id } },
-          data: { is_default: false },
-        });
+    // Serializable + retry — same idiom as POST /api/warehouses. Two
+    // concurrent updates each setting a *different* warehouse as default
+    // could otherwise both commit is_default=true, since each transaction's
+    // updateMany only clears whatever it can see in its own snapshot.
+    const MAX_RETRIES = 5;
+    let warehouse;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        warehouse = await prisma.$transaction(
+          async (tx) => {
+            if (is_default === true) {
+              await tx.warehouse.updateMany({
+                where: { is_default: true, id: { not: id } },
+                data: { is_default: false },
+              });
+            }
+            return tx.warehouse.update({
+              where: { id },
+              data: {
+                code: code ?? existing.code,
+                name_i18n: name_i18n ?? existing.name_i18n,
+                address: address !== undefined ? address : existing.address,
+                latitude: latitude !== undefined ? latitude : existing.latitude,
+                longitude: longitude !== undefined ? longitude : existing.longitude,
+                promptpay_id:
+                  promptpay_id !== undefined ? promptpay_id : existing.promptpay_id,
+                is_active: is_active !== undefined ? is_active : existing.is_active,
+                is_default:
+                  is_default !== undefined ? is_default : existing.is_default,
+              },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+        break;
+      } catch (error) {
+        const isWriteConflict =
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+        if (isWriteConflict && attempt < MAX_RETRIES) continue;
+        throw error;
       }
-      return tx.warehouse.update({
-        where: { id },
-        data: {
-          code: code ?? existing.code,
-          name_i18n: name_i18n ?? existing.name_i18n,
-          address: address !== undefined ? address : existing.address,
-          latitude: latitude !== undefined ? latitude : existing.latitude,
-          longitude: longitude !== undefined ? longitude : existing.longitude,
-          promptpay_id:
-            promptpay_id !== undefined ? promptpay_id : existing.promptpay_id,
-          is_active: is_active !== undefined ? is_active : existing.is_active,
-          is_default:
-            is_default !== undefined ? is_default : existing.is_default,
-        },
-      });
-    });
+    }
 
     return NextResponse.json(warehouse);
   } catch (error) {

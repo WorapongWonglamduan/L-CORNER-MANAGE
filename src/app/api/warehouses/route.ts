@@ -92,26 +92,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const warehouse = await prisma.$transaction(async (tx) => {
-      if (is_default) {
-        await tx.warehouse.updateMany({
-          where: { is_default: true },
-          data: { is_default: false },
-        });
+    // Serializable + retry — two admins creating a "default" warehouse at
+    // the same moment could otherwise both pass: each transaction's
+    // updateMany only clears defaults visible in ITS OWN snapshot, so it
+    // never sees the other transaction's brand-new row, and both commit
+    // with is_default=true. Same idiom as the refund/void/production/
+    // transfer/promotion races fixed elsewhere in this codebase.
+    const MAX_RETRIES = 5;
+    let warehouse;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        warehouse = await prisma.$transaction(
+          async (tx) => {
+            if (is_default) {
+              await tx.warehouse.updateMany({
+                where: { is_default: true },
+                data: { is_default: false },
+              });
+            }
+            return tx.warehouse.create({
+              data: {
+                code,
+                name_i18n,
+                address,
+                latitude,
+                longitude,
+                promptpay_id,
+                is_active,
+                is_default,
+              },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+        break;
+      } catch (error) {
+        const isWriteConflict =
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+        if (isWriteConflict && attempt < MAX_RETRIES) continue;
+        throw error;
       }
-      return tx.warehouse.create({
-        data: {
-          code,
-          name_i18n,
-          address,
-          latitude,
-          longitude,
-          promptpay_id,
-          is_active,
-          is_default,
-        },
-      });
-    });
+    }
 
     return NextResponse.json(warehouse, { status: 201 });
   } catch (error) {
