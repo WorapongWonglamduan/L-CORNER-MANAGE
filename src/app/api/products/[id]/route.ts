@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import type { RecipeInput } from "@/types/product-request";
+import { normalizeMediaUrl } from "@/lib/media-url";
 
 // GET /api/products/[id] - ดึงข้อมูลสินค้าตาม ID
 export async function GET(
@@ -61,7 +62,7 @@ export async function GET(
     // Get all images with their metadata
     const images = product.media?.map((pm) => ({
       id: pm.media.id,
-      url: pm.media.file_path?.replace(/\\/g, '/') || '',
+      url: normalizeMediaUrl(pm.media.file_path),
       isPrimary: pm.is_primary,
       sortOrder: pm.sort_order,
     })) || [];

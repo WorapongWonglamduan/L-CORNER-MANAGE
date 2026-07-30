@@ -113,7 +113,11 @@ export default function IngredientsAndContainersManager() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-primary/10 group-hover:bg-primary/20 transition-colors shrink-0">
-                      {ingredientContainer.primary_image_url && ingredientContainer.primary_image_url.startsWith('/') ? (
+                      {/* No longer requires a leading "/" — that check
+                          rejected R2's absolute https:// URLs and silently
+                          fell back to the placeholder icon for every image
+                          once STORAGE_DRIVER=r2 was turned on. */}
+                      {ingredientContainer.primary_image_url ? (
                         <Image
                           src={ingredientContainer.primary_image_url}
                           alt={ingredientContainer.name_i18n.th}

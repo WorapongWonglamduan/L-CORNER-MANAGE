@@ -5,6 +5,7 @@ import { requirePermission, requireWarehouseAccess } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import type { RecipeInput } from "@/types/product-request";
+import { normalizeMediaUrl } from "@/lib/media-url";
 
 // A SEMI_FINISHED product whose recipe has no track_stock ingredient has no
 // real enforced ceiling (checkout never blocks on it) — stand-in for
@@ -231,14 +232,9 @@ export async function GET(request: NextRequest) {
       }
 
       // Get primary image URL and normalize path for Next.js Image
-      let primary_image_url = product.media?.[0]?.media?.file_path || null;
-      if (primary_image_url) {
-        // Convert backslashes to forward slashes and ensure leading slash
-        primary_image_url = primary_image_url.replace(/\\/g, "/");
-        if (!primary_image_url.startsWith("/")) {
-          primary_image_url = "/" + primary_image_url;
-        }
-      }
+      const primary_image_url = product.media?.[0]?.media?.file_path
+        ? normalizeMediaUrl(product.media[0].media.file_path)
+        : null;
 
       return {
         ...productRest,

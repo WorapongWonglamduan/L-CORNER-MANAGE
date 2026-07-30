@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
+import { normalizeMediaUrl } from "@/lib/media-url";
 
 // GET /api/ingredients-and-containers/[id] - ดึงข้อมูลวัตถุดิบ/ภาชนะตาม ID (จาก products table)
 export async function GET(
@@ -42,7 +43,7 @@ export async function GET(
     // Get all images with their metadata
     const images = product.media?.map((pm) => ({
       id: pm.media.id,
-      url: pm.media.file_path?.replace(/\\/g, '/') || '',
+      url: normalizeMediaUrl(pm.media.file_path),
       isPrimary: pm.is_primary,
       sortOrder: pm.sort_order,
     })) || [];

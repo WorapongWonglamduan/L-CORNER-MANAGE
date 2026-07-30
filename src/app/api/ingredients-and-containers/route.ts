@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
+import { normalizeMediaUrl } from "@/lib/media-url";
 
 // GET /api/ingredients-and-containers - ดึงรายการวัตถุดิบ/ภาชนะทั้งหมด (จาก products table)
 export async function GET(request: NextRequest) {
@@ -76,12 +77,9 @@ export async function GET(request: NextRequest) {
       const primaryProductMedia = product.media?.find(
         (pm) => pm.is_primary,
       );
-      let primaryImageUrl = primaryProductMedia?.media?.file_path || null;
-
-      // Convert backslashes to forward slashes for Next.js Image component
-      if (primaryImageUrl) {
-        primaryImageUrl = primaryImageUrl.replace(/\\/g, "/");
-      }
+      const primaryImageUrl = primaryProductMedia?.media?.file_path
+        ? normalizeMediaUrl(primaryProductMedia.media.file_path)
+        : null;
 
       const stockTotals = product.stock.reduce(
         (acc, s) => ({
