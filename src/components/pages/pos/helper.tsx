@@ -286,9 +286,14 @@ export function usePOSManager() {
       const price = product.selling_price || 0;
       const lineId = makeLineId(productId, []);
 
+      const available = Number(product.available_quantity) || 0;
+
       setCart((prev) => {
         const existing = prev.find((item) => item.lineId === lineId);
         if (existing) {
+          // Capped at available_quantity — same reasoning as
+          // updateQuantity/updateLineQuantity below.
+          if (existing.quantity >= available) return prev;
           return prev.map((item) =>
             item.lineId === lineId
               ? { ...item, quantity: item.quantity + 1 }
@@ -321,6 +326,7 @@ export function usePOSManager() {
       if (!product) return;
 
       const price = product.selling_price || 0;
+      const available = Number(product.available_quantity) || 0;
       const lineId = makeLineId(
         productId,
         toppings.map((t) => t.id),
@@ -329,6 +335,9 @@ export function usePOSManager() {
       setCart((prev) => {
         const existing = prev.find((item) => item.lineId === lineId);
         if (existing) {
+          // Capped at available_quantity — the same base product's stock
+          // limit applies regardless of which toppings are selected on it.
+          if (existing.quantity >= available) return prev;
           return prev.map((item) =>
             item.lineId === lineId
               ? { ...item, quantity: item.quantity + 1 }
@@ -357,19 +366,25 @@ export function usePOSManager() {
   // from the cart panel via updateLineQuantity/removeLineFromCart instead.
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     const lineId = makeLineId(productId, []);
-    if (quantity <= 0) {
+    // Capped at available_quantity — otherwise the cart can grow past what
+    // the server will actually allow, and the cashier only finds out at
+    // checkout, after already reading a wrong total to the customer.
+    const product = products.find((p) => p.id === productId);
+    const cappedQuantity = product
+      ? Math.min(quantity, Number(product.available_quantity) || 0)
+      : quantity;
+    if (cappedQuantity <= 0) {
       setCart((prev) => prev.filter((item) => item.lineId !== lineId));
     } else {
       setCart((prev) => {
         const existing = prev.find((item) => item.lineId === lineId);
         if (existing) {
           return prev.map((item) =>
-            item.lineId === lineId ? { ...item, quantity } : item,
+            item.lineId === lineId ? { ...item, quantity: cappedQuantity } : item,
           );
         }
         // No base line yet (e.g. the product was only added with toppings
         // so far) — create one so the grid's + control has something to act on.
-        const product = products.find((p) => p.id === productId);
         if (!product) return prev;
         return [
           ...prev,
@@ -378,7 +393,7 @@ export function usePOSManager() {
             productId,
             name: product.name_i18n.th,
             price: Number(product.selling_price) || 0,
-            quantity,
+            quantity: cappedQuantity,
             image: product.primary_image_url || undefined,
             toppings: [],
           },
@@ -389,17 +404,24 @@ export function usePOSManager() {
 
   // Adjusts (or removes, at 0) any specific cart line by its lineId —
   // used by the cart panel, which can target customized variants directly.
+  // Capped at the line's own product's available_quantity, same reasoning
+  // as updateQuantity above.
   const updateLineQuantity = useCallback((lineId: string, quantity: number) => {
-    if (quantity <= 0) {
-      setCart((prev) => prev.filter((item) => item.lineId !== lineId));
-    } else {
-      setCart((prev) =>
-        prev.map((item) =>
-          item.lineId === lineId ? { ...item, quantity } : item,
-        ),
+    setCart((prev) => {
+      const existing = prev.find((item) => item.lineId === lineId);
+      const product = existing ? products.find((p) => p.id === existing.productId) : undefined;
+      const cappedQuantity = product
+        ? Math.min(quantity, Number(product.available_quantity) || 0)
+        : quantity;
+
+      if (cappedQuantity <= 0) {
+        return prev.filter((item) => item.lineId !== lineId);
+      }
+      return prev.map((item) =>
+        item.lineId === lineId ? { ...item, quantity: cappedQuantity } : item,
       );
-    }
-  }, []);
+    });
+  }, [products]);
 
   const removeFromCart = useCallback((lineId: string) => {
     setCart((prev) => prev.filter((item) => item.lineId !== lineId));

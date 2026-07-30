@@ -278,12 +278,16 @@ export function useProductForm() {
   };
 
   const handleProductTypeChange = (newProductTypeId: string) => {
-    // Clear recipe ingredients when changing product type
+    // Clear recipe ingredients when changing product type — they're tied
+    // to the old type's recipe form section and won't necessarily apply
+    // to the new one. code/name are only cleared while *creating* a new
+    // product (a blank slate anyway); wiping them on an *edit* silently
+    // blanked a real product's identity just for recategorizing it,
+    // forcing the operator to retype the code/name from memory (and risk
+    // a typo) or fail required-field validation on submit.
     reset({
       ...watch(),
-      code: "",
-      name_en: "",
-      name_th: "",
+      ...(isEdit ? {} : { code: "", name_en: "", name_th: "" }),
       product_type_id: newProductTypeId,
       recipe_ingredients: [],
     });

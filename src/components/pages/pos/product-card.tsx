@@ -29,7 +29,14 @@ export function ProductCard({
 }: ProductCardProps) {
   const t = useTranslations("pos");
 
+  // Capped at `stock` (available_quantity) — without this, the cart could
+  // silently grow past what's actually sellable, and the cashier wouldn't
+  // find out until checkout fails server-side with the whole sale rolled
+  // back, after already reading a wrong total to the customer.
+  const atStockLimit = quantity >= stock;
+
   const handleIncrement = () => {
+    if (atStockLimit) return;
     if (quantity === 0) {
       onAdd(id);
     } else if (onQuantityChange) {
@@ -138,7 +145,9 @@ export function ProductCard({
                 </span>
                 <button
                   onClick={handleIncrement}
-                  className="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-md transition-all active:scale-95"
+                  disabled={atStockLimit}
+                  title={atStockLimit ? t("remaining", { stock }) : undefined}
+                  className="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/20"
                 >
                   <Plus className="w-4 h-4 text-white" />
                 </button>
