@@ -96,6 +96,12 @@ interface CheckoutFormValues {
 
 const GATEWAY_POLL_INTERVAL_MS = 3000;
 
+// Temporarily hidden per request — "card" has no real gateway wired up (the
+// cashier just runs a physical terminal separately), not something this
+// project wants offered as a selectable option right now. Flip back to
+// `true` to restore it; nothing else about the method was removed.
+const CARD_METHOD_ENABLED = false;
+
 export function CheckoutModal({
   isOpen,
   onClose,
@@ -508,27 +514,29 @@ export function CheckoutModal({
                 </span>
               </button>
 
-              <button
-                onClick={() => setValue("paymentMethod", PAYMENT_METHODS.CARD)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  paymentMethod === PAYMENT_METHODS.CARD
-                    ? "border-primary bg-primary/5"
-                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
-                }`}
-              >
-                <CreditCard
-                  className={`w-8 h-8 ${
-                    paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-400 dark:text-gray-500"
-                  }`}
-                />
-                <span
-                  className={`font-semibold ${
-                    paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-600 dark:text-gray-300"
+              {CARD_METHOD_ENABLED && (
+                <button
+                  onClick={() => setValue("paymentMethod", PAYMENT_METHODS.CARD)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === PAYMENT_METHODS.CARD
+                      ? "border-primary bg-primary/5"
+                      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                   }`}
                 >
-                  {t("card")}
-                </span>
-              </button>
+                  <CreditCard
+                    className={`w-8 h-8 ${
+                      paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                  <span
+                    className={`font-semibold ${
+                      paymentMethod === PAYMENT_METHODS.CARD ? "text-primary" : "text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    {t("card")}
+                  </span>
+                </button>
+              )}
 
               <button
                 onClick={() => setValue("paymentMethod", PAYMENT_METHODS.QR)}
