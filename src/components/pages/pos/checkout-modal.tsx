@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { CreditCard, Banknote, Tag, QrCode, Loader2 } from "lucide-react";
+import { CreditCard, Banknote, Tag, QrCode, Wallet, Loader2 } from "lucide-react";
 import generatePayload from "promptpay-qr";
 import QRCode from "react-qr-code";
 import Image from "next/image";
@@ -20,13 +20,32 @@ import { useTranslations } from "next-intl";
 import { toast } from "@/lib/toast";
 import type { DisplayPaymentState } from "./helper";
 
-// A distinct selection value from PAYMENT_METHODS.QR — that one stays the
+// Distinct selection values from PAYMENT_METHODS.QR — that one stays the
 // existing client-generated, unconfirmed PromptPay payload (no gateway,
-// works with zero setup). This one goes through POST /api/payments/intents
-// and only becomes a real Sale once Omise actually confirms the payment —
-// see helper.tsx's startGatewayCheckout/finalizeSuccessfulSale.
+// works with zero setup). These go through POST /api/payments/intents and
+// only become a real Sale once Omise actually confirms the payment — see
+// helper.tsx's startGatewayCheckout/finalizeSuccessfulSale.
 const OMISE_PROMPTPAY = "omise_promptpay" as const;
-type SelectablePaymentMethod = PaymentMethod | typeof OMISE_PROMPTPAY;
+const OMISE_TRUEMONEY_QR = "omise_truemoney_qr" as const;
+type SelectablePaymentMethod =
+  | PaymentMethod
+  | typeof OMISE_PROMPTPAY
+  | typeof OMISE_TRUEMONEY_QR;
+
+// Maps each selectable Omise-gateway option to the `method` string sent to
+// POST /api/payments/intents (and from there straight through to
+// OmiseDriver.createCharge) — both are source-based QR charges with the
+// identical response shape, so everything past this lookup treats them the
+// same (see the isOmiseGatewayMethod checks below).
+const OMISE_GATEWAY_METHODS: Record<string, string> = {
+  [OMISE_PROMPTPAY]: "promptpay",
+  [OMISE_TRUEMONEY_QR]: "truemoney_qr",
+};
+function isOmiseGatewayMethod(
+  method: SelectablePaymentMethod,
+): method is typeof OMISE_PROMPTPAY | typeof OMISE_TRUEMONEY_QR {
+  return method in OMISE_GATEWAY_METHODS;
+}
 
 interface PaymentIntentView {
   id: string;
@@ -146,7 +165,7 @@ export function CheckoutModal({
         amount: discountedTotal,
       });
     } else if (
-      paymentMethod === OMISE_PROMPTPAY &&
+      isOmiseGatewayMethod(paymentMethod) &&
       gatewayIntent?.status === "pending" &&
       gatewayIntent.qr_image_url
     ) {
@@ -293,13 +312,15 @@ export function CheckoutModal({
       return;
     }
 
-    if (paymentMethod === OMISE_PROMPTPAY) {
+    if (isOmiseGatewayMethod(paymentMethod)) {
       if (!onStartGatewayCheckout) return;
       setIsProcessing(true);
       try {
-        const intent = await onStartGatewayCheckout("omise", "promptpay", {
-          promotionCode: promoValidation?.code,
-        });
+        const intent = await onStartGatewayCheckout(
+          "omise",
+          OMISE_GATEWAY_METHODS[paymentMethod],
+          { promotionCode: promoValidation?.code },
+        );
         setGatewayIntent(intent);
         if (intent.status === "succeeded" && intent.sale) {
           await onGatewaySaleCreated?.(intent.sale);
@@ -449,7 +470,11 @@ export function CheckoutModal({
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
               {t("paymentMethod")}
             </label>
-            <div className={`grid gap-3 ${omiseConfigured ? "grid-cols-4" : "grid-cols-3"}`}>
+            {/* Always 3 columns — with 5 options (Omise configured) this
+                simply wraps to a second row instead of squeezing 5 narrow
+                buttons into one row, which cramped the icon/label inside
+                each and wrapped text awkwardly. */}
+            <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => setValue("paymentMethod", PAYMENT_METHODS.CASH)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
@@ -540,6 +565,30 @@ export function CheckoutModal({
                   </span>
                 </button>
               )}
+
+              {omiseConfigured && (
+                <button
+                  onClick={() => setValue("paymentMethod", OMISE_TRUEMONEY_QR)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === OMISE_TRUEMONEY_QR
+                      ? "border-primary bg-primary/5"
+                      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                  }`}
+                >
+                  <Wallet
+                    className={`w-8 h-8 ${
+                      paymentMethod === OMISE_TRUEMONEY_QR ? "text-primary" : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                  <span
+                    className={`font-semibold text-center text-sm ${
+                      paymentMethod === OMISE_TRUEMONEY_QR ? "text-primary" : "text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    {t("omiseTrueMoneyQr")}
+                  </span>
+                </button>
+              )}
             </div>
             {paymentMethod === PAYMENT_METHODS.QR && !promptpayId && (
               <p className="mt-2 text-sm text-red-600">{t("qrNotConfigured")}</p>
@@ -559,10 +608,10 @@ export function CheckoutModal({
             </div>
           )}
 
-          {/* Omise PromptPay — real QR from the gateway, shown once
-              Confirm has actually started the charge; polls until Omise
-              confirms it (see pollGatewayIntent above). */}
-          {paymentMethod === OMISE_PROMPTPAY && gatewayIntent && (
+          {/* Omise PromptPay / TrueMoney QR — real QR from the gateway,
+              shown once Confirm has actually started the charge; polls
+              until Omise confirms it (see pollGatewayIntent above). */}
+          {isOmiseGatewayMethod(paymentMethod) && gatewayIntent && (
             <div className="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
               {gatewayIntent.qr_image_url && (
                 <div className="bg-white p-4 rounded-xl relative w-54 h-54">
