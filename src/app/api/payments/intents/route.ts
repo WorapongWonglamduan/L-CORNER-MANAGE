@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
       data: {
         gateway_reference: chargeResult.gatewayReference,
         qr_image_url: chargeResult.qrImageUrl,
+        qr_payload: chargeResult.qrPayload,
       },
     });
 

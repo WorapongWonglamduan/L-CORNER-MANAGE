@@ -630,6 +630,7 @@
     "processing": "กำลังดำเนินการ...",
     "omisePromptpay": "PromptPay (Omise)",
     "omiseTrueMoneyQr": "TrueMoney QR (Omise)",
+    "paypal": "PayPal",
     "omiseNotConfigured": "ยังไม่ได้ตั้งค่า Omise บนเซิร์ฟเวอร์",
     "waitingForGatewayPayment": "กำลังรอการชำระเงิน...",
     "gatewayPaymentFailed": "การชำระเงินไม่สำเร็จ",

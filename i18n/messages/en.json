@@ -623,6 +623,7 @@
     "processing": "Processing...",
     "omisePromptpay": "PromptPay (Omise)",
     "omiseTrueMoneyQr": "TrueMoney QR (Omise)",
+    "paypal": "PayPal",
     "omiseNotConfigured": "Omise isn't configured on this server yet",
     "waitingForGatewayPayment": "Waiting for payment...",
     "gatewayPaymentFailed": "Payment failed",
