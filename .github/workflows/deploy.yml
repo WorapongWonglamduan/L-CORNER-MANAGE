@@ -90,3 +90,43 @@ jobs:
             docker compose pull app
             docker compose up -d app
             docker image prune -f
+
+  notify:
+    needs: [test, build-and-push, deploy]
+    # always() so this still fires when an earlier job failed — otherwise a
+    # failed test/build would just skip straight past the notification too.
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK_URL not set, skipping notification"
+            exit 0
+          fi
+
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            TITLE="Test ล้มเหลว"; COLOR=15158332
+          elif [ "${{ needs['build-and-push'].result }}" != "success" ]; then
+            TITLE="Build/push image ล้มเหลว"; COLOR=15158332
+          elif [ "${{ needs.deploy.result }}" != "success" ]; then
+            TITLE="Deploy ล้มเหลว"; COLOR=15158332
+          else
+            TITLE="Deploy ขึ้น production สำเร็จ"; COLOR=3066993
+          fi
+
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --arg desc "**branch:** ${{ github.ref_name }}
+          **commit:** [\`${{ github.sha }}\`]($COMMIT_URL)
+          **by:** ${{ github.actor }}
+          [ดู log]($RUN_URL)" \
+            --argjson color "$COLOR" \
+            '{embeds: [{title: $title, description: $desc, color: $color}]}')
+
+          curl -sf -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$WEBHOOK"

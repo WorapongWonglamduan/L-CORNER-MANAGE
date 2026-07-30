@@ -1,5 +1,19 @@
 # Project conventions
 
+## Git workflow
+
+- `main` — production. Every push here auto-deploys to the VPS
+  (`.github/workflows/deploy.yml`). Never push directly to `main`.
+- `develop` — integration branch. No deploy triggers on it, just a place
+  features land before a release gets merged to `main`.
+- For any feature/fix, branch off `develop` as `feature/<name>` (or
+  `fix/<name>`), commit there, push, and open a PR back into `develop`.
+  Wait for it to be merged rather than merging it yourself unless told
+  otherwise.
+- When `develop` is ready to ship, that's a separate PR: `develop` → `main`.
+- No branch protection is enforced on GitHub yet — this is a convention to
+  follow, not a hard block.
+
 ## Reuse existing components before writing new ones
 
 Before adding a new UI element or piece of logic, check whether an existing
