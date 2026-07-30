@@ -51,11 +51,14 @@ method. To implement one for real:
   (create → capture), OAuth2 client-credentials auth. Best fit for
   international/e-commerce customers, not a typical in-person Thai retail
   QR flow.
-- **TrueMoney**: check whether you actually need a *direct* integration —
-  Omise's own `source` types include TrueMoney Wallet (`type:
-  "truemoney_wallet"`), so extending `omise-driver.ts`'s `createCharge`
-  with one more `else if` branch (same shape as the existing `"promptpay"`
-  case) may cover this with no separate driver at all. Only build this
-  file if you specifically need to bypass Omise for it.
+- **TrueMoney**: already covered via Omise — `omise-driver.ts`'s
+  `createCharge` supports `method: "truemoney_qr"` (`source: { type:
+  "truemoney_qr" }`), same `source.scannable_code.image.download_uri`
+  response shape as `"promptpay"`, and same limitation (not expirable via
+  Omise's charge-expire endpoint — see the class-level comment in
+  `omise-driver.ts`). `truemoney-driver.ts` (this stub) would only be worth
+  filling in for a *direct* TrueMoney merchant-API integration — e.g. to
+  reach `truemoney`/`truemoney_jumpapp` flows Omise doesn't expose, or to
+  drop the Omise middleman entirely.
 - **Rabbit LINE Pay**: https://pay.line.me/th/developers — LINE's own Pay
   API, separate from LINE Notify/Messaging API.

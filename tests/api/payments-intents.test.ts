@@ -111,6 +111,30 @@ describe("POST /api/payments/intents + GET /api/payments/intents/[id]", () => {
     expect(await currentStock(fx.productId, fx.warehouseId)).toBe(10); // untouched
   });
 
+  it("returns a pending intent for the truemoney_qr method too, without creating a Sale yet", async () => {
+    createCharge.mockResolvedValue({
+      gatewayReference: "chrg_test_truemoney",
+      status: "pending",
+      qrImageUrl: "https://api.omise.co/qr/truemoney-fake.png",
+    });
+
+    const res = await createIntent(
+      intentRequest({
+        warehouse_id: fx.warehouseId,
+        items: [{ product_id: fx.productId, quantity: 1 }],
+        driver: "omise",
+        method: "truemoney_qr",
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.status).toBe("pending");
+    expect(body.method).toBe("truemoney_qr");
+    expect(body.qr_image_url).toBe("https://api.omise.co/qr/truemoney-fake.png");
+    expect(body.sale_id).toBeNull();
+  });
+
   it("rejects a request for a warehouse the caller has no access to", async () => {
     const other = await prisma.warehouse.create({
       data: { code: `WHT2-${fx.userId.slice(0, 8)}`, name_i18n: { th: "คลัง 2", en: "Warehouse 2" } },

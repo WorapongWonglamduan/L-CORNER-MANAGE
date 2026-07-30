@@ -622,6 +622,7 @@
     "subtotalBeforeDiscount": "Subtotal before discount",
     "processing": "Processing...",
     "omisePromptpay": "PromptPay (Omise)",
+    "omiseTrueMoneyQr": "TrueMoney QR (Omise)",
     "omiseNotConfigured": "Omise isn't configured on this server yet",
     "waitingForGatewayPayment": "Waiting for payment...",
     "gatewayPaymentFailed": "Payment failed",
