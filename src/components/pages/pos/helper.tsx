@@ -92,9 +92,13 @@ export interface CartItem {
 // Mirrors what the customer-facing display (src/components/pages/pos-display)
 // renders on top of the plain cart snapshot: a full-screen QR while a QR
 // payment is pending, or a thank-you screen for a few seconds after any
-// payment method succeeds.
+// payment method succeeds. "awaiting_qr" carries EITHER `qrPayload` (the
+// manual, client-generated PromptPay payload — pos-display renders it via
+// react-qr-code) OR `qrImageUrl` (a real gateway-issued QR image, e.g.
+// Omise's — pos-display renders that one as a plain image instead), never
+// both.
 export type DisplayPaymentState =
-  | { status: "awaiting_qr"; qrPayload: string; amount: number }
+  | { status: "awaiting_qr"; qrPayload?: string; qrImageUrl?: string; amount: number }
   | { status: "success"; amount: number; saleNumber: string }
   | null;
 

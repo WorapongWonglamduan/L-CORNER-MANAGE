@@ -393,6 +393,12 @@ model PaymentIntent {
   status                   PaymentIntentStatus @default(pending)
   gateway_reference        String?             @unique
   qr_image_url             String?
+  // Raw string to render as a client-generated QR (via react-qr-code) rather
+  // than an <img> pointed at a gateway-hosted image — used by drivers like
+  // PayPal that hand back a redirect URL for the customer to open, not a
+  // pre-rendered QR image the way Omise's scannable_code does. Never both
+  // set for the same intent.
+  qr_payload               String?
   // Raw checkout body (items/discount/promotion_code/note/payment_method) —
   // re-resolved against LIVE prices/stock/promotion state every time a Sale
   // is actually created from it, never trusted as a stale snapshot.

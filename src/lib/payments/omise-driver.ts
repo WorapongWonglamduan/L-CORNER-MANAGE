@@ -45,8 +45,11 @@ function requireEnv(name: string): string {
  * Real implementation via typed `fetch` against Omise's REST API — no SDK
  * dependency, so the request/response shapes are visible right here instead
  * of behind an opaque client. Covers "card" (an Omise.js-tokenized card,
- * synchronous) and "promptpay" (a source-based charge that starts `pending`
- * and shows a QR the customer scans, confirmed later via reconciliation).
+ * synchronous) and two source-based QR methods that start `pending` and are
+ * confirmed later via reconciliation: "promptpay" and "truemoney_qr" (same
+ * `source.scannable_code.image.download_uri` response shape for both —
+ * neither is expirable via Omise's charge-expire endpoint, so a cancelled QR
+ * can only be ignored client-side, not actively invalidated).
  *
  * Amounts are always full currency units (e.g. 150.5 = ฿150.50) in this
  * app's own models — Omise expects the smallest subunit (satang for THB),
@@ -81,6 +84,8 @@ export class OmiseDriver implements PaymentDriver {
       body.card = input.cardToken;
     } else if (input.method === "promptpay") {
       body.source = { type: "promptpay" };
+    } else if (input.method === "truemoney_qr") {
+      body.source = { type: "truemoney_qr" };
     } else {
       throw new Error(`OmiseDriver: unsupported method '${input.method}'`);
     }
