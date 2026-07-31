@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { usePermission } from "@/hooks/usePermission";
 import { toast } from "@/lib/toast";
+import { getPaymentMethodLabel } from "../payment-method-label";
 
 interface RefundItem {
   sale_item_id: string;
@@ -102,11 +103,6 @@ export function SalesDetailsModal({
 
   if (!isOpen || !currentSale) return null;
 
-  const getPaymentMethodLabel = (method: string | null) => {
-    if (!method) return "-";
-    return t(method.toLowerCase());
-  };
-
   const startRefund = (item: SaleItem) => {
     setRefundingItemId(item.id);
     setRefundQuantity(String(Number(item.quantity) - refundedQty(item)));
@@ -199,7 +195,7 @@ export function SalesDetailsModal({
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
               <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">{t("paymentMethod")}</div>
               <div className="font-semibold text-gray-900 dark:text-white">
-                {getPaymentMethodLabel(currentSale.payment_method)}
+                {getPaymentMethodLabel(t, currentSale.payment_method)}
               </div>
             </div>
 

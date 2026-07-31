@@ -18,6 +18,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { usePermission } from "@/hooks/usePermission";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
+import { getPaymentMethodLabel } from "../payment-method-label";
 
 export default function SalesContent() {
   const { table, warehouses, warehousesLoading, filters, pagination, actions, modal } =
@@ -53,11 +54,6 @@ export default function SalesContent() {
   const handleViewDetails = (sale: (typeof sales)[0]) => {
     setSelectedSale(sale);
     setIsDetailsModalOpen(true);
-  };
-
-  const getPaymentMethodLabel = (method: string | null) => {
-    if (!method) return "-";
-    return t(method.toLowerCase());
   };
 
   const getPaymentStatusBadge = (status: string) => {
@@ -151,7 +147,7 @@ export default function SalesContent() {
       header: t("paymentMethod"),
       cell: (sale) => (
         <div className="text-sm text-gray-600 dark:text-gray-300">
-          {getPaymentMethodLabel(sale.payment_method)}
+          {getPaymentMethodLabel(t, sale.payment_method)}
         </div>
       ),
     },
