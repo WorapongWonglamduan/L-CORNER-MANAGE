@@ -157,14 +157,24 @@ jobs:
             exit 0
           fi
 
-          if [ "${{ needs.test.result }}" != "success" ]; then
-            TITLE="Test ล้มเหลว"; COLOR=15158332
-          elif [ "${{ needs['build-and-push'].result }}" != "success" ]; then
-            TITLE="Build/push image ล้มเหลว"; COLOR=15158332
-          elif [ "${{ needs.deploy.result }}" != "success" ]; then
-            TITLE="Deploy ล้มเหลว"; COLOR=15158332
+          # This job has no branch filter (fires for both main and staging)
+          # so every title below must say which environment, not just
+          # "production" — otherwise a UAT deploy notification reads as if
+          # it shipped to real customers.
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            ENV_LABEL="Production"
           else
-            TITLE="Deploy ขึ้น production สำเร็จ"; COLOR=3066993
+            ENV_LABEL="UAT"
+          fi
+
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            TITLE="[$ENV_LABEL] Test ล้มเหลว"; COLOR=15158332
+          elif [ "${{ needs['build-and-push'].result }}" != "success" ]; then
+            TITLE="[$ENV_LABEL] Build/push image ล้มเหลว"; COLOR=15158332
+          elif [ "${{ needs.deploy.result }}" != "success" ]; then
+            TITLE="[$ENV_LABEL] Deploy ล้มเหลว"; COLOR=15158332
+          else
+            TITLE="[$ENV_LABEL] Deploy สำเร็จ"; COLOR=3066993
           fi
 
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
