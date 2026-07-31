@@ -23,6 +23,18 @@ export const authConfig: NextAuthConfig = {
   // production, surfacing as a generic "There is a problem with the server
   // configuration" on /api/auth/error instead of a real login attempt.
   trustHost: true,
+  // Caddy terminates TLS and forwards plain HTTP internally, so per-request
+  // protocol auto-detection is unreliable — specifically, the auth() helper
+  // used in Server Components (dashboard, /[locale] root) guessed "http"
+  // and looked for the plain cookie name, while the sign-in route handler
+  // correctly set the `__Secure-` prefixed one. Result: login "succeeds"
+  // (real session cookie set) but every Server Component page bounces back
+  // to /login as if logged out. NODE_ENV is production in both the prod and
+  // UAT containers (hardcoded in docker-compose.yml) and development for
+  // local `npm run dev` (plain http, needs the unprefixed cookie) — forcing
+  // it explicitly here makes cookie naming consistent across every code
+  // path instead of depending on Auth.js's unreliable per-request guess.
+  useSecureCookies: process.env.NODE_ENV === "production",
   providers: [],
 };
 
