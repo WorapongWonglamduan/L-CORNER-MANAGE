@@ -115,7 +115,7 @@ export function useProductDetail() {
     if (!confirmed) return;
 
     try {
-      const response = await fetch(`/api/products/${productId}?hard=true`, {
+      const response = await fetch(`/api/products/${productId}?hard=false`, {
         method: "DELETE",
       });
       if (!response.ok) {

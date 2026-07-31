@@ -4,7 +4,10 @@ services:
     container_name: l-corner-postgres
     restart: unless-stopped
     ports:
-      - "5435:5432"
+      # Bound to loopback only — this DB must never be reachable from the
+      # public internet. Use an SSH tunnel (ssh -L 5435:localhost:5435 ...)
+      # from a local machine to reach it with a GUI client (DBeaver/pgAdmin).
+      - "127.0.0.1:5435:5432"
     environment:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -30,9 +33,22 @@ services:
   # production build — bind-mounting host source over that would replace
   # the compiled output with raw source and Windows-built node_modules.
   app:
+    # Must match the lowercased image the GitHub Actions workflow pushes to
+    # GHCR (deploy.yml lowercases github.repository) — this is what makes
+    # `docker compose pull app` on the VPS actually fetch anything; without
+    # it, compose has no registry reference to pull from at all.
+    image: ghcr.io/worapongwonglamduan/l-corner-manage:latest
     build:
       context: .
       dockerfile: Dockerfile
+      # NEXT_PUBLIC_* vars must be build ARGs, not just runtime environment
+      # (see the Dockerfile builder stage and the note below) — only takes
+      # effect on `docker compose build`; the actual production image comes
+      # from GitHub Actions (build-args set there via repo Variables), which
+      # this compose file's `app` service only ever pulls, never builds.
+      args:
+        NEXT_PUBLIC_OMISE_PUBLIC_KEY: ${NEXT_PUBLIC_OMISE_PUBLIC_KEY:-}
+        NEXT_PUBLIC_PAYPAL_ENABLED: ${NEXT_PUBLIC_PAYPAL_ENABLED:-false}
     container_name: l-corner-app
     restart: unless-stopped
     # No host port published here on purpose — the shared reverse-proxy
@@ -65,10 +81,10 @@ services:
       R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
       R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
       # Payment gateways (src/lib/payments) — see env.template. Note:
-      # NEXT_PUBLIC_OMISE_PUBLIC_KEY / NEXT_PUBLIC_PAYPAL_ENABLED must also
-      # be set at `docker build` time (as a build ARG), not just here —
-      # Next.js inlines NEXT_PUBLIC_* vars into the client bundle during the
-      # build, not at container runtime.
+      # NEXT_PUBLIC_OMISE_PUBLIC_KEY / NEXT_PUBLIC_PAYPAL_ENABLED are also
+      # wired as build args above (`app.build.args`) — Next.js inlines
+      # NEXT_PUBLIC_* vars into the client bundle during the build, not at
+      # container runtime, so setting them only here would have no effect.
       OMISE_SECRET_KEY: ${OMISE_SECRET_KEY:-}
       OMISE_PUBLIC_KEY: ${OMISE_PUBLIC_KEY:-}
       OMISE_WEBHOOK_SECRET: ${OMISE_WEBHOOK_SECRET:-}
