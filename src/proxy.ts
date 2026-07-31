@@ -18,9 +18,15 @@ export async function proxy(request: NextRequest) {
     return intlMiddleware(request);
   }
 
+  // Without secureCookie, getToken() defaults to looking for the unprefixed
+  // cookie name (authjs.session-token) — but src/auth.ts's useSecureCookies
+  // (also NODE_ENV-based) makes the actual cookie __Secure-authjs.session-
+  // token in production, so this always missed it and redirected to login
+  // regardless of whether the user was actually signed in.
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === "production",
   });
   const isLoggedIn = !!token;
 
