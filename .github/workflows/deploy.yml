@@ -85,6 +85,14 @@ jobs:
         with:
           context: .
           push: true
+          # Next.js inlines NEXT_PUBLIC_* vars at build time — these must be
+          # repo Variables (Settings → Secrets and variables → Actions →
+          # Variables), not Secrets, since both are safe to expose client-side
+          # (env.template explains why) and `vars.*` (unlike `secrets.*`)
+          # renders as an empty string rather than erroring when unset.
+          build-args: |
+            NEXT_PUBLIC_OMISE_PUBLIC_KEY=${{ vars.NEXT_PUBLIC_OMISE_PUBLIC_KEY }}
+            NEXT_PUBLIC_PAYPAL_ENABLED=${{ vars.NEXT_PUBLIC_PAYPAL_ENABLED }}
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
