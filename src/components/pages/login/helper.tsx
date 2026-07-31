@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { signIn } from "next-auth/react";
@@ -47,7 +47,6 @@ export const brandingConfig = {
 };
 
 export const useLoginForm = () => {
-  const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations("auth.login");
@@ -74,8 +73,13 @@ export const useLoginForm = () => {
       if (result?.error) {
         setError(t("error"));
       } else {
-        router.push(`/${locale}`);
-        router.refresh();
+        // A full navigation, not router.push (client-side RSC soft nav) —
+        // behind the Caddy reverse proxy, the just-set session cookie from
+        // this response isn't reliably picked up by the next soft-nav
+        // fetch, so the server-side auth() check on `/${locale}` sees no
+        // session and bounces back to login despite having just signed in
+        // successfully. A real browser navigation always sends the cookie.
+        window.location.href = `/${locale}`;
       }
     } catch {
       setError(t("serverError"));
