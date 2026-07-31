@@ -19,6 +19,15 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Next.js inlines NEXT_PUBLIC_* vars into the client bundle at build time, not
+# at container runtime — must arrive as build ARGs (wired from docker-compose
+# build.args / the GitHub Actions build-push-action step), not just the
+# runner stage's `environment:` block in docker-compose.yml.
+ARG NEXT_PUBLIC_OMISE_PUBLIC_KEY
+ARG NEXT_PUBLIC_PAYPAL_ENABLED
+ENV NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
+ENV NEXT_PUBLIC_PAYPAL_ENABLED=${NEXT_PUBLIC_PAYPAL_ENABLED}
+
 RUN npx prisma generate
 RUN npm run build
 
