@@ -57,6 +57,10 @@ services:
       args:
         NEXT_PUBLIC_OMISE_PUBLIC_KEY: ${NEXT_PUBLIC_OMISE_PUBLIC_KEY:-}
         NEXT_PUBLIC_PAYPAL_ENABLED: ${NEXT_PUBLIC_PAYPAL_ENABLED:-false}
+        # Same NEXT_PUBLIC_* build-time rule — must be a build arg, not just
+        # runtime environment, for src/lib/payments/paypal-driver.ts's
+        # redirect URLs to ever be correct in a built image.
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3077}
     # See the ENV_SUFFIX note on the postgres service above — this is also
     # the hostname Caddy's reverse_proxy block targets on shared-proxy, so a
     # UAT stack's Caddy block must reference l-corner-app-uat, not this name.

@@ -25,8 +25,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # runner stage's `environment:` block in docker-compose.yml.
 ARG NEXT_PUBLIC_OMISE_PUBLIC_KEY
 ARG NEXT_PUBLIC_PAYPAL_ENABLED
+# Same rule applies here — src/lib/payments/paypal-driver.ts reads this at
+# "runtime" via process.env, but Next's compiler still statically inlines it
+# at build time since the file is server code Next itself bundles. Left
+# unset, it silently falls back to the code's own http://localhost:3077
+# default, which is wrong in any deployed environment.
+ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
 ENV NEXT_PUBLIC_PAYPAL_ENABLED=${NEXT_PUBLIC_PAYPAL_ENABLED}
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 
 RUN npx prisma generate
 RUN npm run build
