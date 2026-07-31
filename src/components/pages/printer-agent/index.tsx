@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/lib/toast";
+import { generateId } from "@/lib/utils";
 import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { renderReceiptToRaster } from "@/lib/receipt/render";
 import type { PaperWidth } from "@/lib/receipt/types";
@@ -160,7 +161,7 @@ export default function PrinterAgentContent() {
   // side.
   const handleTestPrint = useCallback(() => {
     runJob({
-      id: crypto.randomUUID(),
+      id: generateId(),
       saleId: "test",
       saleNumber: "TEST-0001",
       createdAt: new Date().toISOString(),
