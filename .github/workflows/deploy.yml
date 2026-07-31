@@ -2,7 +2,11 @@ name: Build and deploy
 
 on:
   push:
-    branches: [main]
+    # staging deploys to a second (UAT) stack on the same VPS, under its own
+    # image tag/directory — see the branch-conditional steps below. Never
+    # add develop/feature branches here: those still only get the `test` job
+    # via pull_request, matching the "PR into develop, no deploy" convention.
+    branches: [main, staging]
   pull_request:
   # Lets you re-run a deploy from the Actions tab without an empty commit.
   workflow_dispatch:
@@ -73,6 +77,17 @@ jobs:
       - name: Lowercase the image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
+      # main -> prod's `latest` tag; staging -> a separate `staging` tag, so
+      # the two environments' images (and IMAGE_TAG in each stack's own
+      # .env, see env.template) never overwrite each other on GHCR.
+      - name: Resolve image tag from branch
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "TAG=latest" >> "$GITHUB_ENV"
+          else
+            echo "TAG=staging" >> "$GITHUB_ENV"
+          fi
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -94,8 +109,8 @@ jobs:
             NEXT_PUBLIC_OMISE_PUBLIC_KEY=${{ vars.NEXT_PUBLIC_OMISE_PUBLIC_KEY }}
             NEXT_PUBLIC_PAYPAL_ENABLED=${{ vars.NEXT_PUBLIC_PAYPAL_ENABLED }}
           tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:${{ env.TAG }}
+            ${{ env.IMAGE }}:${{ env.TAG }}-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -105,6 +120,10 @@ jobs:
     steps:
       # The VPS needs its own `git pull` (not just a new image) so that
       # docker-compose.yml/Caddyfile changes ship too, not just app code.
+      # main -> VPS_APP_DIR (prod); staging -> VPS_APP_DIR_UAT (a second,
+      # separately cloned checkout on the same VPS — see env.template's
+      # ENV_SUFFIX/POSTGRES_HOST_PORT/IMAGE_TAG for how it avoids colliding
+      # with prod's containers/volume/port).
       - uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -112,7 +131,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd ${{ secrets.VPS_APP_DIR }}
+            if [ "${{ github.ref_name }}" = "main" ]; then
+              cd ${{ secrets.VPS_APP_DIR }}
+            else
+              cd ${{ secrets.VPS_APP_DIR_UAT }}
+            fi
             git pull
             docker compose pull app
             docker compose up -d app
@@ -134,14 +157,24 @@ jobs:
             exit 0
           fi
 
-          if [ "${{ needs.test.result }}" != "success" ]; then
-            TITLE="Test ล้มเหลว"; COLOR=15158332
-          elif [ "${{ needs['build-and-push'].result }}" != "success" ]; then
-            TITLE="Build/push image ล้มเหลว"; COLOR=15158332
-          elif [ "${{ needs.deploy.result }}" != "success" ]; then
-            TITLE="Deploy ล้มเหลว"; COLOR=15158332
+          # This job has no branch filter (fires for both main and staging)
+          # so every title below must say which environment, not just
+          # "production" — otherwise a UAT deploy notification reads as if
+          # it shipped to real customers.
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            ENV_LABEL="Production"
           else
-            TITLE="Deploy ขึ้น production สำเร็จ"; COLOR=3066993
+            ENV_LABEL="UAT"
+          fi
+
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            TITLE="[$ENV_LABEL] Test ล้มเหลว"; COLOR=15158332
+          elif [ "${{ needs['build-and-push'].result }}" != "success" ]; then
+            TITLE="[$ENV_LABEL] Build/push image ล้มเหลว"; COLOR=15158332
+          elif [ "${{ needs.deploy.result }}" != "success" ]; then
+            TITLE="[$ENV_LABEL] Deploy ล้มเหลว"; COLOR=15158332
+          else
+            TITLE="[$ENV_LABEL] Deploy สำเร็จ"; COLOR=3066993
           fi
 
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
