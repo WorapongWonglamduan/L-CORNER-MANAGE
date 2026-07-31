@@ -17,6 +17,12 @@ export const authConfig: NextAuthConfig = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
+  // This app only ever runs self-hosted behind a raw IP:port or the Caddy
+  // reverse proxy (never Vercel/another platform with auto host detection) —
+  // Auth.js v5 otherwise rejects the request's Host header as untrusted in
+  // production, surfacing as a generic "There is a problem with the server
+  // configuration" on /api/auth/error instead of a real login attempt.
+  trustHost: true,
   providers: [],
 };
 
