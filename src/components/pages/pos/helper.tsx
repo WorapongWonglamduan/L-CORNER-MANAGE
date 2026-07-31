@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { toast } from "@/lib/toast";
+import { generateId } from "@/lib/utils";
 import type { Locale } from "@/types/i18n";
 interface Product {
   id: string;
@@ -587,7 +588,7 @@ export function usePOSManager() {
         body: JSON.stringify({
           warehouse_id: warehouseId,
           job: {
-            id: crypto.randomUUID(),
+            id: generateId(),
             saleId: result.id,
             saleNumber: result.sale_number,
             createdAt: new Date().toISOString(),
@@ -625,7 +626,7 @@ export function usePOSManager() {
         }));
 
         if (!idempotencyKeyRef.current) {
-          idempotencyKeyRef.current = crypto.randomUUID();
+          idempotencyKeyRef.current = generateId();
         }
 
         const response = await fetch("/api/sales", {
