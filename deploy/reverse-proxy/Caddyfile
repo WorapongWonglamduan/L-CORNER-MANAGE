@@ -14,6 +14,22 @@ pos.yourdomain.com {
 	}
 }
 
+# UAT copy of this same project — a second docker-compose stack on this same
+# VPS with ENV_SUFFIX=-uat (see env.template), so its app container is named
+# l-corner-app-uat instead of colliding with prod's l-corner-app above.
+uat-pos.yourdomain.com {
+	reverse_proxy l-corner-app-uat:3000
+
+	encode gzip
+
+	@sse path /api/pos/display /api/pos/print-jobs
+	handle @sse {
+		reverse_proxy l-corner-app-uat:3000 {
+			flush_interval -1
+		}
+	}
+}
+
 # Second project goes here as its own block, once it exists — same shape:
 #
 # portal.yourdomain.com {
