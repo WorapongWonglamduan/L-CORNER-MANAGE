@@ -169,7 +169,7 @@ export default function ProductsManager() {
                         onEdit={() => handleEdit(product)}
                         onDelete={
                           product.can_delete
-                            ? () => handleDelete(product.id, true)
+                            ? () => handleDelete(product.id, false)
                             : undefined
                         }
                         onToggleActive={() => handleToggleActive(product)}
