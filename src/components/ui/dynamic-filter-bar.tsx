@@ -164,7 +164,10 @@ export function DynamicFilterBar({
     <div className={cn("space-y-3", className)}>
       <div className="flex flex-wrap items-end gap-3">
         {basicFields.map((field) => (
-          <div key={field.name} className="w-full max-w-xs">
+          <div
+            key={field.name}
+            className={cn("w-full", field.type === "date-range" ? "max-w-md" : "max-w-xs")}
+          >
             {field.label && (
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                 {field.label}
