@@ -72,7 +72,13 @@ services:
     expose:
       - "3000"
     environment:
-      NODE_ENV: production
+      # Was hardcoded `production` for every stack — now reads from this
+      # stack's own .env (default stays production) so a UAT .env can set
+      # NODE_ENV=development to show the login page's test-account box
+      # there without affecting prod. Deliberate tradeoff: this also flips
+      # useSecureCookies/secureCookie (auth.ts, proxy.ts) and any Next.js
+      # internal behavior gated on NODE_ENV === 'production' for that stack.
+      NODE_ENV: ${NODE_ENV:-production}
       # Baked into the Dockerfile too (tzdata + ENV TZ) — repeated here so
       # it's visible/overridable without a rebuild. Every "local day
       # boundary" date calculation in this app assumes the process clock
