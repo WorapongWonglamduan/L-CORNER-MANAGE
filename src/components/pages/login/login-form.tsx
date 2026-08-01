@@ -5,7 +5,7 @@ import { DynamicForm } from '@/components/dynamic-form/dynamic-form'
 import { useLoginForm } from './helper'
 import { theme } from '@/lib/theme'
 
-export function LoginForm() {
+export function LoginForm({ showTestAccount }: { showTestAccount: boolean }) {
   const t = useTranslations('auth.login')
   const { control, handleSubmit, onSubmit, errors, error, isLoading, formConfig } = useLoginForm()
 
@@ -41,7 +41,7 @@ export function LoginForm() {
         isLoading={isLoading} 
       />
 
-      {process.env.NODE_ENV !== 'production' && (
+      {showTestAccount && (
         <div className="text-center">
           <div className={`inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 ${theme.rounded.sm} ${theme.shadows.sm}`}>
             <svg

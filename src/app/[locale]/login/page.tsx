@@ -12,5 +12,12 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 export default async function LoginPage() {
-  return <LoginPageContent />
+  // Read here, not inside login-form.tsx: that file is a 'use client'
+  // component, and Next.js inlines process.env.NODE_ENV into the client
+  // bundle at `next build` time (always "production" for a real build,
+  // regardless of the container's actual runtime NODE_ENV) — only a Server
+  // Component reads the real per-request value.
+  const showTestAccount = process.env.NODE_ENV !== 'production'
+
+  return <LoginPageContent showTestAccount={showTestAccount} />
 }
