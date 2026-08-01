@@ -12,12 +12,16 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 export default async function LoginPage() {
-  // Read here, not inside login-form.tsx: that file is a 'use client'
-  // component, and Next.js inlines process.env.NODE_ENV into the client
-  // bundle at `next build` time (always "production" for a real build,
-  // regardless of the container's actual runtime NODE_ENV) — only a Server
-  // Component reads the real per-request value.
-  const showTestAccount = process.env.NODE_ENV !== 'production'
+  // Deliberately NOT process.env.NODE_ENV: the standalone server.js that
+  // Next.js generates for a production build hardcodes
+  // `process.env.NODE_ENV = 'production'` as its first line (see
+  // node_modules/next/dist/build/utils.js) — it overwrites the container's
+  // NODE_ENV the instant the process starts, before any of our code runs.
+  // There is no layer (.env, docker-compose, container env) that can make
+  // NODE_ENV differ from "production" in a deployed standalone build, so a
+  // dedicated var (SITE, set per stack in docker-compose.yml) is the only
+  // way to tell which environment this is.
+  const showTestAccount = process.env.SITE !== 'production'
 
   return <LoginPageContent showTestAccount={showTestAccount} />
 }
