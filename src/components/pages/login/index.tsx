@@ -7,7 +7,7 @@ import { loginFeatures, brandingConfig } from './helper'
 import { LoginForm } from './login-form'
 import { theme } from '@/lib/theme'
 
-export default function LoginPageContent() {
+export default function LoginPageContent({ showTestAccount }: { showTestAccount: boolean }) {
   const t = useTranslations('auth.login')
 
   
@@ -56,7 +56,7 @@ export default function LoginPageContent() {
           </div>
 
           <div className={`bg-white dark:bg-gray-800 ${theme.rounded.xl} ${theme.shadows['2xl']} p-6 sm:p-8 ${theme.borders.medium}`}>
-            <LoginForm />
+            <LoginForm showTestAccount={showTestAccount} />
           </div>
 
           <p className="text-center text-sm text-gray-600 dark:text-gray-300 mt-6 font-medium">
