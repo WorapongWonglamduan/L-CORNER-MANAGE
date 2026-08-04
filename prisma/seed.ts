@@ -325,7 +325,7 @@ async function main() {
 
   console.log("🏢 Creating warehouse...");
   const warehouse = await prisma.warehouse.upsert({
-    where: { code: "WH001" },
+    where: { shop_id_code: { shop_id: lcornerShop.id, code: "WH001" } },
     update: {},
     create: {
       shop_id: lcornerShop.id,

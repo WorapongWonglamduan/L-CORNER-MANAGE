@@ -107,14 +107,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existingCode = await prisma.warehouse.findUnique({ where: { code: branch_code } });
-    if (existingCode) {
-      return NextResponse.json(
-        { error: "branch_code is already taken" },
-        { status: 400 },
-      );
-    }
-
+    // No shop_id-scoped duplicate check needed here: this always provisions
+    // a brand-new Shop, so no existing warehouse can share its shop_id yet —
+    // branch_code only needs to be unique within a shop (@@unique([shop_id,
+    // code])), not across shops.
     const managerPermissions = [
       "products.view", "products.create", "products.update", "products.delete",
       "inventory.view", "inventory.adjust", "inventory.transfer",
