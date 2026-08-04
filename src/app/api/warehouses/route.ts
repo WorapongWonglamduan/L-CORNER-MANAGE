@@ -107,7 +107,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await prisma.warehouse.findUnique({ where: { code } });
+    const existing = await prisma.warehouse.findUnique({
+      where: { shop_id_code: { shop_id: session!.user.shop_id!, code } },
+    });
     if (existing) {
       return NextResponse.json(
         { error: "Warehouse code already exists" },

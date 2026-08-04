@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import type { NextAuthConfig } from "next-auth";
@@ -8,6 +8,14 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
+
+// Unlike wrong-email/wrong-password (deliberately merged into one generic
+// message so a guesser can't tell which is true), a lockout is triggered by
+// the account owner's own mistyped attempts, so naming it explicitly is safe
+// and helps their UX rather than a real attacker's.
+class AccountLockedError extends CredentialsSignin {
+  code = "account_locked";
+}
 
 export const authConfig: NextAuthConfig = {
   pages: {
@@ -48,7 +56,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         const { email, password } = parsedCredentials.data;
 
-        if (isLockedOut(email)) return null;
+        if (isLockedOut(email)) throw new AccountLockedError();
 
         // Dynamic import to avoid bundling Prisma into Edge Runtime
         const [{ prisma }, bcrypt] = await Promise.all([
