@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.RecipeWhereInput = {
       is_active: true,
+      // Scoped transitively through Recipe.product_id -> Product.shop_id —
+      // Recipe/RecipeIngredient have no shop_id column of their own.
+      product: { shop_id: session!.user.shop_id! },
     };
 
     if (productId) {
@@ -132,6 +135,28 @@ export async function POST(request: NextRequest) {
     if (!product_id || !name_i18n || !serving_qty || !serving_unit_id) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 },
+      );
+    }
+
+    const shopId = session!.user.shop_id!;
+
+    // Verify the product belongs to the caller's shop before attaching a
+    // recipe to it.
+    const product = await prisma.product.findFirst({
+      where: { id: product_id, shop_id: shopId },
+    });
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    // Verify the serving unit also belongs to the caller's shop.
+    const servingUnit = await prisma.unit.findFirst({
+      where: { id: serving_unit_id, shop_id: shopId },
+    });
+    if (!servingUnit) {
+      return NextResponse.json(
+        { error: "Serving unit not found" },
         { status: 400 },
       );
     }

@@ -56,6 +56,17 @@ export async function POST(request: NextRequest) {
     const deniedWarehouse = await assertWarehouseAccessLive(session, warehouse_id);
     if (deniedWarehouse) return deniedWarehouse;
 
+    // Defense-in-depth alongside assertWarehouseAccessLive above — same
+    // shop-of-warehouse check as POST /api/sales, since this is that
+    // route's gateway-payment equivalent.
+    const warehouseInShop = await prisma.warehouse.findFirst({
+      where: { id: warehouse_id, shop_id: session!.user.shop_id! },
+      select: { id: true },
+    });
+    if (!warehouseInShop) {
+      return NextResponse.json({ error: "Warehouse not found" }, { status: 404 });
+    }
+
     const cartInput: CreateSaleInput = {
       warehouse_id,
       items,

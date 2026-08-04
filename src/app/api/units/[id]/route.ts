@@ -15,8 +15,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const unit = await prisma.unit.findUnique({
-      where: { id },
+    const unit = await prisma.unit.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
     });
 
     if (!unit) {
@@ -48,8 +48,8 @@ export async function PUT(
     const { name_i18n, abbreviation_i18n, unit_type, is_base_unit, is_active } = body;
 
     // Check if unit exists
-    const existingUnit = await prisma.unit.findUnique({
-      where: { id },
+    const existingUnit = await prisma.unit.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
     });
 
     if (!existingUnit) {
@@ -93,8 +93,8 @@ export async function DELETE(
     const hardDelete = searchParams.get("hard") === "true";
 
     // Check if unit exists
-    const existingUnit = await prisma.unit.findUnique({
-      where: { id },
+    const existingUnit = await prisma.unit.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       include: {
         _count: {
           select: {

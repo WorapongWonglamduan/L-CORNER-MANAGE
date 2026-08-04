@@ -16,8 +16,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const product = await prisma.product.findUnique({
-      where: { id },
+    const product = await prisma.product.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       include: {
         base_unit: true,
         product_type: true,
@@ -109,9 +109,11 @@ export async function PUT(
       media_data,
     } = body;
 
+    const shopId = session!.user.shop_id!;
+
     // Check if product exists
-    const existing = await prisma.product.findUnique({
-      where: { id },
+    const existing = await prisma.product.findFirst({
+      where: { id, shop_id: shopId },
     });
 
     if (!existing) {
@@ -130,6 +132,32 @@ export async function PUT(
       if (codeExists) {
         return NextResponse.json(
           { error: "Product code already exists" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Verify the (possibly new) product type / unit belong to the caller's
+    // shop before attaching them.
+    if (type_id !== undefined) {
+      const productType = await prisma.productType.findFirst({
+        where: { id: type_id, shop_id: shopId },
+      });
+      if (!productType) {
+        return NextResponse.json(
+          { error: "Product type not found" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (unit_id) {
+      const unit = await prisma.unit.findFirst({
+        where: { id: unit_id, shop_id: shopId },
+      });
+      if (!unit) {
+        return NextResponse.json(
+          { error: "Unit not found" },
           { status: 400 }
         );
       }
@@ -235,8 +263,8 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if product exists
-    const existing = await prisma.product.findUnique({
-      where: { id },
+    const existing = await prisma.product.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
     });
 
     if (!existing) {

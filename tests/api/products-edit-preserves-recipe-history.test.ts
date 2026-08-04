@@ -26,11 +26,16 @@ describe("PUT /api/products/[id] - preserves recipe history on routine edits", (
   beforeEach(async () => {
     fx = await seedBasics(10);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["products.view", "products.update"] }),
+      fakeSession({
+        userId: fx.userId,
+        permissions: ["products.view", "products.update"],
+        shopId: fx.shopId,
+      }),
     );
 
     const ingredient = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `ING-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "วัตถุดิบ", en: "Ingredient" },
         product_type_id: fx.productTypeId,
@@ -45,6 +50,7 @@ describe("PUT /api/products/[id] - preserves recipe history on routine edits", (
 
     const semiType = await prisma.productType.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMI-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "กึ่งสำเร็จรูป", en: "Semi Finished" },
         type: "semi_finished",
@@ -52,6 +58,7 @@ describe("PUT /api/products/[id] - preserves recipe history on routine edits", (
     });
     const semiProduct = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMIP-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "ชาเขียว", en: "Green Tea" },
         product_type_id: semiType.id,

@@ -15,7 +15,11 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await prisma.recipe.findUnique({ where: { id } });
+    // Scoped transitively through Recipe.product_id -> Product.shop_id —
+    // Recipe has no shop_id column of its own.
+    const existing = await prisma.recipe.findFirst({
+      where: { id, product: { shop_id: session!.user.shop_id! } },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }

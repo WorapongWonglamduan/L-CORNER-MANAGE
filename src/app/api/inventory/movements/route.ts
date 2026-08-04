@@ -44,7 +44,21 @@ export async function GET(request: NextRequest) {
     // (including the cashier role) could see every branch's stock
     // movements — sale deductions, adjustments, transfers, void-restores —
     // system-wide.
-    where.warehouse_id = warehouseId ? warehouseId : { in: session?.user?.warehouse_ids ?? [] };
+    //
+    // Defense-in-depth on top of that: StockMovement.warehouse_id has no
+    // defined Prisma relation to Warehouse (see the reference_id comment
+    // below), so unlike Sale/PaymentIntent/StockTransfer we can't nest a
+    // `warehouse: { shop_id }` filter directly. Instead, resolve the
+    // warehouse ids in scope down to only those that also belong to the
+    // caller's own shop, and filter on that explicitly-verified list.
+    const scopedWarehouses = await prisma.warehouse.findMany({
+      where: {
+        shop_id: session!.user.shop_id!,
+        id: warehouseId ? warehouseId : { in: session?.user?.warehouse_ids ?? [] },
+      },
+      select: { id: true },
+    });
+    where.warehouse_id = { in: scopedWarehouses.map((w) => w.id) };
 
     if (productId) {
       where.product_id = productId;

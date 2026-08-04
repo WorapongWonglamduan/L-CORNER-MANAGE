@@ -44,11 +44,13 @@ describe("available_quantity reflects refund/void stock restoration", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId],
         permissions: ["products.view", "sales.create", "sales.refund", "sales.void"],
+        shopId: fx.shopId,
       }),
     );
 
     const ingredient = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `ING-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "วัตถุดิบทดสอบ", en: "Test Ingredient" },
         product_type_id: fx.productTypeId,
@@ -63,6 +65,7 @@ describe("available_quantity reflects refund/void stock restoration", () => {
 
     const semiType = await prisma.productType.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMI-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "กึ่งสำเร็จรูป", en: "Semi Finished" },
         type: "semi_finished",
@@ -70,6 +73,7 @@ describe("available_quantity reflects refund/void stock restoration", () => {
     });
     const semiProduct = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMIP-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "ชาเขียว", en: "Green Tea" },
         product_type_id: semiType.id,

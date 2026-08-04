@@ -115,6 +115,11 @@ export interface WarehouseOption {
   longitude: number | null;
 }
 
+export interface ShopOption {
+  id: string;
+  name_i18n: { th: string; en: string };
+}
+
 interface DashboardData {
   todaySales: {
     total: number;
@@ -150,6 +155,7 @@ export const useDashboard = () => {
   const locale = params.locale as string;
   const t = useTranslations("dashboard");
   const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.is_super_admin ?? false;
   const sessionWarehouseIds = session?.user?.warehouse_ids;
   const assignedWarehouseIds = useMemo(
     () => sessionWarehouseIds ?? [],
@@ -159,37 +165,78 @@ export const useDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
+  const [shops, setShops] = useState<ShopOption[]>([]);
 
-  // "all" = every branch this user is assigned to, combined. Deliberately
+  // "all" = every branch this user is assigned to, combined (or, for a
+  // super admin, every branch of the currently-scoped shop(s)). Deliberately
   // not "" — the shared Input select control always injects its own blank
   // placeholder option with value="", which would collide with an "all
-  // branches" option using the same value.
+  // branches" option using the same value. Same reasoning for shopId's
+  // "all" = every shop combined, super-admin only.
   const { control, watch, setValue, formState: { errors } } = useForm<{
     warehouseId: string;
+    shopId: string;
   }>({
-    defaultValues: { warehouseId: "all" },
+    defaultValues: { warehouseId: "all", shopId: "all" },
   });
   const warehouseId = watch("warehouseId");
   const setWarehouseId = useCallback(
     (value: string) => setValue("warehouseId", value),
     [setValue],
   );
+  const shopId = watch("shopId");
+  const setShopId = useCallback(
+    (value: string) => {
+      setValue("shopId", value);
+      // A branch selected under the previous shop scope has no meaning
+      // once the shop itself changes — reset back to "every branch."
+      setValue("warehouseId", "all");
+    },
+    [setValue],
+  );
+
+  // Super-admin-only: the shop picker's own options.
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    const fetchShops = async () => {
+      try {
+        const response = await fetch("/api/admin/shops?pageSize=100");
+        if (!response.ok) return;
+        const data = await response.json();
+        setShops(data.items || []);
+      } catch (error) {
+        console.error("Error fetching shops:", error);
+      }
+    };
+    fetchShops();
+  }, [isSuperAdmin]);
 
   useEffect(() => {
+    // Aggregating across every shop has no single branch list to show.
+    if (isSuperAdmin && shopId === "all") {
+      setWarehouses([]);
+      return;
+    }
     const fetchWarehouses = async () => {
       try {
-        const response = await fetch("/api/warehouses?pageSize=100&isActive=true");
+        const query = isSuperAdmin && shopId !== "all" ? `&shopId=${shopId}` : "";
+        const response = await fetch(`/api/warehouses?pageSize=100&isActive=true${query}`);
         const data = await response.json();
         const allItems: WarehouseOption[] = data.items || [];
+        // The server already scopes a super admin's request by the
+        // requested shopId — only a regular (non-super-admin) caller needs
+        // this extra client-side narrowing down to their own assignments.
         setWarehouses(
-          allItems.filter((w) => assignedWarehouseIds.includes(w.id)),
+          isSuperAdmin
+            ? allItems
+            : allItems.filter((w) => assignedWarehouseIds.includes(w.id)),
         );
       } catch (error) {
         console.error("Error fetching warehouses:", error);
       }
     };
     fetchWarehouses();
-  }, [assignedWarehouseIds]);
+  }, [assignedWarehouseIds, isSuperAdmin, shopId]);
 
   const fetchDashboardData = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) {
@@ -199,8 +246,11 @@ export const useDashboard = () => {
     }
 
     try {
-      const query = warehouseId !== "all" ? `?warehouseId=${warehouseId}` : "";
-      const response = await fetch(`/api/dashboard/stats${query}`);
+      const params = new URLSearchParams();
+      if (warehouseId !== "all") params.set("warehouseId", warehouseId);
+      if (isSuperAdmin && shopId !== "all") params.set("shopId", shopId);
+      const query = params.toString();
+      const response = await fetch(`/api/dashboard/stats${query ? `?${query}` : ""}`);
       if (response.ok) {
         const data = await response.json();
         setDashboardData(data);
@@ -211,7 +261,7 @@ export const useDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [warehouseId]);
+  }, [warehouseId, shopId, isSuperAdmin]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -269,6 +319,12 @@ export const useDashboard = () => {
       visibleWarehouses,
       warehouseId,
       setWarehouseId,
+    },
+    shop: {
+      isSuperAdmin,
+      shops,
+      shopId,
+      setShopId,
     },
   };
 };

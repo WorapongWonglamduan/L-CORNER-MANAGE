@@ -26,7 +26,9 @@ export async function GET(
       );
     }
 
-    const warehouse = await prisma.warehouse.findUnique({ where: { id } });
+    const warehouse = await prisma.warehouse.findFirst({
+      where: { id, shop_id: session.user.shop_id! },
+    });
 
     if (!warehouse) {
       return NextResponse.json(
@@ -68,7 +70,9 @@ export async function PUT(
       is_default,
     } = body;
 
-    const existing = await prisma.warehouse.findUnique({ where: { id } });
+    const existing = await prisma.warehouse.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
     if (!existing) {
       return NextResponse.json(
         { error: "Warehouse not found" },
@@ -153,7 +157,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await prisma.warehouse.findUnique({ where: { id } });
+    const existing = await prisma.warehouse.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
     if (!existing) {
       return NextResponse.json(
         { error: "Warehouse not found" },

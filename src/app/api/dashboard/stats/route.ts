@@ -14,26 +14,45 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const warehouseId = searchParams.get("warehouseId");
+    const isSuperAdmin = session.user.is_super_admin;
+    // Only meaningful for a super admin: pick one shop to drill into.
+    // Omitting it means "aggregate across every shop in the system." A
+    // regular user always sees their own shop only — this param is simply
+    // ignored for them, never trusted to escape their own tenant.
+    const shopIdParam = searchParams.get("shopId");
+    const scopeShopId = isSuperAdmin ? shopIdParam || null : session.user.shop_id!;
 
-    if (warehouseId) {
+    if (warehouseId && !isSuperAdmin) {
       const denied = requireWarehouseAccess(session, warehouseId);
       if (denied) return denied;
     }
 
     // A specific branch scopes every query to it; omitting it aggregates
     // across every branch this user is assigned to (not literally every
-    // warehouse in the system). Same filter shape, typed per-model since
-    // Prisma's WhereInput types are nominally distinct despite being
-    // structurally identical here.
-    const warehouseIdFilter: Prisma.StringFilter | string = warehouseId
+    // warehouse in the system) — except for a super admin, who has no
+    // `warehouse_ids` of their own and instead aggregates across every
+    // branch of the scoped shop(s).
+    const warehouseIdFilter: Prisma.StringFilter | string | undefined = warehouseId
       ? warehouseId
-      : { in: session.user.warehouse_ids };
-    const saleWarehouseFilter: Prisma.SaleWhereInput = {
-      warehouse_id: warehouseIdFilter,
-    };
-    const stockWarehouseFilter: Prisma.ProductStockWhereInput = {
-      warehouse_id: warehouseIdFilter,
-    };
+      : isSuperAdmin
+        ? undefined
+        : { in: session.user.warehouse_ids };
+    // Defense-in-depth on top of the warehouse_ids scoping above: nest the
+    // filter through the warehouse relation so the resolved warehouse(s)
+    // must also belong to the scoped shop — same idiom as /api/sales/route.ts.
+    // Left empty entirely for a super admin viewing "every shop combined"
+    // (no warehouseId, no shopId) — a genuine system-wide aggregate.
+    const warehouseRelationFilter: Prisma.WarehouseWhereInput = {};
+    if (warehouseIdFilter !== undefined) warehouseRelationFilter.id = warehouseIdFilter;
+    if (scopeShopId) warehouseRelationFilter.shop_id = scopeShopId;
+    const hasWarehouseScope = Object.keys(warehouseRelationFilter).length > 0;
+
+    const saleWarehouseFilter: Prisma.SaleWhereInput = hasWarehouseScope
+      ? { warehouse: warehouseRelationFilter }
+      : {};
+    const stockWarehouseFilter: Prisma.ProductStockWhereInput = hasWarehouseScope
+      ? { warehouse: warehouseRelationFilter }
+      : {};
     // A refund never changes the original Sale row (status stays
     // "completed", total_amount stays the pre-refund amount — there's no
     // "refunded" SaleStatus), so every revenue aggregate below must net out
@@ -105,6 +124,7 @@ export async function GET(request: NextRequest) {
     // stock it).
     const totalProducts = await prisma.product.count({
       where: {
+        ...(scopeShopId ? { shop_id: scopeShopId } : {}),
         is_active: true,
         deleted_at: null,
         product_type: {
@@ -120,6 +140,7 @@ export async function GET(request: NextRequest) {
     // warehouse's low_stock_threshold.
     const trackedProductsStock = await prisma.product.findMany({
       where: {
+        ...(scopeShopId ? { shop_id: scopeShopId } : {}),
         is_active: true,
         deleted_at: null,
         track_stock: true,

@@ -23,4 +23,7 @@ export const ROUTES = {
     THEME: (locale: string) => `/${locale}/settings/theme`,
   },
   LOGIN: (locale: string) => `/${locale}/login`,
+  ADMIN: {
+    SHOPS: (locale: string) => `/${locale}/admin/shops`,
+  },
 } as const;

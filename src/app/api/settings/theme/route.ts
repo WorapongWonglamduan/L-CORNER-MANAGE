@@ -30,6 +30,10 @@ export async function PUT(request: NextRequest) {
     const session = await auth();
     const denied = requirePermission(session, "settings.update");
     if (denied) return denied;
+    const shopId = session!.user.shop_id;
+    if (!shopId) {
+      return NextResponse.json({ error: "No shop assigned" }, { status: 403 });
+    }
 
     const body = await request.json();
     const { preset_id, custom_color } = body;
@@ -67,9 +71,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const settings = await prisma.appSettings.upsert({
-      where: { id: "singleton" },
+      where: { shop_id: shopId },
       update: colors,
-      create: { id: "singleton", ...colors },
+      create: { shop_id: shopId, ...colors },
     });
 
     return NextResponse.json(settings);

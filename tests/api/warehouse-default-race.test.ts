@@ -26,9 +26,19 @@ function jsonRequest(url: string, body: unknown) {
 // brand-new row. Serializable + retry closes this the same way the
 // refund/void/production/transfer/promotion races were fixed.
 describe("POST /api/warehouses - only one default warehouse at a time", () => {
-  beforeEach(() => {
+  let shopId: string;
+
+  beforeEach(async () => {
+    const shop = await prisma.shop.create({
+      data: { name_i18n: { th: "ร้านทดสอบ", en: "Test Shop" }, is_active: true },
+    });
+    shopId = shop.id;
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: "test-user", permissions: ["settings.update", "settings.view"] }),
+      fakeSession({
+        userId: "test-user",
+        shopId,
+        permissions: ["settings.update", "settings.view"],
+      }),
     );
   });
 

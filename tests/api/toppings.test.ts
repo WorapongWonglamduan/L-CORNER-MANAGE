@@ -31,6 +31,7 @@ describe("Topping quantity/price/ingredient validation", () => {
     mockedAuth.mockResolvedValue(
       fakeSession({
         userId: fx.userId,
+        shopId: fx.shopId,
         permissions: ["products.view", "products.create", "products.update"],
       }),
     );
@@ -73,6 +74,7 @@ describe("Topping quantity/price/ingredient validation", () => {
   it("rejects a non-positive quantity_per_serving on update", async () => {
     const topping = await prisma.topping.create({
       data: {
+        shop_id: fx.shopId,
         name_i18n: { th: "ท้อปปิ้ง", en: "Topping" },
         price: 10,
         ingredient_id: fx.productId,
@@ -93,6 +95,7 @@ describe("Topping quantity/price/ingredient validation", () => {
   it("rejects re-assigning a topping's ingredient to a semi-finished product on update", async () => {
     const semiType = await prisma.productType.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMI-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "กึ่งสำเร็จรูป", en: "Semi Finished" },
         type: "semi_finished",
@@ -100,6 +103,7 @@ describe("Topping quantity/price/ingredient validation", () => {
     });
     const semiProduct = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMIP-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "สินค้ากึ่งสำเร็จรูป", en: "Semi Product" },
         product_type_id: semiType.id,
@@ -110,6 +114,7 @@ describe("Topping quantity/price/ingredient validation", () => {
 
     const topping = await prisma.topping.create({
       data: {
+        shop_id: fx.shopId,
         name_i18n: { th: "ท้อปปิ้ง", en: "Topping" },
         price: 10,
         ingredient_id: fx.productId,

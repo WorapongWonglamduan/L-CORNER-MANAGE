@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: t("codeRequired") }, { status: 400 });
     }
 
-    const promotion = await prisma.promotion.findUnique({
-      where: { code: String(code).toUpperCase() },
+    const promotion = await prisma.promotion.findFirst({
+      where: { code: String(code).toUpperCase(), shop_id: session!.user.shop_id! },
     });
 
     if (!promotion) {

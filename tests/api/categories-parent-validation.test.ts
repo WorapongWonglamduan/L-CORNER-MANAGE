@@ -16,7 +16,11 @@ describe("POST /api/categories - parent_id validation", () => {
   beforeEach(async () => {
     fx = await seedBasics(10);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["settings.view", "settings.update"] }),
+      fakeSession({
+        userId: fx.userId,
+        permissions: ["settings.view", "settings.update"],
+        shopId: fx.shopId,
+      }),
     );
   });
 
@@ -41,7 +45,7 @@ describe("POST /api/categories - parent_id validation", () => {
 
   it("still allows creating a category with a real parent_id", async () => {
     const parent = await prisma.category.create({
-      data: { name_i18n: { th: "หลัก", en: "Root" } },
+      data: { shop_id: fx.shopId, name_i18n: { th: "หลัก", en: "Root" } },
     });
 
     const res = await createCategory(
