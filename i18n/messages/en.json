@@ -10,6 +10,7 @@
       "submit": "Sign In",
       "loading": "Signing in...",
       "error": "Invalid email or password",
+      "lockedError": "Account temporarily locked due to too many failed attempts. Please try again in 15 minutes",
       "serverError": "An error occurred. Please try again",
       "testAccount": "Test account: admin@lcorner.local / admin123",
       "features": {

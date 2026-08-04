@@ -72,7 +72,7 @@ export const useLoginForm = () => {
       });
 
       if (result?.error) {
-        setError(t("error"));
+        setError(result.code === "account_locked" ? t("lockedError") : t("error"));
       } else {
         router.push(`/${locale}`);
         router.refresh();
