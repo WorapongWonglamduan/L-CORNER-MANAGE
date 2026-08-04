@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const isActive = searchParams.get("isActive");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { shop_id: session!.user.shop_id! };
 
     if (isActive !== null) {
       where.is_active = isActive === "true";
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     const denied = requirePermission(session, "settings.update");
     if (denied) return denied;
+    const shopId = session!.user.shop_id!;
 
     const body = await request.json();
     const {
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest) {
 
     const promotion = await prisma.promotion.create({
       data: {
+        shop_id: shopId,
         code: code.toUpperCase(),
         name_i18n,
         discount_type,

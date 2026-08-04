@@ -29,11 +29,17 @@ describe("GET /api/products - ids filter", () => {
   it("returns only the requested products, with their current price and stock", async () => {
     fx = await seedBasics(100);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, warehouseIds: [fx.warehouseId], permissions: ["products.view"] }),
+      fakeSession({
+        userId: fx.userId,
+        warehouseIds: [fx.warehouseId],
+        permissions: ["products.view"],
+        shopId: fx.shopId,
+      }),
     );
 
     const otherProduct = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `PT2-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "สินค้าอื่น", en: "Other Product" },
         product_type_id: fx.productTypeId,
@@ -69,7 +75,12 @@ describe("GET /api/products - ids filter", () => {
   it("omits a product that no longer has active stock at the requested warehouse", async () => {
     fx = await seedBasics(100);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, warehouseIds: [fx.warehouseId], permissions: ["products.view"] }),
+      fakeSession({
+        userId: fx.userId,
+        warehouseIds: [fx.warehouseId],
+        permissions: ["products.view"],
+        shopId: fx.shopId,
+      }),
     );
 
     await prisma.productStock.update({

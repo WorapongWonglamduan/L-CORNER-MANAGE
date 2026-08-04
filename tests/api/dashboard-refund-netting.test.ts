@@ -22,6 +22,7 @@ describe("GET /api/dashboard/stats - nets refunds out of revenue", () => {
     mockedAuth.mockResolvedValue(
       fakeSession({
         userId: fx.userId,
+        shopId: fx.shopId,
         warehouseIds: [fx.warehouseId],
         permissions: ["reports.view"],
       }),

@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { requirePermission } from '@/lib/permissions'
 import { deleteImage } from '@/lib/image-upload'
 import { prisma } from '@/lib/prisma'
+import { resolveMediaShopId } from '@/lib/media-ownership'
 
 export async function GET(
   request: NextRequest,
@@ -24,6 +25,11 @@ export async function GET(
         { error: 'Media not found' },
         { status: 404 }
       )
+    }
+
+    const ownerShopId = await resolveMediaShopId(media)
+    if (!session.user.is_super_admin && ownerShopId !== session.user.shop_id) {
+      return NextResponse.json({ error: 'Media not found' }, { status: 404 })
     }
 
     return NextResponse.json(media)
@@ -56,6 +62,11 @@ export async function DELETE(
         { error: 'Media not found' },
         { status: 404 }
       )
+    }
+
+    const ownerShopId = await resolveMediaShopId(media)
+    if (!session!.user.is_super_admin && ownerShopId !== session!.user.shop_id) {
+      return NextResponse.json({ error: 'Media not found' }, { status: 404 })
     }
 
     // Delete files

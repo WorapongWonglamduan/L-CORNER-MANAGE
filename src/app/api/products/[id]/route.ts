@@ -19,8 +19,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const product = await prisma.product.findUnique({
-      where: { id },
+    const product = await prisma.product.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       include: {
         category: true,
         base_unit: true,
@@ -134,9 +134,11 @@ export async function PUT(
       media_data,
     } = body;
 
+    const shopId = session!.user.shop_id!;
+
     // Check if product exists
-    const existing = await prisma.product.findUnique({
-      where: { id },
+    const existing = await prisma.product.findFirst({
+      where: { id, shop_id: shopId },
     });
 
     if (!existing) {
@@ -172,17 +174,82 @@ export async function PUT(
     // cleans up any existing recipe, regardless of whether the request body
     // happened to include a `recipes` payload (previously, omitting it left
     // orphaned recipes attached to a now-non-semi_finished product).
-    const newProductType = await prisma.productType.findUnique({
-      where: { id: product_type_id },
+    // Scoped by shop_id so a caller can't move their product onto another
+    // shop's product type.
+    const newProductType = await prisma.productType.findFirst({
+      where: { id: product_type_id, shop_id: shopId },
     });
-    const isSemiFinished =
-      newProductType?.type === PRODUCTS_TYPES.SEMI_FINISHED;
+    if (!newProductType) {
+      return NextResponse.json(
+        { error: "Product type not found" },
+        { status: 400 },
+      );
+    }
+    const isSemiFinished = newProductType.type === PRODUCTS_TYPES.SEMI_FINISHED;
 
     if (!isSemiFinished && recipes && recipes.length > 0) {
       return NextResponse.json(
         { error: "Only semi-finished products can have recipes" },
         { status: 400 },
       );
+    }
+
+    // Same reasoning for base unit / category — verify they belong to the
+    // caller's shop before attaching them.
+    const baseUnit = await prisma.unit.findFirst({
+      where: { id: base_unit_id, shop_id: shopId },
+    });
+    if (!baseUnit) {
+      return NextResponse.json(
+        { error: "Base unit not found" },
+        { status: 400 },
+      );
+    }
+
+    if (category_id) {
+      const category = await prisma.category.findFirst({
+        where: { id: category_id, shop_id: shopId },
+      });
+      if (!category) {
+        return NextResponse.json(
+          { error: "Category not found" },
+          { status: 400 },
+        );
+      }
+    }
+
+    // Same reasoning as products/route.ts POST: every ingredient/unit a
+    // recipe references must belong to the caller's shop too.
+    if (recipes && recipes.length > 0) {
+      const ingredientIds = new Set<string>();
+      const unitIds = new Set<string>();
+      for (const recipe of recipes as RecipeInput[]) {
+        for (const ing of recipe.ingredients ?? []) {
+          ingredientIds.add(ing.ingredient_id);
+          unitIds.add(ing.unit_id);
+        }
+      }
+      if (ingredientIds.size > 0) {
+        const [ownedIngredients, ownedUnits] = await Promise.all([
+          prisma.product.findMany({
+            where: { id: { in: [...ingredientIds] }, shop_id: shopId },
+            select: { id: true },
+          }),
+          prisma.unit.findMany({
+            where: { id: { in: [...unitIds] }, shop_id: shopId },
+            select: { id: true },
+          }),
+        ]);
+        if (
+          ownedIngredients.length !== ingredientIds.size ||
+          ownedUnits.length !== unitIds.size
+        ) {
+          return NextResponse.json(
+            { error: "One or more recipe ingredients or units were not found" },
+            { status: 400 },
+          );
+        }
+      }
     }
 
     // Use transaction to update product and recipes
@@ -369,8 +436,8 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const hard = searchParams.get("hard") === "true";
 
-    const product = await prisma.product.findUnique({
-      where: { id },
+    const product = await prisma.product.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
     });
 
     if (!product) {

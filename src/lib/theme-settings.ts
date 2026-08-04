@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 
 export const DEFAULT_THEME = {
   theme_color: "#213559",
@@ -8,16 +9,22 @@ export const DEFAULT_THEME = {
 
 export type ThemeColors = typeof DEFAULT_THEME;
 
-// Reads the singleton AppSettings row (creating it with defaults on first
-// access). Used by the root layout on every request, so it must never throw
-// — falling back to the hardcoded defaults keeps the app rendering even if
-// the DB is briefly unreachable.
+// Reads the caller's shop's AppSettings row (creating it with defaults on
+// first access). Used by the root layout on every request, so it must never
+// throw — falling back to the hardcoded defaults keeps the app rendering
+// even if the DB is briefly unreachable. Pre-login (no session yet, e.g. the
+// login page itself) there's no shop to scope to, so it just returns the
+// hardcoded defaults rather than guessing a shop.
 export async function getThemeColors(): Promise<ThemeColors> {
   try {
+    const session = await auth();
+    const shopId = session?.user?.shop_id;
+    if (!shopId) return DEFAULT_THEME;
+
     const settings = await prisma.appSettings.upsert({
-      where: { id: "singleton" },
+      where: { shop_id: shopId },
       update: {},
-      create: { id: "singleton", ...DEFAULT_THEME },
+      create: { shop_id: shopId, ...DEFAULT_THEME },
     });
     return {
       theme_color: settings.theme_color,

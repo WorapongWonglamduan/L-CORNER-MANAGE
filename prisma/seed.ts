@@ -45,6 +45,8 @@ async function cleanup() {
   await prisma.userRole.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.role.deleteMany({});
+  await prisma.appSettings.deleteMany({});
+  await prisma.shop.deleteMany({});
 
   console.log("✅ Cleanup completed!");
 }
@@ -54,6 +56,17 @@ async function main() {
   
   // Cleanup old data first
   await cleanup();
+
+  console.log("🏬 Creating L-Corner shop...");
+  const lcornerShop = await prisma.shop.upsert({
+    where: { id: "shop-lcorner" },
+    update: {},
+    create: {
+      id: "shop-lcorner",
+      name_i18n: { th: "แอล คอร์เนอร์", en: "L-Corner" },
+      is_active: true,
+    },
+  });
 
   // Define permissions
   console.log("🔑 Defining permissions...");
@@ -84,9 +97,10 @@ async function main() {
   // Create Roles with permissions
   console.log("👥 Creating roles...");
   const adminRole = await prisma.role.upsert({
-    where: { name: "admin" },
+    where: { shop_id_name: { shop_id: lcornerShop.id, name: "admin" } },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       name: "admin",
       display_name_i18n: { th: "ผู้ดูแลระบบ", en: "Administrator" },
       description_i18n: { th: "เข้าถึงทุกฟังก์ชันในระบบ", en: "Full system access" },
@@ -97,9 +111,10 @@ async function main() {
   });
 
   const managerRole = await prisma.role.upsert({
-    where: { name: "manager" },
+    where: { shop_id_name: { shop_id: lcornerShop.id, name: "manager" } },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       name: "manager",
       display_name_i18n: { th: "ผู้จัดการ", en: "Manager" },
       description_i18n: { th: "จัดการสินค้า สต็อก และรายงาน", en: "Manage products, inventory, and reports" },
@@ -110,9 +125,10 @@ async function main() {
   });
 
   const cashierRole = await prisma.role.upsert({
-    where: { name: "cashier" },
+    where: { shop_id_name: { shop_id: lcornerShop.id, name: "cashier" } },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       name: "cashier",
       display_name_i18n: { th: "พนักงานขาย", en: "Cashier" },
       description_i18n: { th: "ขายสินค้าและดูสต็อก", en: "Sales and view inventory" },
@@ -129,6 +145,8 @@ async function main() {
     where: { username: "admin" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
+      is_super_admin: true,
       username: "admin",
       email: "admin@lcorner.local",
       password: hashedPassword,
@@ -157,6 +175,7 @@ async function main() {
     where: { id: "unit-piece" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "unit-piece",
       name_i18n: { th: "ชิ้น", en: "Piece" },
       abbreviation_i18n: { th: "ชิ้น", en: "pcs" },
@@ -170,6 +189,7 @@ async function main() {
     where: { id: "unit-gram" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "unit-gram",
       name_i18n: { th: "กรัม", en: "Gram" },
       abbreviation_i18n: { th: "ก.", en: "g" },
@@ -183,6 +203,7 @@ async function main() {
     where: { id: "unit-ml" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "unit-ml",
       name_i18n: { th: "มิลลิลิตร", en: "Milliliter" },
       abbreviation_i18n: { th: "มล.", en: "ml" },
@@ -196,6 +217,7 @@ async function main() {
     where: { id: "unit-cup" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "unit-cup",
       name_i18n: { th: "แก้ว", en: "Cup" },
       abbreviation_i18n: { th: "แก้ว", en: "cup" },
@@ -210,6 +232,7 @@ async function main() {
     where: { id: "cat-beverage" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "cat-beverage",
       name_i18n: { th: "เครื่องดื่ม", en: "Beverages" },
       sort_order: 1,
@@ -221,6 +244,7 @@ async function main() {
     where: { id: "cat-coffee" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "cat-coffee",
       name_i18n: { th: "กาแฟ", en: "Coffee" },
       parent_id: catBeverage.id,
@@ -233,6 +257,7 @@ async function main() {
     where: { id: "cat-tea" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "cat-tea",
       name_i18n: { th: "ชา", en: "Tea" },
       parent_id: catBeverage.id,
@@ -246,6 +271,7 @@ async function main() {
     where: { code: "INGREDIENT" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "INGREDIENT",
       name_i18n: { th: "วัตถุดิบ", en: "Ingredient" },
       icon: "package",
@@ -259,6 +285,7 @@ async function main() {
     where: { code: "SEMI_FINISHED" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "SEMI_FINISHED",
       name_i18n: { th: "กึ่งสำเร็จรูป", en: "Semi-Finished" },
       icon: "box",
@@ -272,6 +299,7 @@ async function main() {
     where: { code: "FINISHED_GOOD" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "FINISHED_GOOD",
       name_i18n: { th: "สินค้าสำเร็จรูป", en: "Finished Good" },
       icon: "check-circle",
@@ -285,6 +313,7 @@ async function main() {
     where: { code: "CONTAINER" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "CONTAINER",
       name_i18n: { th: "ภาชนะ", en: "Container" },
       icon: "cup-soda",
@@ -299,6 +328,7 @@ async function main() {
     where: { code: "WH001" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "WH001",
       name_i18n: { th: "คลังหลัก", en: "Main Warehouse" },
       address: "L-Corner Store",
@@ -311,6 +341,7 @@ async function main() {
     where: { code: "ING001" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "ING001",
       name_i18n: { th: "เมล็ดกาแฟ", en: "Coffee Beans" },
       description_i18n: { th: "เมล็ดกาแฟคั่วบด", en: "Roasted Coffee Beans" },
@@ -327,6 +358,7 @@ async function main() {
     where: { code: "ING002" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "ING002",
       name_i18n: { th: "นมสด", en: "Fresh Milk" },
       category_id: catBeverage.id,
@@ -342,6 +374,7 @@ async function main() {
     where: { code: "ING003" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "ING003",
       name_i18n: { th: "น้ำตาล", en: "Sugar" },
       category_id: catBeverage.id,
@@ -357,6 +390,7 @@ async function main() {
     where: { code: "ING004" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "ING004",
       name_i18n: { th: "น้ำเปล่า", en: "Water" },
       category_id: catBeverage.id,
@@ -372,6 +406,7 @@ async function main() {
     where: { code: "ING005" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "ING005",
       name_i18n: { th: "ใบชาเขียว", en: "Green Tea Leaves" },
       category_id: catTea.id,
@@ -388,6 +423,7 @@ async function main() {
     where: { code: "SEMI001" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "SEMI001",
       name_i18n: { th: "เอสเพรสโซ่ 1 ช็อต", en: "Espresso Shot" },
       description_i18n: { th: "เอสเพรสโซ่สำหรับทำเครื่องดื่ม", en: "Espresso for beverages" },
@@ -434,6 +470,7 @@ async function main() {
     where: { code: "FG001" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "FG001",
       name_i18n: { th: "ลาเต้", en: "Latte" },
       description_i18n: { th: "กาแฟลาเต้ร้อน/เย็น", en: "Hot/Iced Latte" },
@@ -488,6 +525,7 @@ async function main() {
     where: { code: "FG002" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "FG002",
       name_i18n: { th: "คาปูชิโน่", en: "Cappuccino" },
       description_i18n: { th: "คาปูชิโน่ร้อน/เย็น", en: "Hot/Iced Cappuccino" },
@@ -534,6 +572,7 @@ async function main() {
     where: { code: "FG003" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "FG003",
       name_i18n: { th: "ชาเขียว", en: "Green Tea" },
       description_i18n: { th: "ชาเขียวร้อน/เย็น", en: "Hot/Iced Green Tea" },
@@ -588,6 +627,7 @@ async function main() {
     where: { code: "FG004" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "FG004",
       name_i18n: { th: "อเมริกาโน่", en: "Americano" },
       description_i18n: { th: "อเมริกาโน่ร้อน/เย็น", en: "Hot/Iced Americano" },
@@ -635,6 +675,7 @@ async function main() {
     where: { code: "RM0013" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "RM0013",
       name_i18n: { th: "น้ำหวาน", en: "Nectar" },
       product_type_id: productTypeIngredient.id,
@@ -648,6 +689,7 @@ async function main() {
     where: { code: "RM00014" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "RM00014",
       name_i18n: {
         th: "หัวเชื้อน้ำหวาน กลิ่นแตงโม",
@@ -664,6 +706,7 @@ async function main() {
     where: { code: "RM00016" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "RM00016",
       name_i18n: { th: "หัวเชื้อบลูฮาวาย", en: "Blue Hawaii" },
       product_type_id: productTypeIngredient.id,
@@ -678,6 +721,7 @@ async function main() {
     where: { code: "RM0016" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "RM0016",
       name_i18n: { th: "บูล", en: "Blue" },
       product_type_id: productTypeIngredient.id,
@@ -692,6 +736,7 @@ async function main() {
     where: { id: "cat-mama-cup" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "cat-mama-cup",
       name_i18n: { th: "มาม่าคัพ", en: "MamaCup" },
       sort_order: 0,
@@ -703,6 +748,7 @@ async function main() {
     where: { id: "cat-snack" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       id: "cat-snack",
       name_i18n: { th: "ขนม", en: "snack" },
       sort_order: 0,
@@ -715,6 +761,7 @@ async function main() {
     where: { code: "P00012" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "P00012",
       name_i18n: { th: "ชา", en: "Tea" },
       category_id: catTea.id,
@@ -761,6 +808,7 @@ async function main() {
     where: { code: "P00013" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "P00013",
       name_i18n: { th: "มาม่าหมูสับ", en: "MamaPork" },
       category_id: catMamaCup.id,
@@ -776,6 +824,7 @@ async function main() {
     where: { code: "P00015" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "P00015",
       name_i18n: { th: "มาม่าต้มยำกุ้ง", en: "MamaShrimp" },
       category_id: catMamaCup.id,
@@ -791,6 +840,7 @@ async function main() {
     where: { code: "P00016" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "P00016",
       name_i18n: { th: "เลย์รสต้นตำหรับ", en: "Lay Original" },
       category_id: catSnack.id,
@@ -805,6 +855,7 @@ async function main() {
     where: { code: "P00017" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "P00017",
       name_i18n: { th: "คิดแคท", en: "Kitkat" },
       category_id: catSnack.id,
@@ -820,6 +871,7 @@ async function main() {
     where: { code: "P00018" },
     update: {},
     create: {
+      shop_id: lcornerShop.id,
       code: "P00018",
       name_i18n: { th: "โดริโทส", en: "Doritos" },
       category_id: catSnack.id,

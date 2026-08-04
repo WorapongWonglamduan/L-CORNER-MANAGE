@@ -21,7 +21,11 @@ describe("PUT /api/product-types/[id] - type validation", () => {
   beforeEach(async () => {
     fx = await seedBasics(10);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["settings.view", "settings.update"] }),
+      fakeSession({
+        userId: fx.userId,
+        permissions: ["settings.view", "settings.update"],
+        shopId: fx.shopId,
+      }),
     );
   });
 
@@ -38,6 +42,7 @@ describe("PUT /api/product-types/[id] - type validation", () => {
     async (type) => {
       const productType = await prisma.productType.create({
         data: {
+          shop_id: fx.shopId,
           code: `PT-${fx.userId.slice(0, 8)}-${type}`,
           name_i18n: { th: "ทดสอบ", en: "Test" },
           type,
@@ -63,6 +68,7 @@ describe("PUT /api/product-types/[id] - type validation", () => {
   it("rejects a genuinely invalid type value", async () => {
     const productType = await prisma.productType.create({
       data: {
+        shop_id: fx.shopId,
         code: `PT-${fx.userId.slice(0, 8)}-bad`,
         name_i18n: { th: "ทดสอบ", en: "Test" },
         type: PRODUCTS_TYPES.PRODUCT,

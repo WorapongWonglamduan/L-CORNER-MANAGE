@@ -34,7 +34,11 @@ describe("POST /api/inventory/transfers - concurrency", () => {
   beforeEach(async () => {
     fx = await seedBasics(10); // only 10 units at the source warehouse
     const other = await prisma.warehouse.create({
-      data: { code: `WHT2-${fx.userId.slice(0, 8)}`, name_i18n: { th: "คลัง 2", en: "Warehouse 2" } },
+      data: {
+        shop_id: fx.shopId,
+        code: `WHT2-${fx.userId.slice(0, 8)}`,
+        name_i18n: { th: "คลัง 2", en: "Warehouse 2" },
+      },
     });
     otherWarehouseId = other.id;
     await prisma.userWarehouse.create({
@@ -46,6 +50,7 @@ describe("POST /api/inventory/transfers - concurrency", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId, otherWarehouseId],
         permissions: ["inventory.transfer", "inventory.view"],
+        shopId: fx.shopId,
       }),
     );
   });
@@ -88,6 +93,7 @@ describe("POST /api/production - concurrency", () => {
 
     const ingredient = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `ING-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "วัตถุดิบทดสอบ", en: "Test Ingredient" },
         product_type_id: fx.productTypeId,
@@ -102,6 +108,7 @@ describe("POST /api/production - concurrency", () => {
 
     const semiType = await prisma.productType.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMI-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "กึ่งสำเร็จรูป", en: "Semi Finished" },
         type: "semi_finished",
@@ -109,6 +116,7 @@ describe("POST /api/production - concurrency", () => {
     });
     const semiProduct = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMIP-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "สินค้ากึ่งสำเร็จรูป", en: "Semi Product" },
         product_type_id: semiType.id,
@@ -140,6 +148,7 @@ describe("POST /api/production - concurrency", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId],
         permissions: ["inventory.adjust", "inventory.view"],
+        shopId: fx.shopId,
       }),
     );
   });
@@ -180,6 +189,7 @@ describe("POST /api/sales - promotion concurrency", () => {
     promoCode = `PROMO${fx.productId.slice(0, 6).toUpperCase()}`;
     await prisma.promotion.create({
       data: {
+        shop_id: fx.shopId,
         code: promoCode,
         name_i18n: { th: "โปรโมชั่นทดสอบ", en: "Test Promotion" },
         discount_type: "fixed",
@@ -195,6 +205,7 @@ describe("POST /api/sales - promotion concurrency", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId],
         permissions: ["sales.create", "sales.view"],
+        shopId: fx.shopId,
       }),
     );
   });

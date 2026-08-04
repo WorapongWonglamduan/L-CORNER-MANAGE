@@ -26,9 +26,9 @@ export async function POST(
       )
     }
 
-    // Check if product exists
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
+    // Check if product exists and belongs to the caller's shop
+    const product = await prisma.product.findFirst({
+      where: { id: productId, shop_id: session!.user.shop_id! },
     })
 
     if (!product) {
@@ -96,6 +96,18 @@ export async function GET(
     if (denied) return denied
 
     const { id: productId } = await params
+
+    // Verify the product belongs to the caller's shop before listing its media.
+    const product = await prisma.product.findFirst({
+      where: { id: productId, shop_id: session!.user.shop_id! },
+      select: { id: true },
+    })
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      )
+    }
 
     const productMedia = await prisma.productMedia.findMany({
       where: { product_id: productId },

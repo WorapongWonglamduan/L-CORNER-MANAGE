@@ -16,8 +16,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const productType = await prisma.productType.findUnique({
-      where: { id },
+    const productType = await prisma.productType.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       include: {
         _count: {
           select: { products: true },
@@ -57,8 +57,8 @@ export async function PUT(
     const { code, name_i18n, icon, type, sort_order, is_active } = body;
 
     // Check if product type exists
-    const existing = await prisma.productType.findUnique({
-      where: { id },
+    const existing = await prisma.productType.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
     });
 
     if (!existing) {
@@ -126,8 +126,8 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if product type exists
-    const productType = await prisma.productType.findUnique({
-      where: { id },
+    const productType = await prisma.productType.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       include: {
         _count: {
           select: { products: true },

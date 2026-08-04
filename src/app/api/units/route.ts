@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get("isActive");
 
     // Build where clause
-    const where: Record<string, unknown> = {};
-    
+    const where: Record<string, unknown> = { shop_id: session!.user.shop_id! };
+
     if (isActive !== null) {
       where.is_active = isActive === "true";
     }
@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     const denied = requirePermission(session, "settings.update");
     if (denied) return denied;
+    const shopId = session!.user.shop_id!;
 
     const body = await request.json();
     const { name_i18n, abbreviation_i18n, unit_type, is_base_unit, is_active } = body;
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
 
     const unit = await prisma.unit.create({
       data: {
+        shop_id: shopId,
         name_i18n,
         abbreviation_i18n,
         unit_type: unit_type || null,

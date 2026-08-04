@@ -75,6 +75,15 @@ export async function GET(
     const deniedWarehouse = requireWarehouseAccess(session, sale.warehouse_id);
     if (deniedWarehouse) return deniedWarehouse;
 
+    // Defense-in-depth: the warehouse-access check above is JWT-claim based
+    // and only proves membership in this warehouse's assigned-branch list —
+    // explicitly re-verify the warehouse itself belongs to the caller's own
+    // shop. 404 (not 403) so a cross-tenant id doesn't confirm its own
+    // existence.
+    if (sale.warehouse.shop_id !== session!.user.shop_id) {
+      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+    }
+
     return NextResponse.json(sale);
   } catch (error) {
     console.error("Error fetching sale:", error);
@@ -120,9 +129,14 @@ export async function PUT(
     // knowing its id.
     const existingSale = await prisma.sale.findUnique({
       where: { id },
-      select: { warehouse_id: true },
+      select: { warehouse_id: true, warehouse: { select: { shop_id: true } } },
     });
     if (!existingSale) {
+      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+    }
+    // Defense-in-depth: same shop-of-warehouse check as GET above, before
+    // the live warehouse-access check.
+    if (existingSale.warehouse.shop_id !== session!.user.shop_id) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }
     const deniedWarehouse = await assertWarehouseAccessLive(session, existingSale.warehouse_id);
@@ -184,9 +198,13 @@ export async function DELETE(
     // Branch B sale (and restore its stock there) just by knowing its id.
     const saleForAccessCheck = await prisma.sale.findUnique({
       where: { id },
-      select: { warehouse_id: true },
+      select: { warehouse_id: true, warehouse: { select: { shop_id: true } } },
     });
     if (!saleForAccessCheck) {
+      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+    }
+    // Defense-in-depth: same shop-of-warehouse check as GET/PUT above.
+    if (saleForAccessCheck.warehouse.shop_id !== session!.user.shop_id) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }
     const deniedWarehouse = await assertWarehouseAccessLive(

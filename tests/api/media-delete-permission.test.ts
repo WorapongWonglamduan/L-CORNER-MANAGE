@@ -27,6 +27,7 @@ describe("DELETE /api/media/[id] - permission", () => {
         file_path: "/uploads/test.png",
         mime_type: "image/png",
         file_size: 10,
+        uploaded_by: fx.userId,
       },
     });
     mediaId = media.id;
@@ -43,7 +44,7 @@ describe("DELETE /api/media/[id] - permission", () => {
 
   it("rejects a caller with only products.update", async () => {
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["products.view", "products.update"] }),
+      fakeSession({ userId: fx.userId, shopId: fx.shopId, permissions: ["products.view", "products.update"] }),
     );
 
     const res = await deleteMedia(
@@ -58,7 +59,7 @@ describe("DELETE /api/media/[id] - permission", () => {
 
   it("allows a caller with products.delete", async () => {
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["products.view", "products.delete"] }),
+      fakeSession({ userId: fx.userId, shopId: fx.shopId, permissions: ["products.view", "products.delete"] }),
     );
 
     const res = await deleteMedia(

@@ -32,7 +32,7 @@ describe("POST /api/sales - idempotency", () => {
   beforeEach(async () => {
     fx = await seedBasics(100);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, warehouseIds: [fx.warehouseId], permissions: ["sales.create"] }),
+      fakeSession({ userId: fx.userId, shopId: fx.shopId, warehouseIds: [fx.warehouseId], permissions: ["sales.create"] }),
     );
   });
 

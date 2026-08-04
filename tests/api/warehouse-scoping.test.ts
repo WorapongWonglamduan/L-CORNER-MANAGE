@@ -29,7 +29,11 @@ describe("Warehouse scoping across branches", () => {
   beforeEach(async () => {
     fx = await seedBasics(50);
     const other = await prisma.warehouse.create({
-      data: { code: `WHT2-${fx.userId.slice(0, 8)}`, name_i18n: { th: "คลัง 2", en: "Warehouse 2" } },
+      data: {
+        shop_id: fx.shopId,
+        code: `WHT2-${fx.userId.slice(0, 8)}`,
+        name_i18n: { th: "คลัง 2", en: "Warehouse 2" },
+      },
     });
     otherWarehouseId = other.id;
     // The test user is deliberately NOT assigned to otherWarehouseId.
@@ -96,6 +100,7 @@ describe("Warehouse scoping across branches", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId],
         permissions: ["sales.view", "sales.void", "inventory.view"],
+        shopId: fx.shopId,
       }),
     );
   });
@@ -198,6 +203,7 @@ describe("Warehouse scoping across branches", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId],
         permissions: ["settings.view"],
+        shopId: fx.shopId,
       }),
     );
     const res = await listWarehouses(new NextRequest("http://localhost/api/warehouses?pageSize=100"));

@@ -39,7 +39,7 @@ describe("POST /api/sales", () => {
   beforeEach(async () => {
     fx = await seedBasics(100);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, warehouseIds: [fx.warehouseId] }),
+      fakeSession({ userId: fx.userId, shopId: fx.shopId, warehouseIds: [fx.warehouseId] }),
     );
   });
 
@@ -123,7 +123,7 @@ describe("GET /api/sales date range filter (Asia/Bangkok local-day boundaries)",
   beforeEach(async () => {
     fx = await seedBasics(100);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, warehouseIds: [fx.warehouseId] }),
+      fakeSession({ userId: fx.userId, shopId: fx.shopId, warehouseIds: [fx.warehouseId] }),
     );
   });
 
@@ -198,7 +198,7 @@ describe("DELETE /api/sales/[id] (void)", () => {
   beforeEach(async () => {
     fx = await seedBasics(100);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, warehouseIds: [fx.warehouseId] }),
+      fakeSession({ userId: fx.userId, shopId: fx.shopId, warehouseIds: [fx.warehouseId] }),
     );
   });
 

@@ -18,17 +18,29 @@ export async function GET(request: NextRequest) {
     const pageSize = parsePageSize(searchParams);
     const isActive = searchParams.get("isActive");
     const search = searchParams.get("search") || "";
+    // Only meaningful for a super admin: view a specific shop's branches
+    // (e.g. drilling into one shop's dashboard). Ignored for a regular
+    // user — they can never see another shop's branches.
+    const shopIdParam = searchParams.get("shopId");
 
     const where: Prisma.WarehouseWhereInput = {};
+    if (session.user.is_super_admin) {
+      const effectiveShopId = shopIdParam || session.user.shop_id;
+      if (effectiveShopId) where.shop_id = effectiveShopId;
+      // No shopId and no shop of their own: lists every branch across every
+      // shop — acceptable for a super admin, who can see everything anyway.
+    } else {
+      where.shop_id = session.user.shop_id!;
 
-    // Every non-admin caller (POS branch picker, product-form warehouse
-    // picker, etc.) already filters the response down to the user's own
-    // assigned branches client-side — but the full list, including every
-    // branch's address/GPS/promptpay_id, was reaching the browser first.
-    // Enforce the same scoping server-side; only settings.view (admin-level)
-    // callers, who manage warehouses themselves, get the unrestricted list.
-    if (!hasPermission(session, "settings.view")) {
-      where.id = { in: session.user.warehouse_ids ?? [] };
+      // Every non-admin caller (POS branch picker, product-form warehouse
+      // picker, etc.) already filters the response down to the user's own
+      // assigned branches client-side — but the full list, including every
+      // branch's address/GPS/promptpay_id, was reaching the browser first.
+      // Enforce the same scoping server-side; only settings.view (admin-level)
+      // callers, who manage warehouses themselves, get the unrestricted list.
+      if (!hasPermission(session, "settings.view")) {
+        where.id = { in: session.user.warehouse_ids ?? [] };
+      }
     }
 
     if (isActive !== null && isActive !== undefined) {
@@ -123,6 +135,7 @@ export async function POST(request: NextRequest) {
             }
             return tx.warehouse.create({
               data: {
+                shop_id: session!.user.shop_id!,
                 code,
                 name_i18n,
                 address,

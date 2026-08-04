@@ -28,6 +28,7 @@ describe("POST /api/inventory/adjust", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId],
         permissions: ["inventory.view", "inventory.adjust"],
+        shopId: fx.shopId,
       }),
     );
   });
@@ -131,7 +132,11 @@ describe("POST /api/inventory/adjust", () => {
   // which would grant visibility as a side effect of recording a count.
   it("refuses to adjust stock for a product never assigned to the warehouse", async () => {
     const otherWarehouse = await prisma.warehouse.create({
-      data: { code: `WHT2-${fx.userId.slice(0, 8)}`, name_i18n: { th: "คลัง 2", en: "Warehouse 2" } },
+      data: {
+        shop_id: fx.shopId,
+        code: `WHT2-${fx.userId.slice(0, 8)}`,
+        name_i18n: { th: "คลัง 2", en: "Warehouse 2" },
+      },
     });
     // The caller has live access to this warehouse (so the request reaches
     // the ProductStock existence check) — deliberately no ProductStock row

@@ -9,6 +9,8 @@ export function fakeSession(overrides: {
   userId: string;
   permissions?: string[];
   warehouseIds?: string[];
+  shopId?: string;
+  isSuperAdmin?: boolean;
 }): Session {
   return {
     user: {
@@ -23,6 +25,8 @@ export function fakeSession(overrides: {
         "inventory.view",
       ],
       warehouse_ids: overrides.warehouseIds ?? [],
+      shop_id: overrides.shopId ?? null,
+      is_super_admin: overrides.isSuperAdmin ?? false,
     },
     expires: new Date(Date.now() + 3600_000).toISOString(),
   } as Session;
@@ -34,6 +38,7 @@ interface SeededProduct {
   userId: string;
   unitId: string;
   productTypeId: string;
+  shopId: string;
 }
 
 /** Minimal, self-contained fixture set: one warehouse, one finished-good
@@ -45,8 +50,16 @@ export async function seedBasics(
 ): Promise<SeededProduct> {
   const suffix = randomUUID().slice(0, 8);
 
+  const shop = await prisma.shop.create({
+    data: {
+      name_i18n: { th: `ร้านทดสอบ-${suffix}`, en: `Test Shop ${suffix}` },
+      is_active: true,
+    },
+  });
+
   const unit = await prisma.unit.create({
     data: {
+      shop_id: shop.id,
       name_i18n: { th: "ชิ้น", en: "piece" },
       abbreviation_i18n: { th: "ชิ้น", en: "pc" },
       is_base_unit: true,
@@ -55,6 +68,7 @@ export async function seedBasics(
 
   const productType = await prisma.productType.create({
     data: {
+      shop_id: shop.id,
       code: `TEST-${suffix}`,
       name_i18n: { th: "ทดสอบ", en: "Test" },
       type: "finished_good",
@@ -63,6 +77,7 @@ export async function seedBasics(
 
   const warehouse = await prisma.warehouse.create({
     data: {
+      shop_id: shop.id,
       code: `WHT-${suffix}`,
       name_i18n: { th: "คลังทดสอบ", en: "Test Warehouse" },
     },
@@ -70,6 +85,7 @@ export async function seedBasics(
 
   const product = await prisma.product.create({
     data: {
+      shop_id: shop.id,
       code: `PT-${suffix}`,
       name_i18n: { th: "สินค้าทดสอบ", en: "Test Product" },
       product_type_id: productType.id,
@@ -90,6 +106,7 @@ export async function seedBasics(
 
   const user = await prisma.user.create({
     data: {
+      shop_id: shop.id,
       username: `tester-${suffix}`,
       email: `tester-${suffix}@example.com`,
       password: "not-a-real-hash",
@@ -107,6 +124,7 @@ export async function seedBasics(
     userId: user.id,
     unitId: unit.id,
     productTypeId: productType.id,
+    shopId: shop.id,
   };
 }
 
@@ -151,4 +169,9 @@ export async function resetDb() {
   // AppSettings is a singleton config row (id "singleton"), not
   // per-test fixture data — deliberately not wiped here, unlike
   // everything else in this function.
+
+  // Shop must go last — every table above (role, warehouse, product,
+  // product_type, category, unit, promotion, topping, user) carries a
+  // shop_id FK to it.
+  await prisma.shop.deleteMany();
 }

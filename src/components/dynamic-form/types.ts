@@ -42,4 +42,8 @@ export interface FieldConfig<T extends FieldValues = FieldValues> {
   className?: string;
   /** Side-effect fired after this field's own value changes (e.g. parse a pasted map link and fill sibling lat/long fields). Requires the form's `setValue` to be threaded down to `DynamicFormFields`/`EntityDialog` — a no-op if omitted. */
   onValueChange?: (value: string, helpers: { setValue?: UseFormSetValue<T> }) => void;
+  /** `image-upload`/`multi-image-upload` only — where the uploaded file is stored/tagged. Defaults to Input.tsx's own `"products"` fallback if omitted. */
+  imageUploadFolder?: string;
+  imageUploadEntityType?: string;
+  imageUploadEntityId?: string;
 }

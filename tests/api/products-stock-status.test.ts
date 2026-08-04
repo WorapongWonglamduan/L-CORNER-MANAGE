@@ -23,11 +23,17 @@ describe("GET /api/products - stock status for semi-finished products", () => {
   beforeEach(async () => {
     fx = await seedBasics(100);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, warehouseIds: [fx.warehouseId], permissions: ["products.view"] }),
+      fakeSession({
+        userId: fx.userId,
+        warehouseIds: [fx.warehouseId],
+        permissions: ["products.view"],
+        shopId: fx.shopId,
+      }),
     );
 
     const ingredient = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `ING-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "วัตถุดิบทดสอบ", en: "Test Ingredient" },
         product_type_id: fx.productTypeId,
@@ -41,6 +47,7 @@ describe("GET /api/products - stock status for semi-finished products", () => {
 
     const semiType = await prisma.productType.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMI-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "กึ่งสำเร็จรูป", en: "Semi Finished" },
         type: "semi_finished",
@@ -48,6 +55,7 @@ describe("GET /api/products - stock status for semi-finished products", () => {
     });
     const semiProduct = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `SEMIP-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "ชาเขียว", en: "Green Tea" },
         product_type_id: semiType.id,

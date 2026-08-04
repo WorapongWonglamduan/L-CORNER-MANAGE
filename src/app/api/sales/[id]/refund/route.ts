@@ -115,9 +115,22 @@ export async function POST(
     // transaction below instead of trusted from here.
     const sale = await prisma.sale.findUnique({
       where: { id },
-      select: { id: true, sale_number: true, status: true, warehouse_id: true, promotion_id: true },
+      select: {
+        id: true,
+        sale_number: true,
+        status: true,
+        warehouse_id: true,
+        promotion_id: true,
+        warehouse: { select: { shop_id: true } },
+      },
     });
     if (!sale) {
+      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+    }
+    // Defense-in-depth: same shop-of-warehouse check as the other
+    // sales/[id] routes, checked before the status/warehouse-access checks
+    // below so a cross-tenant id doesn't leak anything about its own state.
+    if (sale.warehouse.shop_id !== session!.user.shop_id) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }
     if (sale.status !== "completed") {

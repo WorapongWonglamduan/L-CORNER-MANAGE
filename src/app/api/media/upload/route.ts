@@ -3,13 +3,23 @@ import { auth } from '@/auth'
 import { requirePermission } from '@/lib/permissions'
 import { uploadImage, ImageUploadError } from '@/lib/image-upload'
 import { prisma } from '@/lib/prisma'
+import { resolveMediaShopId } from '@/lib/media-ownership'
 
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
     const session = await auth()
-    const denied = requirePermission(session, 'products.create')
-    if (denied) return denied
+    // A super admin has no shop-scoped Role (and so no products.create
+    // permission) but still needs to upload a shop's logo while
+    // provisioning/editing it — bypass the permission check for them, same
+    // pattern as the entity-ownership check just below.
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!session.user.is_super_admin) {
+      const denied = requirePermission(session, 'products.create')
+      if (denied) return denied
+    }
 
     // Get form data
     const formData = await request.formData()
@@ -24,6 +34,23 @@ export async function POST(request: NextRequest) {
         { error: 'No file provided' },
         { status: 400 }
       )
+    }
+
+    // If the upload is being attached to an existing entity, that entity
+    // must belong to the caller's shop — otherwise a shop could attach an
+    // image to another shop's product by guessing its id.
+    if (entityId) {
+      const ownerShopId = await resolveMediaShopId({
+        entity_type: entityType,
+        entity_id: entityId,
+        uploaded_by: null,
+      })
+      if (!session!.user.is_super_admin && ownerShopId !== session!.user.shop_id) {
+        return NextResponse.json(
+          { error: 'Entity not found' },
+          { status: 404 }
+        )
+      }
     }
 
     // Upload and process image — single variant only (original), no
