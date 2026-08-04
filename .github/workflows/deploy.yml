@@ -161,7 +161,7 @@ jobs:
             echo "VPS_DB_DATABASE=${{ vars.PROD_DB_DATABASE || 'l_corner_pos' }}" >> "$GITHUB_ENV"
           else
             echo "VPS_DB_PORT=${{ vars.UAT_DB_PORT || '5436' }}" >> "$GITHUB_ENV"
-            echo "VPS_DB_DATABASE=${{ vars.UAT_DB_DATABASE || 'l_corner_pos' }}" >> "$GITHUB_ENV"
+            echo "VPS_DB_DATABASE=${{ vars.UAT_DB_DATABASE || 'l_corner_pos_uat' }}" >> "$GITHUB_ENV"
           fi
 
       - name: Open SSH tunnel to the VPS's Postgres
