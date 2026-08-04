@@ -121,8 +121,72 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
+  # Applies pending prisma/schema.prisma changes to the real DB before the
+  # new image (which may expect the new schema) goes live. Gated behind a
+  # GitHub Environment with required reviewers — configure this once in
+  # Settings → Environments (production-db-migrate / uat-db-migrate) — so an
+  # actual human approves every real-DB schema change from the Actions tab,
+  # the same review step Prisma's own AI-agent guard enforces for --accept-
+  # data-loss locally. Deliberately runs plain `prisma db push` with NO
+  # --accept-data-loss: an additive-safe change (a new nullable column, a
+  # new table) applies automatically once approved; anything Prisma flags as
+  # lossy makes this step fail loudly instead of silently applying, and
+  # needs a deliberate manual `db push --accept-data-loss` run instead (see
+  # [[prisma-migration-safety]]) — same as the multi-tenant Shop migration's
+  # nullable-column -> backfill-script -> required-column dance, which this
+  # step alone could never safely automate.
+  migrate-db:
     needs: build-and-push
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production-db-migrate' || 'uat-db-migrate' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+
+      # Postgres is bound to 127.0.0.1 on the VPS on purpose (docker-
+      # compose.yml) — never reachable from the internet directly — so this
+      # runner reaches it the same way a human would for a GUI client: an
+      # SSH tunnel through the VPS, port-forwarded to whichever stack's own
+      # host port this branch targets.
+      - name: Resolve this branch's DB port/name on the VPS
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "VPS_DB_PORT=${{ vars.PROD_DB_PORT || '5435' }}" >> "$GITHUB_ENV"
+            echo "VPS_DB_DATABASE=${{ vars.PROD_DB_DATABASE || 'l_corner_pos' }}" >> "$GITHUB_ENV"
+          else
+            echo "VPS_DB_PORT=${{ vars.UAT_DB_PORT || '5436' }}" >> "$GITHUB_ENV"
+            echo "VPS_DB_DATABASE=${{ vars.UAT_DB_DATABASE || 'l_corner_pos_uat' }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Open SSH tunnel to the VPS's Postgres
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -f -N \
+            -L 5433:127.0.0.1:${{ env.VPS_DB_PORT }} \
+            -i ~/.ssh/deploy_key \
+            ${{ secrets.VPS_SSH_USER }}@${{ secrets.VPS_HOST }}
+          # Give the background tunnel a moment to actually establish before
+          # Prisma tries to connect through it.
+          sleep 3
+
+      - run: npx prisma db push
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_DATABASE: ${{ env.VPS_DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.VPS_DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.VPS_DB_PASSWORD }}
+
+  deploy:
+    needs: [build-and-push, migrate-db]
     runs-on: ubuntu-latest
     steps:
       # The VPS needs its own `git pull` (not just a new image) so that
@@ -149,7 +213,7 @@ jobs:
             docker image prune -f
 
   notify:
-    needs: [test, build-and-push, deploy]
+    needs: [test, build-and-push, migrate-db, deploy]
     # always() so this still fires when an earlier job failed — otherwise a
     # failed test/build would just skip straight past the notification too.
     if: always() && github.event_name != 'pull_request'
@@ -178,6 +242,8 @@ jobs:
             TITLE="[$ENV_LABEL] Test ล้มเหลว"; COLOR=15158332
           elif [ "${{ needs['build-and-push'].result }}" != "success" ]; then
             TITLE="[$ENV_LABEL] Build/push image ล้มเหลว"; COLOR=15158332
+          elif [ "${{ needs['migrate-db'].result }}" != "success" ]; then
+            TITLE="[$ENV_LABEL] Migrate DB ล้มเหลว"; COLOR=15158332
           elif [ "${{ needs.deploy.result }}" != "success" ]; then
             TITLE="[$ENV_LABEL] Deploy ล้มเหลว"; COLOR=15158332
           else

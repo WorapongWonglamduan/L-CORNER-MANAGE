@@ -15,7 +15,9 @@ export async function GET(
 
     const { id } = await params;
 
-    const promotion = await prisma.promotion.findUnique({ where: { id } });
+    const promotion = await prisma.promotion.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
 
     if (!promotion) {
       return NextResponse.json({ error: "Promotion not found" }, { status: 404 });
@@ -53,7 +55,9 @@ export async function PUT(
       is_active,
     } = body;
 
-    const existing = await prisma.promotion.findUnique({ where: { id } });
+    const existing = await prisma.promotion.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Promotion not found" }, { status: 404 });
     }
@@ -145,7 +149,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await prisma.promotion.findUnique({ where: { id } });
+    const existing = await prisma.promotion.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Promotion not found" }, { status: 404 });
     }

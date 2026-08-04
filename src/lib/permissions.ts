@@ -39,6 +39,51 @@ export function requirePermission(
 }
 
 /**
+ * Platform-level gate for the super-admin shop-provisioning routes/pages —
+ * orthogonal to the per-shop `permissions` array (a super admin has no
+ * shop_id and no shop-scoped Role, so it can't be expressed as a permission
+ * string).
+ */
+export function requireSuperAdmin(session: Session | null): NextResponse | null {
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!session.user.is_super_admin) {
+    return NextResponse.json(
+      { error: "Forbidden: super admin only" },
+      { status: 403 },
+    );
+  }
+  return null;
+}
+
+/**
+ * shop_id is a 1:1 attribute of the user row (unlike the many-to-many
+ * UserWarehouse grant), so there's no separate live-DB variant needed here
+ * the way assertWarehouseAccessLive exists for warehouses below — the JWT
+ * claim and a fresh DB read would say the same thing.
+ */
+export function hasShopAccess(
+  session: Session | null,
+  shopId: string,
+): boolean {
+  return !!session?.user?.is_super_admin || session?.user?.shop_id === shopId;
+}
+
+export function requireShopAccess(
+  session: Session | null,
+  shopId: string,
+): NextResponse | null {
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!hasShopAccess(session, shopId)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return null;
+}
+
+/**
  * JWT-claim based (same staleness trade-off already accepted for
  * permissions/roles — the assigned-branch list is baked in at login and
  * only refreshes on next login). Use on read (GET) routes, where a stale

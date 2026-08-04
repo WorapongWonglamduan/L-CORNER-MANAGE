@@ -34,6 +34,7 @@ describe("POST /api/sales/[id]/refund", () => {
     mockedAuth.mockResolvedValue(
       fakeSession({
         userId: fx.userId,
+        shopId: fx.shopId,
         warehouseIds: [fx.warehouseId],
         permissions: ["sales.create", "sales.refund", "sales.view", "sales.void"],
       }),
@@ -271,11 +272,15 @@ describe("POST /api/sales/[id]/refund", () => {
       ),
     ]);
 
-    const statuses = [voidRes.status, refundRes.status].sort();
-    // Exactly one wins — either the void cancels it first (refund then sees
-    // "not completed"), or the refund commits first (void then sees
-    // "already has refunds"). Never both succeeding.
-    expect(statuses).toEqual([200, 400]);
+    const statuses = [voidRes.status, refundRes.status].sort((a, b) => a - b);
+    // Exactly one wins — either the void cancels it first (200) and the
+    // refund then sees "not completed" (400), or the refund commits first
+    // (201) and the void then sees "already has refunds" (400). Both
+    // orderings are legitimate outcomes of the same race — which one
+    // actually wins varies with scheduling/timing (confirmed flaky in CI,
+    // where the refund won consistently unlike local runs) — never both
+    // succeeding is the only invariant this test can assert.
+    expect([[200, 400], [201, 400]]).toContainEqual(statuses);
 
     // Whichever won, stock must reflect exactly ONE restoration of the 5
     // sold units — never 5 (void) + 2 (refund) = 7, and never double-counted.
@@ -322,6 +327,7 @@ describe("POST /api/sales/[id]/refund - promotion usage release", () => {
     mockedAuth.mockResolvedValue(
       fakeSession({
         userId: fx.userId,
+        shopId: fx.shopId,
         warehouseIds: [fx.warehouseId],
         permissions: ["sales.create", "sales.refund", "sales.view"],
       }),
@@ -329,6 +335,7 @@ describe("POST /api/sales/[id]/refund - promotion usage release", () => {
 
     const promotion = await prisma.promotion.create({
       data: {
+        shop_id: fx.shopId,
         // Uppercase — POST /api/sales normalizes the incoming code to
         // uppercase before looking it up, so a lowercase-hex UUID slice
         // here would never match.

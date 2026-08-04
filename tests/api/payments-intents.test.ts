@@ -63,6 +63,7 @@ describe("POST /api/payments/intents + GET /api/payments/intents/[id]", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId],
         permissions: ["sales.create", "sales.view"],
+        shopId: fx.shopId,
       }),
     );
     createCharge.mockReset();
@@ -206,7 +207,11 @@ describe("POST /api/payments/intents + GET /api/payments/intents/[id]", () => {
 
   it("rejects a request for a warehouse the caller has no access to", async () => {
     const other = await prisma.warehouse.create({
-      data: { code: `WHT2-${fx.userId.slice(0, 8)}`, name_i18n: { th: "คลัง 2", en: "Warehouse 2" } },
+      data: {
+        shop_id: fx.shopId,
+        code: `WHT2-${fx.userId.slice(0, 8)}`,
+        name_i18n: { th: "คลัง 2", en: "Warehouse 2" },
+      },
     });
 
     const res = await createIntent(
@@ -283,7 +288,11 @@ describe("POST /api/payments/intents + GET /api/payments/intents/[id]", () => {
 
   it("GET poll denies access to a different warehouse's intent", async () => {
     const other = await prisma.warehouse.create({
-      data: { code: `WHT3-${fx.userId.slice(0, 8)}`, name_i18n: { th: "คลัง 3", en: "Warehouse 3" } },
+      data: {
+        shop_id: fx.shopId,
+        code: `WHT3-${fx.userId.slice(0, 8)}`,
+        name_i18n: { th: "คลัง 3", en: "Warehouse 3" },
+      },
     });
     const otherIntent = await prisma.paymentIntent.create({
       data: {

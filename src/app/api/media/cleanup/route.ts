@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
 import { deleteImage } from "@/lib/image-upload";
+import { resolveMediaShopId } from "@/lib/media-ownership";
 
 /**
  * API endpoint to cleanup orphan media files
@@ -23,9 +24,26 @@ export async function DELETE() {
       },
     });
 
-    const orphanMedia = allMedia.filter(
+    const candidates = allMedia.filter(
       (media) => media.product_images.length === 0
     );
+
+    // Only clean up orphans this caller's shop actually owns — an
+    // unresolvable/other-shop entity_type/entity_id is left alone rather
+    // than deleted, since this bulk maintenance action has no per-row
+    // permission check otherwise.
+    const orphanMedia = session!.user.is_super_admin
+      ? candidates
+      : (
+          await Promise.all(
+            candidates.map(async (media) => ({
+              media,
+              shopId: await resolveMediaShopId(media),
+            })),
+          )
+        )
+          .filter(({ shopId }) => shopId === session!.user.shop_id)
+          .map(({ media }) => media);
 
     console.log(`Found ${orphanMedia.length} orphan media records`);
 

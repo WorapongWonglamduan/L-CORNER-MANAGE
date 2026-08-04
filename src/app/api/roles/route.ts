@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const isActive = searchParams.get("isActive");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { shop_id: session!.user.shop_id! };
 
     if (isActive !== null) {
       where.is_active = isActive === "true";
@@ -103,7 +103,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await prisma.role.findUnique({ where: { name } });
+    const existing = await prisma.role.findUnique({
+      where: { shop_id_name: { shop_id: session!.user.shop_id!, name } },
+    });
     if (existing) {
       return NextResponse.json(
         { error: "Role name is already taken" },
@@ -113,6 +115,7 @@ export async function POST(request: NextRequest) {
 
     const role = await prisma.role.create({
       data: {
+        shop_id: session!.user.shop_id!,
         name,
         display_name_i18n,
         description_i18n: description_i18n ?? undefined,

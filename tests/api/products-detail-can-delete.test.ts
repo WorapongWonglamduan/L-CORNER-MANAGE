@@ -28,6 +28,7 @@ describe("GET /api/products/[id] - can_delete", () => {
     mockedAuth.mockResolvedValue(
       fakeSession({
         userId: fx.userId,
+        shopId: fx.shopId,
         warehouseIds: [fx.warehouseId],
         permissions: ["products.view", "sales.create"],
       }),

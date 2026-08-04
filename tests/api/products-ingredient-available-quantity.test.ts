@@ -22,7 +22,12 @@ describe("GET /api/products - available_quantity for genuine ingredient/containe
   beforeEach(async () => {
     fx = await seedBasics(1);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, warehouseIds: [fx.warehouseId], permissions: ["products.view"] }),
+      fakeSession({
+        userId: fx.userId,
+        warehouseIds: [fx.warehouseId],
+        permissions: ["products.view"],
+        shopId: fx.shopId,
+      }),
     );
   });
 
@@ -37,6 +42,7 @@ describe("GET /api/products - available_quantity for genuine ingredient/containe
   it("reports available_quantity equal to current_stock for an 'ingredient' type product", async () => {
     const ingredientType = await prisma.productType.create({
       data: {
+        shop_id: fx.shopId,
         code: `INGT-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "วัตถุดิบ", en: "Ingredient" },
         type: "ingredient",
@@ -44,6 +50,7 @@ describe("GET /api/products - available_quantity for genuine ingredient/containe
     });
     const ingredientProduct = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `ING-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "นมสด", en: "Fresh Milk" },
         product_type_id: ingredientType.id,
@@ -69,6 +76,7 @@ describe("GET /api/products - available_quantity for genuine ingredient/containe
   it("reports available_quantity equal to current_stock for a 'container' type product", async () => {
     const containerType = await prisma.productType.create({
       data: {
+        shop_id: fx.shopId,
         code: `CONT-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "ภาชนะ", en: "Container" },
         type: "container",
@@ -76,6 +84,7 @@ describe("GET /api/products - available_quantity for genuine ingredient/containe
     });
     const containerProduct = await prisma.product.create({
       data: {
+        shop_id: fx.shopId,
         code: `CUP-${fx.productId.slice(0, 8)}`,
         name_i18n: { th: "แก้วพลาสติก", en: "Plastic Cup" },
         product_type_id: containerType.id,

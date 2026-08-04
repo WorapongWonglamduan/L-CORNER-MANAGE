@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause - query from products table
     const where: Record<string, unknown> = {
+      shop_id: session!.user.shop_id!,
       // Filter ingredient and container product types
       product_type: {
         type: {
@@ -153,6 +154,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const shopId = session!.user.shop_id!;
+
     // Check if code already exists
     const existing = await prisma.product.findUnique({
       where: { code },
@@ -165,9 +168,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify the product type / unit actually belong to the caller's shop —
+    // otherwise a caller could attach another shop's type/unit to their
+    // ingredient/container.
+    const productType = await prisma.productType.findFirst({
+      where: { id: type_id, shop_id: shopId },
+    });
+    if (!productType) {
+      return NextResponse.json(
+        { error: "Product type not found" },
+        { status: 400 },
+      );
+    }
+
+    const unit = await prisma.unit.findFirst({
+      where: { id: unit_id, shop_id: shopId },
+    });
+    if (!unit) {
+      return NextResponse.json(
+        { error: "Unit not found" },
+        { status: 400 },
+      );
+    }
+
     // Create as a product with an ingredient/container product type
     const product = await prisma.product.create({
       data: {
+        shop_id: shopId,
         code,
         name_i18n,
         description_i18n: description_i18n || null,

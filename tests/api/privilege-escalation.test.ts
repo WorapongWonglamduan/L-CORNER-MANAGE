@@ -45,7 +45,7 @@ describe("Privilege escalation guards", () => {
 
   it("blocks POST /api/roles from granting a permission the caller doesn't hold", async () => {
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["users.create", "users.update"] }),
+      fakeSession({ userId: fx.userId, permissions: ["users.create", "users.update"], shopId: fx.shopId }),
     );
 
     const res = await createRole(
@@ -62,13 +62,16 @@ describe("Privilege escalation guards", () => {
   it("blocks PUT /api/roles/[id] from escalating an existing role beyond the caller's own permissions", async () => {
     const role = await prisma.role.create({
       data: {
+        shop_id: fx.shopId,
         name: `support-${fx.userId.slice(0, 8)}`,
         display_name_i18n: { th: "ซัพพอร์ต", en: "Support" },
         permissions: ["users.update"],
         is_system: false,
       },
     });
-    mockedAuth.mockResolvedValue(fakeSession({ userId: fx.userId, permissions: ["users.update"] }));
+    mockedAuth.mockResolvedValue(
+      fakeSession({ userId: fx.userId, permissions: ["users.update"], shopId: fx.shopId }),
+    );
 
     const res = await updateRole(
       jsonRequest(`/api/roles/${role.id}`, "PUT", {
@@ -85,13 +88,16 @@ describe("Privilege escalation guards", () => {
   it("blocks PUT /api/users/[id] from assigning a role that grants permissions the caller doesn't hold", async () => {
     const adminLikeRole = await prisma.role.create({
       data: {
+        shop_id: fx.shopId,
         name: `admin-like-${fx.userId.slice(0, 8)}`,
         display_name_i18n: { th: "แอดมิน", en: "Admin-like" },
         permissions: ["users.update", "settings.update", "products.delete"],
         is_system: false,
       },
     });
-    mockedAuth.mockResolvedValue(fakeSession({ userId: fx.userId, permissions: ["users.update"] }));
+    mockedAuth.mockResolvedValue(
+      fakeSession({ userId: fx.userId, permissions: ["users.update"], shopId: fx.shopId }),
+    );
 
     const res = await updateUser(
       jsonRequest(`/api/users/${fx.userId}`, "PUT", { role_ids: [adminLikeRole.id] }),
@@ -105,7 +111,7 @@ describe("Privilege escalation guards", () => {
 
   it("allows granting/assigning permissions the caller already holds", async () => {
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["users.create", "sales.view"] }),
+      fakeSession({ userId: fx.userId, permissions: ["users.create", "sales.view"], shopId: fx.shopId }),
     );
 
     const res = await createRole(
@@ -125,7 +131,7 @@ describe("Promotion discount/max_uses validation", () => {
   beforeEach(async () => {
     fx = await seedBasics(1);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["settings.view", "settings.update"] }),
+      fakeSession({ userId: fx.userId, permissions: ["settings.view", "settings.update"], shopId: fx.shopId }),
     );
   });
 
@@ -149,6 +155,7 @@ describe("Promotion discount/max_uses validation", () => {
   it("rejects a negative discount_value on update, even for a promo that was valid before", async () => {
     const promo = await prisma.promotion.create({
       data: {
+        shop_id: fx.shopId,
         code: `POS-${fx.userId.slice(0, 6)}`,
         name_i18n: { th: "โปร", en: "Promo" },
         discount_type: "percentage",

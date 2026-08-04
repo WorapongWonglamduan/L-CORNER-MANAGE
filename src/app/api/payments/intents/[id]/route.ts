@@ -20,13 +20,21 @@ export async function GET(
 
     const { id } = await params;
 
-    const intent = await prisma.paymentIntent.findUnique({ where: { id } });
+    const intent = await prisma.paymentIntent.findUnique({
+      where: { id },
+      include: { warehouse: { select: { shop_id: true } } },
+    });
     if (!intent) {
       return NextResponse.json({ error: "Payment intent not found" }, { status: 404 });
     }
 
     const deniedWarehouse = requireWarehouseAccess(session, intent.warehouse_id);
     if (deniedWarehouse) return deniedWarehouse;
+
+    // Defense-in-depth: same shop-of-warehouse check as GET /api/sales/[id].
+    if (intent.warehouse.shop_id !== session!.user.shop_id) {
+      return NextResponse.json({ error: "Payment intent not found" }, { status: 404 });
+    }
 
     await expireIfStale(id);
     const reconciled = await reconcileIntent(id);

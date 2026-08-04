@@ -15,6 +15,17 @@ export async function GET(
     if (denied) return denied;
 
     const { id: product_id } = await params;
+
+    // Verify the product belongs to the caller's shop before revealing any
+    // per-warehouse stock/visibility info about it.
+    const product = await prisma.product.findFirst({
+      where: { id: product_id, shop_id: session!.user.shop_id! },
+      select: { id: true },
+    });
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
     const warehouseIds = session?.user?.warehouse_ids ?? [];
 
     const warehouses = await prisma.warehouse.findMany({

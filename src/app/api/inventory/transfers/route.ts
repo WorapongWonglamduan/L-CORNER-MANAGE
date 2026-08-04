@@ -33,16 +33,22 @@ export async function GET(request: NextRequest) {
     // to every branch this user is assigned to, not every warehouse in the
     // system — otherwise any inventory.view holder could see every
     // branch's transfers just by calling the API without warehouseId.
+    //
+    // Defense-in-depth on top of that: nest through the from_warehouse/
+    // to_warehouse relations (instead of the scalar *_warehouse_id fields)
+    // so the resolved warehouse(s) must also belong to the caller's own
+    // shop — same idiom as /api/sales/route.ts.
+    const shopId = session!.user.shop_id!;
     if (warehouseId) {
       where.OR = [
-        { from_warehouse_id: warehouseId },
-        { to_warehouse_id: warehouseId },
+        { from_warehouse: { id: warehouseId, shop_id: shopId } },
+        { to_warehouse: { id: warehouseId, shop_id: shopId } },
       ];
     } else {
       const assignedIds = session?.user?.warehouse_ids ?? [];
       where.OR = [
-        { from_warehouse_id: { in: assignedIds } },
-        { to_warehouse_id: { in: assignedIds } },
+        { from_warehouse: { id: { in: assignedIds }, shop_id: shopId } },
+        { to_warehouse: { id: { in: assignedIds }, shop_id: shopId } },
       ];
     }
 
@@ -113,6 +119,20 @@ export async function POST(request: NextRequest) {
     if (deniedFrom) return deniedFrom;
     const deniedTo = await assertWarehouseAccessLive(session, to_warehouse_id);
     if (deniedTo) return deniedTo;
+
+    // Defense-in-depth alongside the access checks above: confirm both ends
+    // of the transfer actually belong to the caller's own shop, not just
+    // that the caller has a UserWarehouse grant for each.
+    const warehousesInShop = await prisma.warehouse.findMany({
+      where: {
+        id: { in: [from_warehouse_id, to_warehouse_id] },
+        shop_id: session!.user.shop_id!,
+      },
+      select: { id: true },
+    });
+    if (warehousesInShop.length !== 2) {
+      return NextResponse.json({ error: "Warehouse not found" }, { status: 404 });
+    }
 
     const transferQty = Number(quantity);
     if (!transferQty || transferQty <= 0) {

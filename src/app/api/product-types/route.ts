@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
 
     // Build where clause
-    const where: Prisma.ProductTypeWhereInput = {};
+    const where: Prisma.ProductTypeWhereInput = { shop_id: session!.user.shop_id! };
 
     if (type && type !== null) {
       const types = type.split(",").map((t) => t.trim());
@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     const denied = requirePermission(session, "settings.update");
     if (denied) return denied;
+    const shopId = session!.user.shop_id!;
 
     const body = await request.json();
     const { code, name_i18n, icon, /*  type, */ sort_order, is_active } = body;
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
 
     const productType = await prisma.productType.create({
       data: {
+        shop_id: shopId,
         code,
         name_i18n,
         icon,

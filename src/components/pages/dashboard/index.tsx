@@ -32,7 +32,7 @@ export default function DashboardContent({
   userRoles,
   userPermissions
 }: DashboardContentProps) {
-  const { t, status, stats, actions, warehouse, filterForm } = useDashboard()
+  const { t, status, stats, actions, warehouse, shop, filterForm } = useDashboard()
   const locale = useLocale() as Locale
 
   const currentDate = new Date().toLocaleDateString('th-TH', {
@@ -61,8 +61,28 @@ export default function DashboardContent({
               </div>
             </div>
             <div className="flex items-center gap-2 self-start">
+              {shop.isSuperAdmin && (
+                <DynamicFormFields<{ warehouseId: string; shopId: string }>
+                  fields={[
+                    {
+                      name: "shopId",
+                      type: INPUT_TYPES.SELECT,
+                      options: [
+                        { value: "all", label: t('allShops') },
+                        ...shop.shops.map((s) => ({
+                          value: s.id,
+                          label: s.name_i18n[locale],
+                        })),
+                      ],
+                      className: "py-2!",
+                    },
+                  ]}
+                  control={filterForm.control}
+                  errors={filterForm.errors}
+                />
+              )}
               {warehouse.warehouses.length > 0 && (
-                <DynamicFormFields<{ warehouseId: string }>
+                <DynamicFormFields<{ warehouseId: string; shopId: string }>
                   fields={[
                     {
                       name: "warehouseId",

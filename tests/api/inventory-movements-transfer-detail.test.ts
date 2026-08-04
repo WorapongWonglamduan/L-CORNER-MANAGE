@@ -23,7 +23,11 @@ describe("GET /api/inventory/movements - warehouse and transfer detail", () => {
   beforeEach(async () => {
     fx = await seedBasics(50);
     const other = await prisma.warehouse.create({
-      data: { code: `WHT2-${fx.userId.slice(0, 8)}`, name_i18n: { th: "คลัง 2", en: "Warehouse 2" } },
+      data: {
+        shop_id: fx.shopId,
+        code: `WHT2-${fx.userId.slice(0, 8)}`,
+        name_i18n: { th: "คลัง 2", en: "Warehouse 2" },
+      },
     });
     otherWarehouseId = other.id;
     await prisma.userWarehouse.create({
@@ -35,6 +39,7 @@ describe("GET /api/inventory/movements - warehouse and transfer detail", () => {
         userId: fx.userId,
         warehouseIds: [fx.warehouseId, otherWarehouseId],
         permissions: ["inventory.transfer", "inventory.view"],
+        shopId: fx.shopId,
       }),
     );
   });

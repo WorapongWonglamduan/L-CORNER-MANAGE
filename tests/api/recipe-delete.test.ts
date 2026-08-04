@@ -21,7 +21,7 @@ describe("DELETE /api/recipes/[id]", () => {
   beforeEach(async () => {
     fx = await seedBasics(10);
     mockedAuth.mockResolvedValue(
-      fakeSession({ userId: fx.userId, permissions: ["products.view", "products.update"] }),
+      fakeSession({ userId: fx.userId, shopId: fx.shopId, permissions: ["products.view", "products.update"] }),
     );
   });
 

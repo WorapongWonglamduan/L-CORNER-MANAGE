@@ -16,8 +16,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const topping = await prisma.topping.findUnique({
-      where: { id },
+    const topping = await prisma.topping.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       include: {
         ingredient: { select: { id: true, code: true, name_i18n: true, stock: true } },
         available_on: {
@@ -61,6 +61,7 @@ export async function PUT(
     const session = await auth();
     const denied = requirePermission(session, "products.update");
     if (denied) return denied;
+    const shopId = session!.user.shop_id!;
 
     const { id } = await params;
     const body = await request.json();
@@ -73,7 +74,9 @@ export async function PUT(
       product_ids,
     } = body;
 
-    const existing = await prisma.topping.findUnique({ where: { id } });
+    const existing = await prisma.topping.findFirst({
+      where: { id, shop_id: shopId },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Topping not found" }, { status: 404 });
     }
@@ -97,8 +100,8 @@ export async function PUT(
     // isn't equipped to handle (it deducts the product's own stock row
     // directly instead of exploding a recipe).
     if (ingredient_id !== undefined && ingredient_id !== existing.ingredient_id) {
-      const ingredient = await prisma.product.findUnique({
-        where: { id: ingredient_id },
+      const ingredient = await prisma.product.findFirst({
+        where: { id: ingredient_id, shop_id: shopId },
         include: { product_type: true },
       });
       if (!ingredient) {
@@ -107,6 +110,19 @@ export async function PUT(
       if (ingredient.product_type.type === PRODUCTS_TYPES.SEMI_FINISHED) {
         return NextResponse.json(
           { error: "A topping's ingredient must be a real stock item, not a semi-finished product" },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (Array.isArray(product_ids) && product_ids.length > 0) {
+      const availableProducts = await prisma.product.findMany({
+        where: { id: { in: product_ids }, shop_id: shopId },
+        select: { id: true },
+      });
+      if (availableProducts.length !== new Set(product_ids).size) {
+        return NextResponse.json(
+          { error: "One or more products were not found" },
           { status: 400 },
         );
       }
@@ -167,7 +183,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await prisma.topping.findUnique({ where: { id } });
+    const existing = await prisma.topping.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Topping not found" }, { status: 404 });
     }

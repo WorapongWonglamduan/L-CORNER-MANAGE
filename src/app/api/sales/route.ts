@@ -74,7 +74,14 @@ export async function GET(request: NextRequest) {
       where.payment_status = paymentStatus;
     }
 
-    where.warehouse_id = warehouseIdFilter;
+    // Defense-in-depth on top of the warehouse_ids scoping above: nest the
+    // filter through the warehouse relation so the resolved warehouse(s)
+    // must also belong to the caller's own shop. Post-migration this should
+    // already be structurally guaranteed (a user's warehouse_ids can only
+    // ever contain warehouses from their own shop_id), but this makes the
+    // guarantee explicit at the query itself rather than relying solely on
+    // that invariant holding elsewhere.
+    where.warehouse = { id: warehouseIdFilter, shop_id: session!.user.shop_id! };
 
     // startDate/endDate arrive as bare "yyyy-MM-dd" (see DateField, which
     // never adds a time or offset) — appending "T00:00:00" with no "Z"
@@ -177,6 +184,17 @@ export async function POST(request: NextRequest) {
       warehouse_id,
     );
     if (deniedWarehouse) return deniedWarehouse;
+
+    // Defense-in-depth alongside assertWarehouseAccessLive above: confirm
+    // the warehouse being sold from actually belongs to the caller's own
+    // shop, not just that the caller has a UserWarehouse grant for it.
+    const warehouseInShop = await prisma.warehouse.findFirst({
+      where: { id: warehouse_id, shop_id: session!.user.shop_id! },
+      select: { id: true },
+    });
+    if (!warehouseInShop) {
+      return NextResponse.json({ error: "Warehouse not found" }, { status: 404 });
+    }
 
     const { sale, isNew } = await createCompletedSale(
       body,
