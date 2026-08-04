@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get("isActive");
     const productId = searchParams.get("product_id");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { shop_id: session!.user.shop_id! };
 
     if (isActive !== null) {
       where.is_active = isActive === "true";
@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     const denied = requirePermission(session, "products.create");
     if (denied) return denied;
+    const shopId = session!.user.shop_id!;
 
     const body = await request.json();
     const {
@@ -120,8 +121,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ingredient = await prisma.product.findUnique({
-      where: { id: ingredient_id },
+    const ingredient = await prisma.product.findFirst({
+      where: { id: ingredient_id, shop_id: shopId },
       include: { product_type: true },
     });
 
@@ -139,8 +140,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (Array.isArray(product_ids) && product_ids.length > 0) {
+      const availableProducts = await prisma.product.findMany({
+        where: { id: { in: product_ids }, shop_id: shopId },
+        select: { id: true },
+      });
+      if (availableProducts.length !== new Set(product_ids).size) {
+        return NextResponse.json(
+          { error: "One or more products were not found" },
+          { status: 400 },
+        );
+      }
+    }
+
     const topping = await prisma.topping.create({
       data: {
+        shop_id: shopId,
         name_i18n,
         price,
         ingredient_id,

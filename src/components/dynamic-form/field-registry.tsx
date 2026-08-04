@@ -123,6 +123,9 @@ const imageUploadField: FieldRenderer = (field, rhf, opts) => (
     }
     disabled={opts.disabled}
     required={!!field.rules?.required}
+    imageUploadFolder={field.imageUploadFolder}
+    imageUploadEntityType={field.imageUploadEntityType}
+    imageUploadEntityId={field.imageUploadEntityId}
   />
 );
 

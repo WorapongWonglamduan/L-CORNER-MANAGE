@@ -42,8 +42,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const user = await prisma.user.findUnique({
-      where: { id },
+    const user = await prisma.user.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       select: USER_SAFE_SELECT,
     });
 
@@ -83,7 +83,9 @@ export async function PUT(
       warehouse_ids,
     } = body;
 
-    const existing = await prisma.user.findUnique({ where: { id } });
+    const existing = await prisma.user.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
     if (!existing) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -116,9 +118,20 @@ export async function PUT(
     // subset of the caller's own.
     if (role_ids !== undefined && Array.isArray(role_ids) && role_ids.length > 0) {
       const roles = await prisma.role.findMany({
-        where: { id: { in: role_ids } },
-        select: { permissions: true },
+        where: { id: { in: role_ids }, shop_id: session!.user.shop_id! },
+        select: { id: true, permissions: true },
       });
+      // Every requested role_id must resolve within the caller's own shop —
+      // otherwise a role_id from another shop would skip the permission
+      // check below entirely (its permissions wouldn't be in `roles`) while
+      // still landing in user_roles further down, since userRole.createMany
+      // has no shop check of its own.
+      if (roles.length !== role_ids.length) {
+        return NextResponse.json(
+          { error: "One or more roles were not found" },
+          { status: 400 },
+        );
+      }
       const grantedPermissions = new Set(
         roles.flatMap((r) => (Array.isArray(r.permissions) ? (r.permissions as string[]) : [])),
       );
@@ -130,6 +143,21 @@ export async function PUT(
             error: `Cannot assign a role granting permissions you don't hold yourself: ${ungranted.join(", ")}`,
           },
           { status: 403 },
+        );
+      }
+    }
+
+    // Same reasoning as the role_ids check above: a warehouse_id from
+    // another shop must not be silently attachable via userWarehouse.createMany.
+    if (warehouse_ids !== undefined && Array.isArray(warehouse_ids) && warehouse_ids.length > 0) {
+      const warehouses = await prisma.warehouse.findMany({
+        where: { id: { in: warehouse_ids }, shop_id: session!.user.shop_id! },
+        select: { id: true },
+      });
+      if (warehouses.length !== warehouse_ids.length) {
+        return NextResponse.json(
+          { error: "One or more warehouses were not found" },
+          { status: 400 },
         );
       }
     }
@@ -229,7 +257,9 @@ export async function DELETE(
       );
     }
 
-    const existing = await prisma.user.findUnique({ where: { id } });
+    const existing = await prisma.user.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
     if (!existing) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }

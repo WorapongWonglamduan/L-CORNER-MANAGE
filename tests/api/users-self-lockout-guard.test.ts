@@ -23,6 +23,7 @@ describe("Self-lockout guards on user management", () => {
     fx = await seedBasics(10);
     const role = await prisma.role.create({
       data: {
+        shop_id: fx.shopId,
         name: `admin-${fx.userId.slice(0, 8)}`,
         display_name_i18n: { th: "แอดมิน", en: "Admin" },
         permissions: ["users.update", "users.delete"],
@@ -34,6 +35,7 @@ describe("Self-lockout guards on user management", () => {
     mockedAuth.mockResolvedValue(
       fakeSession({
         userId: fx.userId,
+        shopId: fx.shopId,
         permissions: ["users.update", "users.delete"],
       }),
     );
@@ -91,6 +93,7 @@ describe("Self-lockout guards on user management", () => {
   it("still allows deactivating a DIFFERENT user", async () => {
     const other = await prisma.user.create({
       data: {
+        shop_id: fx.shopId,
         username: `other-${fx.userId.slice(0, 8)}`,
         email: `other-${fx.userId.slice(0, 8)}@example.com`,
         password: "not-a-real-hash",

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const isActive = searchParams.get("isActive");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { shop_id: session!.user.shop_id! };
 
     if (isActive !== null) {
       where.is_active = isActive === "true";
@@ -92,6 +92,9 @@ export async function POST(request: NextRequest) {
     if (denied) return denied;
 
     const body = await request.json();
+    // `is_super_admin` is intentionally never read from the body — a shop
+    // admin creating a user must never be able to grant super-admin via
+    // this endpoint.
     const { username, email, password, full_name, is_active } = body;
 
     if (!username || !email || !password || !full_name) {
@@ -121,6 +124,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
+        shop_id: session!.user.shop_id!,
         username,
         email,
         password: hashedPassword,

@@ -15,8 +15,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const category = await prisma.category.findUnique({
-      where: { id },
+    const category = await prisma.category.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       include: {
         _count: {
           select: { products: true },
@@ -50,14 +50,15 @@ export async function PUT(
     const session = await auth();
     const denied = requirePermission(session, "settings.update");
     if (denied) return denied;
+    const shopId = session!.user.shop_id!;
 
     const { id } = await params;
     const body = await request.json();
     const { name_i18n, parent_id, sort_order, is_active } = body;
 
     // Check if category exists
-    const existing = await prisma.category.findUnique({
-      where: { id },
+    const existing = await prisma.category.findFirst({
+      where: { id, shop_id: shopId },
     });
 
     if (!existing) {
@@ -85,8 +86,8 @@ export async function PUT(
           );
         }
         const ancestor: { parent_id: string | null } | null =
-          await prisma.category.findUnique({
-            where: { id: ancestorId },
+          await prisma.category.findFirst({
+            where: { id: ancestorId, shop_id: shopId },
             select: { parent_id: true },
           });
         ancestorId = ancestor?.parent_id ?? null;
@@ -126,8 +127,8 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if category exists
-    const category = await prisma.category.findUnique({
-      where: { id },
+    const category = await prisma.category.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
       include: {
         _count: {
           select: {

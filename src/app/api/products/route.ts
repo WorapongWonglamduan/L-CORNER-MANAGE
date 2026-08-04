@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: Prisma.ProductWhereInput = {
       deleted_at: null,
+      shop_id: session!.user.shop_id!,
     };
 
     if (unassigned) {
@@ -348,6 +349,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const shopId = session!.user.shop_id!;
+
     // Check if code already exists
     const existing = await prisma.product.findUnique({
       where: { code },
@@ -360,16 +363,85 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Recipes only ever make sense for SEMI_FINISHED products.
-    if (recipes && recipes.length > 0) {
-      const newProductType = await prisma.productType.findUnique({
-        where: { id: product_type_id },
+    // Verify the product type / base unit (and category, if given) actually
+    // belong to the caller's shop — otherwise a caller could attach another
+    // shop's category/type/unit to their product.
+    const newProductType = await prisma.productType.findFirst({
+      where: { id: product_type_id, shop_id: shopId },
+    });
+    if (!newProductType) {
+      return NextResponse.json(
+        { error: "Product type not found" },
+        { status: 400 },
+      );
+    }
+
+    const baseUnit = await prisma.unit.findFirst({
+      where: { id: base_unit_id, shop_id: shopId },
+    });
+    if (!baseUnit) {
+      return NextResponse.json(
+        { error: "Base unit not found" },
+        { status: 400 },
+      );
+    }
+
+    if (category_id) {
+      const category = await prisma.category.findFirst({
+        where: { id: category_id, shop_id: shopId },
       });
-      if (newProductType?.type !== PRODUCTS_TYPES.SEMI_FINISHED) {
+      if (!category) {
         return NextResponse.json(
-          { error: "Only semi-finished products can have recipes" },
+          { error: "Category not found" },
           { status: 400 },
         );
+      }
+    }
+
+    // Recipes only ever make sense for SEMI_FINISHED products.
+    if (
+      recipes &&
+      recipes.length > 0 &&
+      newProductType.type !== PRODUCTS_TYPES.SEMI_FINISHED
+    ) {
+      return NextResponse.json(
+        { error: "Only semi-finished products can have recipes" },
+        { status: 400 },
+      );
+    }
+
+    // Every ingredient/unit referenced by a nested recipe must belong to the
+    // caller's shop too — otherwise a recipe could attach another shop's
+    // ingredient product via a guessed id.
+    if (recipes && recipes.length > 0) {
+      const ingredientIds = new Set<string>();
+      const unitIds = new Set<string>();
+      for (const recipe of recipes as RecipeInput[]) {
+        for (const ing of recipe.ingredients ?? []) {
+          ingredientIds.add(ing.ingredient_id);
+          unitIds.add(ing.unit_id);
+        }
+      }
+      if (ingredientIds.size > 0) {
+        const [ownedIngredients, ownedUnits] = await Promise.all([
+          prisma.product.findMany({
+            where: { id: { in: [...ingredientIds] }, shop_id: shopId },
+            select: { id: true },
+          }),
+          prisma.unit.findMany({
+            where: { id: { in: [...unitIds] }, shop_id: shopId },
+            select: { id: true },
+          }),
+        ]);
+        if (
+          ownedIngredients.length !== ingredientIds.size ||
+          ownedUnits.length !== unitIds.size
+        ) {
+          return NextResponse.json(
+            { error: "One or more recipe ingredients or units were not found" },
+            { status: 400 },
+          );
+        }
       }
     }
 
@@ -377,6 +449,7 @@ export async function POST(request: NextRequest) {
     const product = await prisma.$transaction(async (tx) => {
       return await tx.product.create({
         data: {
+          shop_id: shopId,
           code,
           name_i18n,
           description_i18n: description_i18n || null,

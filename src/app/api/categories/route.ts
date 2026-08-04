@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get("isActive");
 
     // Build where clause
-    const where: Prisma.CategoryWhereInput = {};
+    const where: Prisma.CategoryWhereInput = { shop_id: session!.user.shop_id! };
 
     // Note: Cannot search by name_i18n directly with JSON field
     // Search functionality would need to be implemented differently
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     const denied = requirePermission(session, "settings.update");
     if (denied) return denied;
+    const shopId = session!.user.shop_id!;
 
     const body = await request.json();
     const { name_i18n, parent_id, sort_order, is_active } = body;
@@ -78,7 +79,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (parent_id) {
-      const parentExists = await prisma.category.findUnique({ where: { id: parent_id } });
+      const parentExists = await prisma.category.findUnique({
+        where: { id: parent_id, shop_id: shopId },
+      });
       if (!parentExists) {
         return NextResponse.json({ error: "Parent category not found" }, { status: 400 });
       }
@@ -86,6 +89,7 @@ export async function POST(request: NextRequest) {
 
     const category = await prisma.category.create({
       data: {
+        shop_id: shopId,
         name_i18n,
         parent_id: parent_id || null,
         sort_order: sort_order ? parseInt(sort_order) : 0,

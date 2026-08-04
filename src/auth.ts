@@ -65,6 +65,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             user_warehouses: {
               select: { warehouse_id: true },
             },
+            shop: {
+              select: { name_i18n: true, logo_path: true },
+            },
           },
         });
 
@@ -92,6 +95,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           id: user.id,
           name: user.full_name,
           email: user.email,
+          shop_id: user.shop_id,
+          shop_name_i18n: (user.shop?.name_i18n as { th?: string; en?: string } | null) ?? null,
+          shop_logo_path: user.shop?.logo_path ?? null,
+          is_super_admin: user.is_super_admin,
           roles,
           permissions: uniquePermissions,
           warehouse_ids: warehouseIds,
@@ -103,6 +110,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.shop_id = user.shop_id;
+        token.shop_name_i18n = user.shop_name_i18n;
+        token.shop_logo_path = user.shop_logo_path;
+        token.is_super_admin = user.is_super_admin;
         token.roles = user.roles;
         token.permissions = user.permissions;
         token.warehouse_ids = user.warehouse_ids;
@@ -112,6 +123,11 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     async session({ session, token }) {
       if (token && session.user) {
         if (token.id) session.user.id = token.id as string;
+        session.user.shop_id = (token.shop_id as string | null) ?? null;
+        session.user.shop_name_i18n =
+          (token.shop_name_i18n as { th?: string; en?: string } | null) ?? null;
+        session.user.shop_logo_path = (token.shop_logo_path as string | null) ?? null;
+        session.user.is_super_admin = !!token.is_super_admin;
         if (token.roles) session.user.roles = token.roles as string[];
         if (token.permissions)
           session.user.permissions = token.permissions as string[];

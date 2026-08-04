@@ -18,6 +18,16 @@ export async function PATCH(
     const deniedWarehouse = await assertWarehouseAccessLive(session, warehouse_id);
     if (deniedWarehouse) return deniedWarehouse;
 
+    // Verify the product belongs to the caller's shop before letting them
+    // toggle its visibility at this warehouse.
+    const product = await prisma.product.findFirst({
+      where: { id: product_id, shop_id: session!.user.shop_id! },
+      select: { id: true },
+    });
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
     const body = await request.json();
     const { is_active } = body;
 

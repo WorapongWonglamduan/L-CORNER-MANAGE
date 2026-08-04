@@ -28,28 +28,60 @@ enum DiscountType {
   fixed
 }
 
-model User {
+// A tenant. Everything else in this schema (branches/Warehouse, catalog,
+// users, roles) belongs to exactly one Shop — see [[l-corner-manage-status]]
+// for the multi-tenant restructuring this was introduced for.
+model Shop {
   id         String   @id @default(uuid())
-  username   String   @unique
-  email      String   @unique
-  password   String
-  full_name  String
+  name_i18n  Json
+  logo_path  String?
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  warehouses    Warehouse[]
+  users         User[]
+  categories    Category[]
+  products      Product[]
+  product_types ProductType[]
+  units         Unit[]
+  promotions    Promotion[]
+  toppings      Topping[]
+  roles         Role[]
+  app_settings  AppSettings?
+
+  @@map("shops")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  // Nullable: a super admin (is_super_admin = true) belongs to no shop and
+  // provisions new shops; every other user must have a shop_id.
+  shop_id        String?
+  username       String   @unique
+  email          String   @unique
+  password       String
+  full_name      String
+  is_active      Boolean  @default(true)
+  is_super_admin Boolean  @default(false)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  shop              Shop?           @relation(fields: [shop_id], references: [id])
   user_roles        UserRole[]
   user_warehouses   UserWarehouse[]
   created_sales     Sale[]          @relation("SaleCreatedBy")
   created_transfers StockTransfer[]
   created_refunds   SaleRefund[]    @relation("RefundCreatedBy")
 
+  @@index([shop_id])
   @@map("users")
 }
 
 model Role {
   id                String   @id @default(uuid())
-  name              String   @unique
+  shop_id           String
+  name              String
   display_name_i18n Json
   description_i18n  Json?
   permissions       Json     @default("[]")
@@ -58,8 +90,10 @@ model Role {
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
 
+  shop       Shop       @relation(fields: [shop_id], references: [id])
   user_roles UserRole[]
 
+  @@unique([shop_id, name])
   @@map("roles")
 }
 
@@ -95,6 +129,7 @@ model UserWarehouse {
 
 model Unit {
   id                String   @id @default(uuid())
+  shop_id           String
   name_i18n         Json
   abbreviation_i18n Json
   unit_type         String?
@@ -102,10 +137,12 @@ model Unit {
   is_active         Boolean  @default(true)
   created_at        DateTime @default(now())
 
+  shop               Shop               @relation(fields: [shop_id], references: [id])
   products_as_base   Product[]          @relation("BaseUnit")
   recipe_ingredients RecipeIngredient[]
   recipes            Recipe[]           @relation("ServingUnit")
 
+  @@index([shop_id])
   @@map("units")
 }
 
@@ -113,21 +150,33 @@ model Unit {
 
 model Category {
   id         String   @id @default(uuid())
+  shop_id    String
   name_i18n  Json
   parent_id  String?
   sort_order Int      @default(0)
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
 
+  shop     Shop       @relation(fields: [shop_id], references: [id])
   parent   Category?  @relation("CategoryTree", fields: [parent_id], references: [id])
   children Category[] @relation("CategoryTree")
   products Product[]
 
+  @@index([shop_id])
   @@map("categories")
 }
 
+// A DB-level partial unique index also exists on this table, outside
+// Prisma's schema (same idiom as the enum comment at the top of this file —
+// `prisma db push` doesn't manage it, so it survives untouched across
+// pushes): `CREATE UNIQUE INDEX warehouses_is_default_true_idx ON
+// warehouses (shop_id) WHERE (is_default = true)` — at most one default
+// warehouse per shop. Originally global (one default warehouse in the
+// whole system) from the single-shop era; rescoped to per-shop when the
+// Shop model was introduced, since every shop needs its own default.
 model Warehouse {
   id           String   @id @default(uuid())
+  shop_id      String
   code         String   @unique
   name_i18n    Json
   address      String?  @db.Text
@@ -138,6 +187,7 @@ model Warehouse {
   is_default   Boolean  @default(false)
   created_at   DateTime @default(now())
 
+  shop            Shop            @relation(fields: [shop_id], references: [id])
   sales           Sale[]
   stock           ProductStock[]
   transfers_out   StockTransfer[] @relation("TransferFrom")
@@ -145,6 +195,7 @@ model Warehouse {
   user_warehouses UserWarehouse[]
   payment_intents PaymentIntent[]
 
+  @@index([shop_id])
   @@map("warehouses")
 }
 
@@ -203,6 +254,7 @@ model StockTransfer {
 
 model Product {
   id               String  @id @default(uuid())
+  shop_id          String
   code             String  @unique
   name_i18n        Json
   description_i18n Json?
@@ -226,6 +278,7 @@ model Product {
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
 
+  shop                   Shop               @relation(fields: [shop_id], references: [id])
   category               Category?          @relation(fields: [category_id], references: [id])
   product_type           ProductType        @relation(fields: [product_type_id], references: [id])
   base_unit              Unit               @relation("BaseUnit", fields: [base_unit_id], references: [id])
@@ -238,6 +291,7 @@ model Product {
   stock                  ProductStock[]
   transfers              StockTransfer[]
 
+  @@index([shop_id])
   @@index([product_type_id])
   @@index([category_id])
   @@index([is_active])
@@ -292,6 +346,7 @@ model RecipeIngredient {
 // than per recipe.
 model Topping {
   id                   String   @id @default(uuid())
+  shop_id              String
   name_i18n            Json
   price                Decimal  @db.Decimal(15, 2)
   ingredient_id        String
@@ -300,10 +355,12 @@ model Topping {
   created_at           DateTime @default(now())
   updated_at           DateTime @updatedAt
 
+  shop               Shop              @relation(fields: [shop_id], references: [id])
   ingredient         Product           @relation("ToppingIngredientProduct", fields: [ingredient_id], references: [id])
   available_on       ProductTopping[]
   sale_item_toppings SaleItemTopping[]
 
+  @@index([shop_id])
   @@index([ingredient_id])
   @@map("toppings")
 }
@@ -509,6 +566,7 @@ model SaleItemTopping {
 // discounts, an optional usage cap, and an optional expiry date.
 model Promotion {
   id             String       @id @default(uuid())
+  shop_id        String
   code           String       @unique
   name_i18n      Json
   discount_type  DiscountType
@@ -520,13 +578,16 @@ model Promotion {
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
 
+  shop  Shop   @relation(fields: [shop_id], references: [id])
   sales Sale[]
 
+  @@index([shop_id])
   @@map("promotions")
 }
 
 model ProductType {
   id         String   @id @default(uuid())
+  shop_id    String
   name_i18n  Json
   code       String   @unique
   icon       String?
@@ -544,8 +605,10 @@ model ProductType {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  shop     Shop      @relation(fields: [shop_id], references: [id])
   products Product[]
 
+  @@index([shop_id])
   @@map("product_types")
 }
 
@@ -646,15 +709,17 @@ model ProductMedia {
   @@map("product_media")
 }
 
-// Singleton row (always id "singleton") holding shared, org-wide app
+// One row per shop, keyed by shop_id — holding that shop's theme
 // preferences. Starts with just the selectable theme color; a real
 // key-value settings table would be premature until a second setting exists.
 model AppSettings {
-  id                String   @id @default("singleton")
+  shop_id           String   @id
   theme_color       String   @default("#213559")
   theme_color_light String   @default("#2c4a7a")
   theme_color_dark  String   @default("#1a2844")
   updated_at        DateTime @updatedAt
+
+  shop Shop @relation(fields: [shop_id], references: [id], onDelete: Cascade)
 
   @@map("app_settings")
 }

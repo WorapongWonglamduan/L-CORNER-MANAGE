@@ -34,6 +34,7 @@ describe("POST /api/sales/[id]/refund", () => {
     mockedAuth.mockResolvedValue(
       fakeSession({
         userId: fx.userId,
+        shopId: fx.shopId,
         warehouseIds: [fx.warehouseId],
         permissions: ["sales.create", "sales.refund", "sales.view", "sales.void"],
       }),
@@ -322,6 +323,7 @@ describe("POST /api/sales/[id]/refund - promotion usage release", () => {
     mockedAuth.mockResolvedValue(
       fakeSession({
         userId: fx.userId,
+        shopId: fx.shopId,
         warehouseIds: [fx.warehouseId],
         permissions: ["sales.create", "sales.refund", "sales.view"],
       }),
@@ -329,6 +331,7 @@ describe("POST /api/sales/[id]/refund - promotion usage release", () => {
 
     const promotion = await prisma.promotion.create({
       data: {
+        shop_id: fx.shopId,
         // Uppercase — POST /api/sales normalizes the incoming code to
         // uppercase before looking it up, so a lowercase-hex UUID slice
         // here would never match.

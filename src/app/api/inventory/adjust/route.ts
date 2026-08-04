@@ -32,6 +32,17 @@ export async function POST(request: NextRequest) {
     const deniedWarehouse = await assertWarehouseAccessLive(session, warehouse_id);
     if (deniedWarehouse) return deniedWarehouse;
 
+    // Defense-in-depth alongside assertWarehouseAccessLive above: confirm
+    // the warehouse being adjusted actually belongs to the caller's own
+    // shop, not just that the caller has a UserWarehouse grant for it.
+    const warehouseInShop = await prisma.warehouse.findFirst({
+      where: { id: warehouse_id, shop_id: session!.user.shop_id! },
+      select: { id: true },
+    });
+    if (!warehouseInShop) {
+      return NextResponse.json({ error: "Warehouse not found" }, { status: 404 });
+    }
+
     // Get current product stock at this warehouse
     const product = await prisma.product.findUnique({
       where: { id: product_id },

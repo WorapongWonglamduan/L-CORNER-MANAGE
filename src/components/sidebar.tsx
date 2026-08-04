@@ -8,6 +8,7 @@ import {
   Package,
   FileText,
   Warehouse,
+  Building2,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -47,6 +48,14 @@ export function Sidebar({ userName }: SidebarProps) {
   const permissions = session?.user?.permissions ?? [];
   const displayName = userName ?? session?.user?.name ?? undefined;
   const roles = session?.user?.roles ?? [];
+  const isSuperAdmin = session?.user?.is_super_admin ?? false;
+  const shopNameI18n = session?.user?.shop_name_i18n ?? null;
+  const shopName =
+    (locale === "en" ? shopNameI18n?.en : shopNameI18n?.th) ??
+    shopNameI18n?.th ??
+    shopNameI18n?.en ??
+    null;
+  const shopLogoPath = session?.user?.shop_logo_path ?? null;
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -92,6 +101,16 @@ export function Sidebar({ userName }: SidebarProps) {
       icon: Settings,
       permission: "settings.view",
     },
+    ...(isSuperAdmin
+      ? [
+          {
+            href: ROUTES.ADMIN.SHOPS(locale),
+            label: tNav("shops"),
+            icon: Building2,
+            permission: null,
+          },
+        ]
+      : []),
   ];
 
   const navItems = allNavItems.filter(
@@ -144,11 +163,24 @@ export function Sidebar({ userName }: SidebarProps) {
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center shrink-0">
-                <span className="text-2xl font-bold text-white">L</span>
+              <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                {shopLogoPath ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={shopLogoPath}
+                    alt={shopName ?? ""}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl font-bold text-white">
+                    {(shopName ?? "L").charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className={isCollapsed ? "md:hidden" : ""}>
-                <h1 className="text-lg font-bold text-white">{t("title")}</h1>
+                <h1 className="text-lg font-bold text-white truncate max-w-36" title={shopName ?? undefined}>
+                  {shopName ?? t("title")}
+                </h1>
               </div>
             </div>
             <button

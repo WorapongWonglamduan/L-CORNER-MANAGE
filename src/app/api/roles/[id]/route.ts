@@ -16,7 +16,9 @@ export async function GET(
 
     const { id } = await params;
 
-    const role = await prisma.role.findUnique({ where: { id } });
+    const role = await prisma.role.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
 
     if (!role) {
       return NextResponse.json({ error: "Role not found" }, { status: 404 });
@@ -47,8 +49,9 @@ export async function PUT(
     // `is_system` is intentionally ignored — it can never be changed via this endpoint.
     const { name, display_name_i18n, description_i18n, permissions, is_active } =
       body;
+    const shopId = session!.user.shop_id!;
 
-    const existing = await prisma.role.findUnique({ where: { id } });
+    const existing = await prisma.role.findFirst({ where: { id, shop_id: shopId } });
     if (!existing) {
       return NextResponse.json({ error: "Role not found" }, { status: 404 });
     }
@@ -91,7 +94,7 @@ export async function PUT(
         );
       }
       const conflict = await prisma.role.findFirst({
-        where: { id: { not: id }, name },
+        where: { id: { not: id }, shop_id: shopId, name },
       });
       if (conflict) {
         return NextResponse.json(
@@ -134,7 +137,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await prisma.role.findUnique({ where: { id } });
+    const existing = await prisma.role.findFirst({
+      where: { id, shop_id: session!.user.shop_id! },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Role not found" }, { status: 404 });
     }
