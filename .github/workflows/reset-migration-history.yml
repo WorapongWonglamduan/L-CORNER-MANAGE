@@ -1,0 +1,92 @@
+name: Reset DB and apply Prisma migration history (one-time)
+
+# Manual-only, click-to-run tool for the one-time cutover to real Prisma
+# Migrate history (see [[prisma-migration-safety]]). Every environment
+# (local dev, local test, UAT, prod) was schema-synced with `prisma db
+# push` up to this point, so none of them have a `_prisma_migrations` table
+# that matches `prisma/migrations/` — applying the history cleanly needs an
+# empty database first. This is authorized to fully wipe the target
+# database (including prod) because the system has no real users/data in
+# production yet — see the "ใช่ reset ทั้ง 3 ที่ (local/UAT/prod)" decision.
+#
+# Not part of the regular deploy pipeline — this only ever needs to run
+# ONCE per environment. After this, the recurring `migrate-db` job in
+# deploy.yml (`prisma migrate deploy`) is all that's needed for schema
+# changes going forward. Gated behind the same GitHub Environment approval
+# as migrate-db, so an actual human approves the wipe from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Which stack's database to reset"
+        required: true
+        type: choice
+        options:
+          - uat
+          - prod
+        default: uat
+      seed:
+        description: "Seed demo data (admin user, roles, sample products) after reset"
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment == 'prod' && 'production-db-migrate' || 'uat-db-migrate' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Resolve this environment's DB port/name on the VPS
+        run: |
+          if [ "${{ inputs.environment }}" = "prod" ]; then
+            echo "VPS_DB_PORT=${{ vars.PROD_DB_PORT || '5435' }}" >> "$GITHUB_ENV"
+            echo "VPS_DB_DATABASE=${{ vars.PROD_DB_DATABASE || 'l_corner_pos' }}" >> "$GITHUB_ENV"
+          else
+            echo "VPS_DB_PORT=${{ vars.UAT_DB_PORT || '5436' }}" >> "$GITHUB_ENV"
+            echo "VPS_DB_DATABASE=${{ vars.UAT_DB_DATABASE || 'l_corner_pos_uat' }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Open SSH tunnel to the VPS's Postgres
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -f -N \
+            -L 5433:127.0.0.1:${{ env.VPS_DB_PORT }} \
+            -i ~/.ssh/deploy_key \
+            ${{ secrets.VPS_SSH_USER }}@${{ secrets.VPS_HOST }}
+          sleep 3
+
+      # Drops every table (including whatever `_prisma_migrations` rows
+      # exist from the old db-push era) and recreates an empty public
+      # schema, then applies prisma/migrations/ from scratch. Approving
+      # this job from the Actions tab IS the human sign-off — no
+      # PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION var is needed here since
+      # that guard only fires for Prisma CLI runs it detects as driven by an
+      # AI coding agent, not a CI job.
+      - name: Reset database and apply migration history
+        run: npx prisma migrate reset --force
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_DATABASE: ${{ env.VPS_DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.VPS_DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.VPS_DB_PASSWORD }}
+
+      - name: Seed demo data
+        if: ${{ inputs.seed }}
+        run: npx tsx prisma/seed.ts
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_DATABASE: ${{ env.VPS_DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.VPS_DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.VPS_DB_PASSWORD }}

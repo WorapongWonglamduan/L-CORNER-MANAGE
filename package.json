@@ -9,8 +9,8 @@
     "start": "next start -p 3077",
     "lint": "eslint",
     "db:generate": "prisma generate",
-    "db:push": "node scripts/db-push.js",
-    "db:migrate": "node scripts/db-push.js",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test": "vitest run"
