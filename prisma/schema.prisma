@@ -167,11 +167,14 @@ model Category {
 }
 
 // A DB-level partial unique index also exists on this table, outside
-// Prisma's schema (same idiom as the enum comment at the top of this file —
-// `prisma db push` doesn't manage it, so it survives untouched across
-// pushes): `CREATE UNIQUE INDEX warehouses_is_default_true_idx ON
-// warehouses (shop_id) WHERE (is_default = true)` — at most one default
-// warehouse per shop. Originally global (one default warehouse in the
+// Prisma's schema (partial/filtered indexes aren't expressible in the
+// Prisma schema DSL — no WHERE clause on @@unique/@@index): `CREATE UNIQUE
+// INDEX warehouses_is_default_true_idx ON warehouses (shop_id) WHERE
+// (is_default = true)` — at most one default warehouse per shop. Hand-added
+// as raw SQL to the `20260804154812_init_multi_tenant` migration, per
+// Prisma's documented "customizing migrations" pattern for unsupported
+// features — future `prisma migrate dev` runs treat it as part of history
+// and won't try to drop it. Originally global (one default warehouse in the
 // whole system) from the single-shop era; rescoped to per-shop when the
 // Shop model was introduced, since every shop needs its own default.
 model Warehouse {
