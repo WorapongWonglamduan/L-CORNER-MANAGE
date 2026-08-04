@@ -82,7 +82,7 @@ export async function PUT(
 
     if (code && code !== existing.code) {
       const codeExists = await prisma.warehouse.findUnique({
-        where: { code },
+        where: { shop_id_code: { shop_id: existing.shop_id, code } },
       });
       if (codeExists) {
         return NextResponse.json(
