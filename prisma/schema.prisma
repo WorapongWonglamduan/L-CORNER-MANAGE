@@ -180,7 +180,7 @@ model Category {
 model Warehouse {
   id           String   @id @default(uuid())
   shop_id      String
-  code         String   @unique
+  code         String
   name_i18n    Json
   address      String?  @db.Text
   latitude     Float?
@@ -198,7 +198,7 @@ model Warehouse {
   user_warehouses UserWarehouse[]
   payment_intents PaymentIntent[]
 
-  @@index([shop_id])
+  @@unique([shop_id, code])
   @@map("warehouses")
 }
 
