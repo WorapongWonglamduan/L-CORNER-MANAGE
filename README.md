@@ -55,7 +55,7 @@ cp env.template .env
 
 # 5. Setup database
 npm run db:generate
-npm run db:push
+npm run db:deploy
 npm run db:seed
 
 # 6. Run development server
@@ -79,7 +79,7 @@ docker-compose up -d
 
 # 4. Setup database (รอ container พร้อมก่อน ~10 วินาที)
 npm run db:generate
-npm run db:push
+npm run db:deploy
 npm run db:seed
 ```
 
@@ -149,8 +149,8 @@ DB_PASSWORD=postgres
 # 1. Generate Prisma Client
 npm run db:generate
 
-# 2. Push schema to database
-npm run db:push
+# 2. Apply migration history to the database
+npm run db:deploy
 
 # 3. Seed initial data (admin user, roles, etc.)
 npm run db:seed
@@ -245,8 +245,8 @@ docker-compose down -v
 | `npm start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm run db:generate` | Generate Prisma Client |
-| `npm run db:push` | Push schema to database (development) |
-| `npm run db:migrate` | Run database migrations |
+| `npm run db:migrate` | Create + apply a new migration (development) |
+| `npm run db:deploy` | Apply pending migrations, no prompts (CI/production) |
 | `npm run db:seed` | Seed database with initial data |
 | `npm run db:studio` | Open Prisma Studio (database GUI) |
 
@@ -461,14 +461,12 @@ git push origin feature/your-feature
 ```bash
 # 1. แก้ไข prisma/schema.prisma
 
-# 2. Push schema (development)
-npm run db:push
-
-# 3. Generate Prisma Client
-npm run db:generate
-
-# 4. (Optional) Create migration
+# 2. Create + apply the migration (generates prisma/migrations/<timestamp>_your_migration_name/)
 npx prisma migrate dev --name your_migration_name
+
+# 3. Generate Prisma Client (migrate dev usually does this automatically, but
+# re-run if the client seems stale)
+npm run db:generate
 ```
 
 ### 3. Add New Translation

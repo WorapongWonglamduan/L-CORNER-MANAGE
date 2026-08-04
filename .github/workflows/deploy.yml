@@ -53,10 +53,15 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # db push alone doesn't regenerate the client here, and @prisma/client
-      # is unusable (no .prisma/client/default) until this has run.
+      # migrate deploy alone doesn't regenerate the client here, and
+      # @prisma/client is unusable (no .prisma/client/default) until this
+      # has run.
       - run: npx prisma generate
-      - run: npx prisma db push --url="postgresql://postgres:postgres@localhost:5435/l_corner_pos_test?schema=public"
+      # Applies the committed migration history as-is (job-level env above
+      # already points this at the ephemeral test DB) — no --accept-
+      # data-loss, no interactive prompts, so a migration that can't apply
+      # cleanly fails the job loudly instead of silently reshaping data.
+      - run: npx prisma migrate deploy
       - run: npm test
 
   build-and-push:
@@ -121,20 +126,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Applies pending prisma/schema.prisma changes to the real DB before the
-  # new image (which may expect the new schema) goes live. Gated behind a
-  # GitHub Environment with required reviewers — configure this once in
-  # Settings → Environments (production-db-migrate / uat-db-migrate) — so an
-  # actual human approves every real-DB schema change from the Actions tab,
-  # the same review step Prisma's own AI-agent guard enforces for --accept-
-  # data-loss locally. Deliberately runs plain `prisma db push` with NO
-  # --accept-data-loss: an additive-safe change (a new nullable column, a
-  # new table) applies automatically once approved; anything Prisma flags as
-  # lossy makes this step fail loudly instead of silently applying, and
-  # needs a deliberate manual `db push --accept-data-loss` run instead (see
-  # [[prisma-migration-safety]]) — same as the multi-tenant Shop migration's
-  # nullable-column -> backfill-script -> required-column dance, which this
-  # step alone could never safely automate.
+  # Applies pending, already-committed migrations (prisma/migrations/*) to
+  # the real DB before the new image (which may expect the new schema) goes
+  # live. Gated behind a GitHub Environment with required reviewers —
+  # configure this once in Settings → Environments (production-db-migrate /
+  # uat-db-migrate) — so an actual human approves every real-DB schema
+  # change from the Actions tab. Runs `prisma migrate deploy`, which only
+  # ever applies migration files that are already in the repo and were
+  # already reviewed as a normal PR diff — any judgment call about whether a
+  # change is safe/lossy happens locally when the migration is authored
+  # (`prisma migrate dev`), not here. See [[prisma-migration-safety]].
   migrate-db:
     needs: build-and-push
     if: github.event_name != 'pull_request'
@@ -177,7 +178,7 @@ jobs:
           # Prisma tries to connect through it.
           sleep 3
 
-      - run: npx prisma db push
+      - run: npx prisma migrate deploy
         env:
           DB_HOST: localhost
           DB_PORT: 5433
