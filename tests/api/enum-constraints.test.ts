@@ -38,9 +38,14 @@ describe("DB-level enum constraints", () => {
   });
 
   it("rejects an invalid Promotion.discount_type value at the database level", async () => {
+    const shop = await prisma.shop.create({
+      data: { name_i18n: { th: "ร้านทดสอบ", en: "Test Shop" }, is_active: true },
+    });
+
     await expect(
       prisma.promotion.create({
         data: {
+          shop_id: shop.id,
           code: "BADTYPE",
           name_i18n: { th: "โปร", en: "Promo" },
           // @ts-expect-error intentionally invalid to prove the DB rejects it
