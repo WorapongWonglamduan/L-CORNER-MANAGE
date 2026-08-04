@@ -12,7 +12,7 @@
 3. เปิด Postgres ในเครื่อง — **เช็ค port ให้ตรงกันก่อน**: `docker-compose.yml` map port `5436:5432` แต่ `.env` เขียน `DB_PORT=5435` (ไม่ตรงกัน) แก้ให้ตรงกันอย่างใดอย่างหนึ่งก่อน (แก้ `docker-compose.yml` เป็น `5435:5432` ให้ตรงกับ `.env` ง่ายสุด) แล้ว `docker compose up -d`
 4. `npm install`
 5. `npx prisma generate` — จำเป็นถ้า schema เปลี่ยนไปจากเดิม (เช่น branch `feature/qr-payment-customer-display` มี `promptpay_id` เพิ่ม)
-6. `npm run db:push` — สร้าง/อัปเดตตารางให้ตรงกับ `prisma/schema.prisma` ปัจจุบัน — **ห้ามใช้ `prisma migrate dev`** (migration history ในโปรเจกต์นี้ไม่ตรงกับ DB จริง จะถูกชวนให้ reset)
+6. `npx prisma migrate deploy` — สร้างตารางตาม migration history ใน `prisma/migrations/` (มี history จริงแล้ว ไม่ต้องใช้ `db push` อีกต่อไป)
 7. `npm run db:seed` — ล้างข้อมูลเก่าทั้งหมดแล้วสร้างข้อมูลตัวอย่างใหม่ทั้งชุด (users/roles/warehouses/products/recipes/promotions ฯลฯ) ใช้ได้เลยกับ DB เปล่าๆ ไม่ต้องมีข้อมูลเดิมมาก่อน
 8. `npm run dev` (รันที่ port 3077)
 9. Login ทดสอบด้วย `admin@lcorner.local` / `admin123` (มาจาก `prisma/seed.ts`)
