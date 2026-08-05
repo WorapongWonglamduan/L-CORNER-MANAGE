@@ -4,7 +4,6 @@ import { parsePageSize } from "@/lib/pagination";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
-import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 // GET /api/product-types - ดึงรายการประเภทสินค้าทั้งหมด
 export async function GET(request: NextRequest) {
@@ -76,62 +75,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/product-types - สร้างประเภทสินค้าใหม่
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    const denied = requirePermission(session, "settings.update");
-    if (denied) return denied;
-    const shopId = session!.user.shop_id!;
-
-    const body = await request.json();
-    const { code, name_i18n, icon, sort_order, is_active } = body;
-
-    // Validation
-    if (!code || !name_i18n) {
-      return NextResponse.json(
-        { error: "Code and name are required" },
-        { status: 400 },
-      );
-    }
-
-    // Check if code already exists within this shop (code is only unique
-    // per shop_id, not system-wide — see @@unique([shop_id, code]))
-    const existing = await prisma.productType.findFirst({
-      where: { code, shop_id: shopId },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "Product type code already exists" },
-        { status: 400 },
-      );
-    }
-
-    // `type` (semi_finished/finished_good/ingredient/container) isn't a
-    // field on this form — it drives recipe/stock logic elsewhere in the
-    // app (see products/form/helper.tsx, api/products/route.ts), so it's
-    // provisioned automatically per shop (api/admin/shops/route.ts) rather
-    // than left for a shop admin to invent through this endpoint. Anything
-    // created here is the generic, functionally-inert "product" type.
-    const productType = await prisma.productType.create({
-      data: {
-        shop_id: shopId,
-        code,
-        name_i18n,
-        icon,
-        type: PRODUCTS_TYPES.PRODUCT,
-        sort_order: sort_order ? parseInt(sort_order) : 0,
-        is_active: is_active ?? true,
-      },
-    });
-
-    return NextResponse.json(productType, { status: 201 });
-  } catch (error) {
-    console.error("Error creating product type:", error);
-    return NextResponse.json(
-      { error: "Failed to create product type" },
-      { status: 500 },
-    );
-  }
+// POST /api/product-types - ปิดการสร้างประเภทสินค้าเอง
+//
+// The 4 product types a shop needs (ingredient/semi_finished/finished_good/
+// container) are provisioned once, automatically, when the shop is created
+// (api/admin/shops/route.ts) and never change — `type` drives recipe/stock
+// logic elsewhere (products/form/helper.tsx, api/products/route.ts), so a
+// shop admin inventing new ones here has no way to give them working
+// behavior, and deleting/editing the real ones would break product
+// creation. This endpoint is read-only by design; there is no create path.
+export async function POST() {
+  return NextResponse.json(
+    { error: "Product types are managed by the system and cannot be created" },
+    { status: 403 },
+  );
 }
