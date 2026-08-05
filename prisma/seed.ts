@@ -268,7 +268,7 @@ async function main() {
 
   console.log("🏷️ Creating product types...");
   const productTypeIngredient = await prisma.productType.upsert({
-    where: { code: "INGREDIENT" },
+    where: { shop_id_code: { shop_id: lcornerShop.id, code: "INGREDIENT" } },
     update: {},
     create: {
       shop_id: lcornerShop.id,
@@ -282,7 +282,7 @@ async function main() {
   });
 
   const productTypeSemiFinished = await prisma.productType.upsert({
-    where: { code: "SEMI_FINISHED" },
+    where: { shop_id_code: { shop_id: lcornerShop.id, code: "SEMI_FINISHED" } },
     update: {},
     create: {
       shop_id: lcornerShop.id,
@@ -296,7 +296,7 @@ async function main() {
   });
 
   const productTypeFinishedGood = await prisma.productType.upsert({
-    where: { code: "FINISHED_GOOD" },
+    where: { shop_id_code: { shop_id: lcornerShop.id, code: "FINISHED_GOOD" } },
     update: {},
     create: {
       shop_id: lcornerShop.id,
@@ -310,14 +310,14 @@ async function main() {
   });
 
   const productTypeContainer = await prisma.productType.upsert({
-    where: { code: "CONTAINER" },
+    where: { shop_id_code: { shop_id: lcornerShop.id, code: "CONTAINER" } },
     update: {},
     create: {
       shop_id: lcornerShop.id,
       code: "CONTAINER",
       name_i18n: { th: "ภาชนะ", en: "Container" },
       icon: "cup-soda",
-      type: "ingredient",
+      type: "container",
       sort_order: 4,
       is_active: true,
     },

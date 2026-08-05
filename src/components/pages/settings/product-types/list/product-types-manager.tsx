@@ -14,11 +14,19 @@ import { DetailRow } from "@/components/ui/detail-row";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useProductTypesManager } from "./helper";
 import { getProductTypeFormConfig } from "../form/config";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
+
+const TYPE_LABEL_KEY: Record<string, string> = {
+  [PRODUCTS_TYPES.PRODUCT]: "typeProduct",
+  [PRODUCTS_TYPES.SEMI_FINISHED]: "typeSemiFinished",
+  [PRODUCTS_TYPES.FINISHED_GOOD]: "typeFinishedGood",
+  [PRODUCTS_TYPES.INGREDIENT]: "typeIngredient",
+  [PRODUCTS_TYPES.CONTAINER]: "typeContainer",
+};
 
 export default function ProductTypesManager() {
   const {
     t,
-    locale,
     table: { types, loading, totalItems, totalPages },
     filters,
     pagination: { handlePageChange, handlePageSizeChange },
@@ -109,7 +117,7 @@ export default function ProductTypesManager() {
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getTypeBadgeColor(productType.id)}`}
                       >
-                        {productType.name_i18n[locale]}
+                        {t(TYPE_LABEL_KEY[productType.type] ?? "typeProduct")}
                       </span>
                     }
                   />
