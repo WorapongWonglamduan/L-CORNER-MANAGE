@@ -424,6 +424,8 @@
       "typeProduct": "Product",
       "typeSemiFinished": "Semi-Finished",
       "typeFinishedGood": "Finished Good",
+      "typeIngredient": "Ingredient",
+      "typeContainer": "Container",
       "sortOrder": "Sort Order",
       "sortOrderPlaceholder": "0",
       "sortOrderMin": "Sort order must be greater than or equal to 0",

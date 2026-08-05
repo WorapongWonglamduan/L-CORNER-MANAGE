@@ -555,6 +555,8 @@
       "typeProduct": "สินค้า",
       "typeSemiFinished": "สินค้ากึ่งสำเร็จรูป",
       "typeFinishedGood": "สินค้าสำเร็จรูป",
+      "typeIngredient": "วัตถุดิบ",
+      "typeContainer": "ภาชนะ",
       "sortOrder": "ลำดับการแสดง",
       "sortOrderPlaceholder": "0",
       "sortOrderMin": "ลำดับต้องมากกว่าหรือเท่ากับ 0",
