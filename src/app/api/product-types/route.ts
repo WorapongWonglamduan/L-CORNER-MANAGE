@@ -4,6 +4,7 @@ import { parsePageSize } from "@/lib/pagination";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 // GET /api/product-types - ดึงรายการประเภทสินค้าทั้งหมด
 export async function GET(request: NextRequest) {
@@ -84,27 +85,20 @@ export async function POST(request: NextRequest) {
     const shopId = session!.user.shop_id!;
 
     const body = await request.json();
-    const { code, name_i18n, icon, /*  type, */ sort_order, is_active } = body;
+    const { code, name_i18n, icon, sort_order, is_active } = body;
 
     // Validation
-    if (!code || !name_i18n /* || !type */) {
+    if (!code || !name_i18n) {
       return NextResponse.json(
-        { error: "Code, name, and type are required" },
+        { error: "Code and name are required" },
         { status: 400 },
       );
     }
 
-    // Validate type
-    // if (!["raw_material", "product", "semi_finished", "finished_good"].includes(type)) {
-    //   return NextResponse.json(
-    //     { error: "Type must be 'raw_material', 'product', 'semi_finished', or 'finished_good'" },
-    //     { status: 400 },
-    //   );
-    // }
-
-    // Check if code already exists
-    const existing = await prisma.productType.findUnique({
-      where: { code },
+    // Check if code already exists within this shop (code is only unique
+    // per shop_id, not system-wide — see @@unique([shop_id, code]))
+    const existing = await prisma.productType.findFirst({
+      where: { code, shop_id: shopId },
     });
 
     if (existing) {
@@ -114,13 +108,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // `type` (semi_finished/finished_good/ingredient/container) isn't a
+    // field on this form — it drives recipe/stock logic elsewhere in the
+    // app (see products/form/helper.tsx, api/products/route.ts), so it's
+    // provisioned automatically per shop (api/admin/shops/route.ts) rather
+    // than left for a shop admin to invent through this endpoint. Anything
+    // created here is the generic, functionally-inert "product" type.
     const productType = await prisma.productType.create({
       data: {
         shop_id: shopId,
         code,
         name_i18n,
         icon,
-        // type,
+        type: PRODUCTS_TYPES.PRODUCT,
         sort_order: sort_order ? parseInt(sort_order) : 0,
         is_active: is_active ?? true,
       },
