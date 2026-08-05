@@ -5,6 +5,7 @@ import { parsePageSize } from "@/lib/pagination";
 import { auth } from "@/auth";
 import { requireSuperAdmin } from "@/lib/permissions";
 import { ALL_PERMISSIONS } from "@/constants/permissions";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { Prisma } from "@prisma/client";
 
 // GET /api/admin/shops - list every shop (super admin only)
@@ -178,6 +179,50 @@ export async function POST(request: NextRequest) {
           is_active: true,
           is_default: true,
         },
+      });
+
+      // Every shop needs these 4 classifications to exist before it can
+      // create a single product — products/form/helper.tsx only offers
+      // semi_finished/finished_good product types in its dropdown, and
+      // ingredients-and-containers/toppings pages filter by
+      // ingredient/container. A shop with none of these can't create
+      // products at all (see product-types settings form, which
+      // deliberately doesn't let admins pick `type` themselves).
+      await tx.productType.createMany({
+        data: [
+          {
+            shop_id: shop.id,
+            code: "INGREDIENT",
+            name_i18n: { th: "วัตถุดิบ", en: "Ingredient" },
+            icon: "package",
+            type: PRODUCTS_TYPES.INGREDIENT,
+            sort_order: 1,
+          },
+          {
+            shop_id: shop.id,
+            code: "SEMI_FINISHED",
+            name_i18n: { th: "กึ่งสำเร็จรูป", en: "Semi-Finished" },
+            icon: "box",
+            type: PRODUCTS_TYPES.SEMI_FINISHED,
+            sort_order: 2,
+          },
+          {
+            shop_id: shop.id,
+            code: "FINISHED_GOOD",
+            name_i18n: { th: "สินค้าสำเร็จรูป", en: "Finished Good" },
+            icon: "check-circle",
+            type: PRODUCTS_TYPES.FINISHED_GOOD,
+            sort_order: 3,
+          },
+          {
+            shop_id: shop.id,
+            code: "CONTAINER",
+            name_i18n: { th: "ภาชนะ", en: "Container" },
+            icon: "cup-soda",
+            type: PRODUCTS_TYPES.CONTAINER,
+            sort_order: 4,
+          },
+        ],
       });
 
       const owner = await tx.user.create({

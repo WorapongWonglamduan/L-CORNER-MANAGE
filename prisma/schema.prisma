@@ -592,7 +592,7 @@ model ProductType {
   id         String   @id @default(uuid())
   shop_id    String
   name_i18n  Json
-  code       String   @unique
+  code       String
   icon       String?
   // Stale comment fixed: actual values are PRODUCTS_TYPES in
   // src/constants/input-types.ts — "product" | "semi_finished" |
@@ -611,7 +611,7 @@ model ProductType {
   shop     Shop      @relation(fields: [shop_id], references: [id])
   products Product[]
 
-  @@index([shop_id])
+  @@unique([shop_id, code])
   @@map("product_types")
 }
 

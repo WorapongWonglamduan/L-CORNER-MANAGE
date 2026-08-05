@@ -77,10 +77,12 @@ export async function PUT(
       );
     }
 
-    // Check if code is being changed and if new code already exists
+    // Check if code is being changed and if new code already exists within
+    // this shop (code is only unique per shop_id, not system-wide — see
+    // @@unique([shop_id, code]))
     if (code && code !== existing.code) {
-      const codeExists = await prisma.productType.findUnique({
-        where: { code },
+      const codeExists = await prisma.productType.findFirst({
+        where: { code, shop_id: session!.user.shop_id! },
       });
 
       if (codeExists) {
