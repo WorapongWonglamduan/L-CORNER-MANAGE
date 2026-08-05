@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { requirePermission } from "@/lib/permissions";
-import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 // GET /api/product-types/[id] - ดึงข้อมูลประเภทสินค้าตาม ID
 export async function GET(
@@ -42,126 +41,23 @@ export async function GET(
   }
 }
 
-// PUT /api/product-types/[id] - อัพเดทข้อมูลประเภทสินค้า
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    const denied = requirePermission(session, "settings.update");
-    if (denied) return denied;
-
-    const { id } = await params;
-    const body = await request.json();
-    const { code, name_i18n, icon, type, sort_order, is_active } = body;
-
-    // Check if product type exists
-    const existing = await prisma.productType.findFirst({
-      where: { id, shop_id: session!.user.shop_id! },
-    });
-
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Product type not found" },
-        { status: 404 }
-      );
-    }
-
-    // Validate type if provided
-    const validTypes = Object.values(PRODUCTS_TYPES) as string[];
-    if (type && !validTypes.includes(type)) {
-      return NextResponse.json(
-        { error: `Type must be one of: ${validTypes.join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    // Check if code is being changed and if new code already exists within
-    // this shop (code is only unique per shop_id, not system-wide — see
-    // @@unique([shop_id, code]))
-    if (code && code !== existing.code) {
-      const codeExists = await prisma.productType.findFirst({
-        where: { code, shop_id: session!.user.shop_id! },
-      });
-
-      if (codeExists) {
-        return NextResponse.json(
-          { error: "Product type code already exists" },
-          { status: 400 }
-        );
-      }
-    }
-
-    const productType = await prisma.productType.update({
-      where: { id },
-      data: {
-        code: code || existing.code,
-        name_i18n: name_i18n || existing.name_i18n,
-        icon: icon !== undefined ? icon : existing.icon,
-        type: type || existing.type,
-        sort_order: sort_order !== undefined ? parseInt(sort_order) : existing.sort_order,
-        is_active: is_active !== undefined ? is_active : existing.is_active,
-      },
-    });
-
-    return NextResponse.json(productType);
-  } catch (error) {
-    console.error("Error updating product type:", error);
-    return NextResponse.json(
-      { error: "Failed to update product type" },
-      { status: 500 }
-    );
-  }
+// PUT/DELETE /api/product-types/[id] - ปิดการแก้ไข/ลบประเภทสินค้า
+//
+// See POST's comment in ../route.ts: the 4 product types are provisioned
+// once per shop and never change. Editing `type` on a row already in use
+// would silently change recipe/stock behavior for its existing products;
+// deleting one (even an unused row) would put the shop back in the
+// "can't create a product" state this was fixed for. Read-only by design.
+export async function PUT() {
+  return NextResponse.json(
+    { error: "Product types are managed by the system and cannot be edited" },
+    { status: 403 },
+  );
 }
 
-// DELETE /api/product-types/[id] - ลบประเภทสินค้า
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    const denied = requirePermission(session, "settings.update");
-    if (denied) return denied;
-
-    const { id } = await params;
-
-    // Check if product type exists
-    const productType = await prisma.productType.findFirst({
-      where: { id, shop_id: session!.user.shop_id! },
-      include: {
-        _count: {
-          select: { products: true },
-        },
-      },
-    });
-
-    if (!productType) {
-      return NextResponse.json(
-        { error: "Product type not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check if product type has products
-    if (productType._count.products > 0) {
-      return NextResponse.json(
-        { error: "Cannot delete product type with existing products" },
-        { status: 400 }
-      );
-    }
-
-    await prisma.productType.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: "Product type deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting product type:", error);
-    return NextResponse.json(
-      { error: "Failed to delete product type" },
-      { status: 500 }
-    );
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "Product types are managed by the system and cannot be deleted" },
+    { status: 403 },
+  );
 }
