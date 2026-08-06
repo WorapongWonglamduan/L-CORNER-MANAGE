@@ -17,6 +17,45 @@ class AccountLockedError extends CredentialsSignin {
   code = "account_locked";
 }
 
+// How often an already-issued JWT re-syncs roles/permissions/shop/warehouses
+// from the DB. Without this, an admin editing another user's role, shop, or
+// warehouse assignment only takes effect once that user logs out and back
+// in, since the JWT strategy otherwise only reads these fields at sign-in.
+const SESSION_REVALIDATE_INTERVAL_MS = 2 * 60 * 1000;
+
+const userSessionInclude = {
+  user_roles: { include: { role: true } },
+  user_warehouses: { select: { warehouse_id: true } },
+  shop: { select: { name_i18n: true, logo_path: true } },
+} as const;
+
+type UserWithSessionRelations = {
+  shop_id: string | null;
+  is_super_admin: boolean;
+  user_roles: { role: { name: string; permissions: unknown } }[];
+  user_warehouses: { warehouse_id: string }[];
+  shop: { name_i18n: unknown; logo_path: string | null } | null;
+};
+
+function toSessionFields(user: UserWithSessionRelations) {
+  const roles = user.user_roles.map((ur) => ur.role.name);
+  const allPermissions = user.user_roles.flatMap((ur) =>
+    Array.isArray(ur.role.permissions) ? ur.role.permissions : [],
+  );
+  const permissions = [...new Set(allPermissions)] as string[];
+  const warehouse_ids = user.user_warehouses.map((uw) => uw.warehouse_id);
+
+  return {
+    shop_id: user.shop_id,
+    shop_name_i18n: (user.shop?.name_i18n as { th?: string; en?: string } | null) ?? null,
+    shop_logo_path: user.shop?.logo_path ?? null,
+    is_super_admin: user.is_super_admin,
+    roles,
+    permissions,
+    warehouse_ids,
+  };
+}
+
 export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/th/login",
@@ -66,17 +105,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email, is_active: true },
-          include: {
-            user_roles: {
-              include: { role: true },
-            },
-            user_warehouses: {
-              select: { warehouse_id: true },
-            },
-            shop: {
-              select: { name_i18n: true, logo_path: true },
-            },
-          },
+          include: userSessionInclude,
         });
 
         if (!user) {
@@ -92,24 +121,11 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         clearFailedLogins(email);
 
-        const roles = user.user_roles.map((ur) => ur.role.name);
-        const allPermissions = user.user_roles.flatMap((ur) =>
-          Array.isArray(ur.role.permissions) ? ur.role.permissions : [],
-        );
-        const uniquePermissions = [...new Set(allPermissions)] as string[];
-        const warehouseIds = user.user_warehouses.map((uw) => uw.warehouse_id);
-
         return {
           id: user.id,
           name: user.full_name,
           email: user.email,
-          shop_id: user.shop_id,
-          shop_name_i18n: (user.shop?.name_i18n as { th?: string; en?: string } | null) ?? null,
-          shop_logo_path: user.shop?.logo_path ?? null,
-          is_super_admin: user.is_super_admin,
-          roles,
-          permissions: uniquePermissions,
-          warehouse_ids: warehouseIds,
+          ...toSessionFields(user),
         };
       },
     }),
@@ -125,7 +141,35 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         token.roles = user.roles;
         token.permissions = user.permissions;
         token.warehouse_ids = user.warehouse_ids;
+        token.checkedAt = Date.now();
+        return token;
       }
+
+      const checkedAt = token.checkedAt ?? 0;
+      if (Date.now() - checkedAt < SESSION_REVALIDATE_INTERVAL_MS) {
+        return token;
+      }
+
+      // Dynamic import to avoid bundling Prisma into Edge Runtime
+      const { prisma } = await import("./lib/prisma");
+      const dbUser = await prisma.user.findUnique({
+        where: { id: token.id, is_active: true },
+        include: userSessionInclude,
+      });
+
+      // Deactivated or deleted since the token was issued — sign them out
+      // instead of letting them keep operating on stale roles/permissions.
+      if (!dbUser) return null;
+
+      const fields = toSessionFields(dbUser);
+      token.shop_id = fields.shop_id;
+      token.shop_name_i18n = fields.shop_name_i18n;
+      token.shop_logo_path = fields.shop_logo_path;
+      token.is_super_admin = fields.is_super_admin;
+      token.roles = fields.roles;
+      token.permissions = fields.permissions;
+      token.warehouse_ids = fields.warehouse_ids;
+      token.checkedAt = Date.now();
       return token;
     },
     async session({ session, token }) {
