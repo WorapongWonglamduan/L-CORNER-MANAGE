@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
       cost_price,
       is_active,
       media_data,
+      warehouse_ids,
     } = body;
 
     // Validation
@@ -211,6 +212,25 @@ export async function POST(request: NextRequest) {
         product_type: true,
       },
     });
+
+    // A product with no ProductStock row at a warehouse simply hasn't been
+    // stocked there yet (allow-list, not deny-list) — filter to the caller's
+    // own assigned branches so a client can't post a warehouse it has no
+    // access to. Mirrors POST /api/products' warehouse_ids handling.
+    const validWarehouseIds = (
+      Array.isArray(warehouse_ids) ? warehouse_ids : []
+    ).filter((id: string) => session?.user?.warehouse_ids?.includes(id));
+
+    if (validWarehouseIds.length > 0) {
+      await prisma.productStock.createMany({
+        data: validWarehouseIds.map((warehouse_id: string) => ({
+          product_id: product.id,
+          warehouse_id,
+          current_stock: 0,
+          is_active: true,
+        })),
+      });
+    }
 
     // Create ProductMedia relations if media_data provided
     if (media_data && Array.isArray(media_data) && media_data.length > 0) {
