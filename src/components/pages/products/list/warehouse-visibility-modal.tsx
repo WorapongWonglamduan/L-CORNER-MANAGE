@@ -87,6 +87,7 @@ export function WarehouseVisibilityModal({
             : w,
         ),
       );
+      toast.success(nextActive ? t("restoreSuccess") : t("hideSuccess"));
     } catch (error) {
       console.error("Error updating product warehouse visibility:", error);
       toast.error(t("updateError"));
