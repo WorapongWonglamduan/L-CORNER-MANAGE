@@ -63,6 +63,8 @@ export function Sidebar({ userName }: SidebarProps) {
     router.refresh();
   };
 
+  // Items scoped to this shop — every user works within one of these,
+  // gated by their own permissions.
   const allNavItems = [
     {
       href: ROUTES.DASHBOARD(locale),
@@ -101,21 +103,25 @@ export function Sidebar({ userName }: SidebarProps) {
       icon: Settings,
       permission: "settings.view",
     },
-    ...(isSuperAdmin
-      ? [
-          {
-            href: ROUTES.ADMIN.SHOPS(locale),
-            label: tNav("shops"),
-            icon: Building2,
-            permission: null,
-          },
-        ]
-      : []),
   ];
 
   const navItems = allNavItems.filter(
     (item) => !item.permission || permissions.includes(item.permission),
   );
+
+  // Cross-tenant admin console (manages every shop in the system, not this
+  // one) — kept visually separate from the shop-scoped items above rather
+  // than nested under "ตั้งค่า", since it operates at a different scope and
+  // privilege level entirely.
+  const adminNavItems = isSuperAdmin
+    ? [
+        {
+          href: ROUTES.ADMIN.SHOPS(locale),
+          label: tNav("shops"),
+          icon: Building2,
+        },
+      ]
+    : [];
 
   const isActive = (href: string) => pathname === href;
 
@@ -242,6 +248,38 @@ export function Sidebar({ userName }: SidebarProps) {
               </button>
             );
           })}
+
+          {adminNavItems.length > 0 && (
+            <>
+              <div className={`pt-3 mt-3 border-t border-white/10 ${isCollapsed ? "md:hidden" : ""}`}>
+                <p className="px-4 text-xs font-semibold uppercase tracking-wide text-blue-100/70">
+                  {tNav("systemAdmin")}
+                </p>
+              </div>
+              {isCollapsed && <div className="hidden md:block my-3 border-t border-white/10" />}
+              {adminNavItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => router.push(item.href)}
+                    className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                      active
+                        ? "bg-white text-primary font-semibold shadow-lg"
+                        : "text-white hover:bg-white/10"
+                    } ${isCollapsed ? "md:justify-center" : ""}`}
+                    title={isCollapsed ? item.label : undefined}
+                  >
+                    <Icon className="w-5 h-5 shrink-0" />
+                    <span className={`text-sm ${isCollapsed ? "md:hidden" : ""}`}>
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         {/* Bottom Actions */}
