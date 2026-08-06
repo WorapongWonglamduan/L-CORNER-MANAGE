@@ -38,5 +38,7 @@ declare module 'next-auth/jwt' {
     roles: string[]
     permissions: string[]
     warehouse_ids: string[]
+    /** Epoch ms the token's roles/permissions/shop were last re-synced from the DB. */
+    checkedAt?: number
   }
 }
