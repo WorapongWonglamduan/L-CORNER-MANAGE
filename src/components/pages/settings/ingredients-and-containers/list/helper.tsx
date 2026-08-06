@@ -1,12 +1,14 @@
 import { useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { useEntityList } from "@/hooks/useEntityList";
 import { useEntityForm } from "@/hooks/useEntityForm";
 import { useConfirm } from "@/hooks/useConfirm";
 import { FilterOptions } from "@/hooks/usePagination";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PRODUCTS_TYPES } from "@/constants/input-types";
 import { ImageFile } from "@/components/ui/multi-image-upload";
 import type { FilterValues } from "@/components/ui/dynamic-filter-bar";
+import type { WarehouseOption } from "@/components/pages/products/form/helper";
 
 export interface IngredientContainerFormData {
   code: string;
@@ -19,6 +21,7 @@ export interface IngredientContainerFormData {
   cost_price?: number;
   images?: ImageFile[];
   is_active: boolean;
+  warehouse_ids: string[];
 }
 
 interface IngredientContainer {
@@ -98,10 +101,17 @@ interface IngredientsAndContainersFilterOptions extends FilterOptions {
 export function useIngredientsAndContainersManager() {
   const t = useTranslations("settings.ingredientsAndContainers");
   const { confirm, ConfirmDialog } = useConfirm();
+  const { data: session } = useSession();
+  const sessionWarehouseIds = session?.user?.warehouse_ids;
+  const assignedWarehouseIds = useMemo(
+    () => sessionWarehouseIds ?? [],
+    [sessionWarehouseIds],
+  );
   const [optionsData, setOptionsData] = useState<{
     units: Unit[];
     productTypes: ProductType[];
-  }>({ units: [], productTypes: [] });
+    warehouses: WarehouseOption[];
+  }>({ units: [], productTypes: [], warehouses: [] });
   const [dataLoading, setDataLoading] = useState(true);
 
   const {
@@ -136,19 +146,25 @@ export function useIngredientsAndContainersManager() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [unitsRes, productTypesRes] = await Promise.all([
+        const [unitsRes, productTypesRes, warehousesRes] = await Promise.all([
           fetch("/api/units?pageSize=100&isActive=true"),
           fetch(
             `/api/product-types?pageSize=100&isActive=true&type=${PRODUCTS_TYPES.INGREDIENT},${PRODUCTS_TYPES.CONTAINER}`,
           ),
+          fetch("/api/warehouses?pageSize=100&isActive=true"),
         ]);
 
         const unitsData = await unitsRes.json();
         const productTypesData = await productTypesRes.json();
+        const warehousesData = await warehousesRes.json();
+        const allWarehouses: WarehouseOption[] = warehousesData.items || [];
 
         setOptionsData({
           units: unitsData.items || [],
           productTypes: productTypesData.items || [],
+          warehouses: allWarehouses.filter((w) =>
+            assignedWarehouseIds.includes(w.id),
+          ),
         });
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -158,13 +174,14 @@ export function useIngredientsAndContainersManager() {
     };
 
     fetchData();
-  }, []);
+  }, [assignedWarehouseIds]);
 
   const {
     control,
     handleSubmit,
     errors,
     watch,
+    setValue,
     loading: formLoading,
     error: formError,
     editingEntity: editingIngredientContainer,
@@ -188,6 +205,7 @@ export function useIngredientsAndContainersManager() {
         unit_id: "",
         cost_price: 0,
         is_active: true,
+        warehouse_ids: [],
       },
     },
     endpoint: "/api/ingredients-and-containers",
@@ -252,6 +270,7 @@ export function useIngredientsAndContainersManager() {
         cost_price: data.cost_price || null,
         is_active: data.is_active,
         media_data: mediaData,
+        warehouse_ids: data.warehouse_ids,
       };
 
       return payload;
@@ -279,11 +298,22 @@ export function useIngredientsAndContainersManager() {
         cost_price: ingredientContainer.cost_price || 0,
         is_active: ingredientContainer.is_active,
         images: existingImages,
+        warehouse_ids: [],
       };
     },
     onSuccess: refetch,
     confirmDelete: confirm,
   });
+
+  const toggleWarehouseId = (id: string) => {
+    const current = watch("warehouse_ids") || [];
+    setValue(
+      "warehouse_ids",
+      current.includes(id)
+        ? current.filter((w) => w !== id)
+        : [...current, id],
+    );
+  };
 
   return {
     t,
@@ -327,6 +357,8 @@ export function useIngredientsAndContainersManager() {
       dataLoading,
       units: optionsData.units,
       productTypes: optionsData.productTypes,
+      warehouses: optionsData.warehouses,
+      toggleWarehouseId,
     },
   };
 }

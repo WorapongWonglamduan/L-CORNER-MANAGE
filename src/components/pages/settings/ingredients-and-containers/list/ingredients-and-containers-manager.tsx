@@ -1,8 +1,10 @@
 "use client";
 
-import { Plus, Package } from "lucide-react";
+import { useState } from "react";
+import { Plus, Package, Warehouse } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { Input, INPUT_TYPES } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/pagination";
 import { DynamicFilterBar, getSearchAndActiveFilterFields } from "@/components/ui/dynamic-filter-bar";
 import { ActionButtons } from "@/components/ui/action-buttons";
@@ -12,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EntityCardGrid, EntityCard } from "@/components/ui/entity-card-grid";
 import { DetailRow } from "@/components/ui/detail-row";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { WarehouseVisibilityModal } from "@/components/pages/products/list/warehouse-visibility-modal";
 import { useIngredientsAndContainersManager } from "./helper";
 import { getIngredientContainerFormConfig } from "../form/config";
 import { useLocale, useTranslations } from "next-intl";
@@ -20,6 +23,7 @@ import type { Locale } from "@/types/i18n";
 export default function IngredientsAndContainersManager() {
   const locale = useLocale() as Locale;
   const tCommon = useTranslations("common");
+  const tProducts = useTranslations("settings.products");
   const {
     t,
     table: { items: ingredientsAndContainers, loading },
@@ -41,6 +45,7 @@ export default function IngredientsAndContainersManager() {
     form: {
       control: formControl,
       handleSubmit: formHandleSubmit,
+      watch: formWatch,
       errors: formErrors,
       loading: formLoading,
       error: formError,
@@ -48,8 +53,15 @@ export default function IngredientsAndContainersManager() {
       dataLoading,
       units,
       productTypes,
+      warehouses,
+      toggleWarehouseId,
     },
   } = useIngredientsAndContainersManager();
+
+  const [warehouseModalItem, setWarehouseModalItem] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const filterFields = getSearchAndActiveFilterFields(t, tCommon);
 
@@ -127,6 +139,12 @@ export default function IngredientsAndContainersManager() {
                   <ActionButtons
                     onEdit={() => handleEdit(ingredientContainer)}
                     onDelete={() => handleDelete(ingredientContainer.id)}
+                    onManageWarehouses={() =>
+                      setWarehouseModalItem({
+                        id: ingredientContainer.id,
+                        name: ingredientContainer.name_i18n.th,
+                      })
+                    }
                     editTitle={t("edit") || "แก้ไข"}
                     deleteTitle={t("delete") || "ลบ"}
                   />
@@ -215,7 +233,65 @@ export default function IngredientsAndContainersManager() {
         saveText={t("save")}
         savingText={t("saving")}
         maxWidth="3xl"
-      />
+      >
+        {/* Branches (create only — reassigning after creation happens via
+            the "จัดการคลัง" modal above, one place, not two) */}
+        {!editingIngredientContainer && (
+          <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                <Warehouse className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                {tProducts("branchesTitle")}
+              </h3>
+            </div>
+            {warehouses.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {tProducts("warehouses.noWarehouseAssigned")}
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {warehouses.map((warehouse) => {
+                  const selected = (formWatch("warehouse_ids") || []).includes(
+                    warehouse.id,
+                  );
+                  return (
+                    <div
+                      key={warehouse.id}
+                      className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      <Input
+                        inputType={INPUT_TYPES.CHECKBOX}
+                        checked={selected}
+                        onCheckedChange={() => toggleWarehouseId(warehouse.id)}
+                      />
+                      <span
+                        className="text-sm text-gray-900 dark:text-white cursor-pointer"
+                        onClick={() => toggleWarehouseId(warehouse.id)}
+                      >
+                        {warehouse.name_i18n[locale]}{" "}
+                        <span className="text-gray-500 dark:text-gray-400">
+                          ({warehouse.code})
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </EntityDialog>
+
+      {warehouseModalItem && (
+        <WarehouseVisibilityModal
+          productId={warehouseModalItem.id}
+          productName={warehouseModalItem.name}
+          isOpen={!!warehouseModalItem}
+          onClose={() => setWarehouseModalItem(null)}
+        />
+      )}
 
       <ConfirmDialog />
     </div>
