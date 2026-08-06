@@ -122,7 +122,8 @@
     "inventory": "Inventory",
     "reports": "Reports",
     "settings": "Settings",
-    "shops": "Manage Shops"
+    "shops": "Manage Shops",
+    "systemAdmin": "System Administration"
   },
   "notFound": {
     "title": "Page Not Found",
