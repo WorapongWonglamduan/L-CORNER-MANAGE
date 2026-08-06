@@ -399,7 +399,9 @@
         "hide": "Hide",
         "restore": "Restore",
         "hideRequiresZeroStock": "Stock must be 0 first",
-        "updateError": "Failed to update product visibility"
+        "updateError": "Failed to update product visibility",
+        "hideSuccess": "Product hidden from this warehouse",
+        "restoreSuccess": "Product restored to this warehouse"
       }
     },
     "productTypes": {
