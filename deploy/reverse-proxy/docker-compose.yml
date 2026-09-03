@@ -17,6 +17,24 @@ services:
     networks:
       - shared-proxy
 
+  # Only needed on a VPS with no public IP, reached over Cloudflare Tunnel
+  # instead of Caddy's own 80/443 above being internet-facing (see the
+  # Caddyfile's http:// comment) — a VPS with a real public IP doesn't need
+  # this service at all. `./cloudflared/` (config.yml + the tunnel's
+  # credentials .json) is created once by hand on the host, per the tunnel
+  # bootstrap steps in this directory's README, and is gitignored — it's
+  # host-specific and holds the tunnel's credentials, not something to check
+  # in like the Caddyfile.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: shared-cloudflared
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    networks:
+      - shared-proxy
+
 volumes:
   caddy_data:
     driver: local

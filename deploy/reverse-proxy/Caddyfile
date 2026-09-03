@@ -1,4 +1,12 @@
-lcorner.anakodtech.com {
+# This VPS has no public IP (Tailscale-only) — Cloudflare Tunnel is the
+# ingress instead of Caddy binding host ports 80/443 directly (see the
+# cloudflared service in this directory's docker-compose.yml). TLS is
+# terminated at Cloudflare's edge and the tunnel-to-Caddy hop stays plain
+# HTTP inside the shared-proxy Docker network, so every site block below
+# uses an explicit `http://` address — that's what disables Caddy's
+# automatic-HTTPS/ACME behavior (which would otherwise retry forever, since
+# this host can never answer an ACME HTTP-01 challenge from the internet).
+http://lcorner.anakodtech.com {
 	reverse_proxy l-corner-app:3000
 
 	encode gzip
@@ -17,7 +25,7 @@ lcorner.anakodtech.com {
 # UAT copy of this same project — a second docker-compose stack on this same
 # VPS with ENV_SUFFIX=-uat (see env.template), so its app container is named
 # l-corner-app-uat instead of colliding with prod's l-corner-app above.
-uat-lcorner.anakodtech.com {
+http://uat-lcorner.anakodtech.com {
 	reverse_proxy l-corner-app-uat:3000
 
 	encode gzip
