@@ -165,6 +165,18 @@ jobs:
             echo "VPS_DB_DATABASE=${{ vars.UAT_DB_DATABASE || 'l_corner_pos_uat' }}" >> "$GITHUB_ENV"
           fi
 
+      # Postgres and SSH itself are only reachable over Tailscale now (the
+      # VPS has no public IP) — this runner has to join the tailnet before
+      # it can even resolve/route to VPS_HOST, let alone open the tunnel
+      # below. TAILSCALE_AUTHKEY should be a reusable, ephemeral key
+      # (Tailscale admin console → Settings → Keys) so repeated CI runs
+      # don't pile up dead nodes in the tailnet.
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: latest
+
       - name: Open SSH tunnel to the VPS's Postgres
         run: |
           mkdir -p ~/.ssh
@@ -190,6 +202,14 @@ jobs:
     needs: [build-and-push, migrate-db]
     runs-on: ubuntu-latest
     steps:
+      # Same reasoning as migrate-db's Tailscale step above — this runner
+      # needs to be on the tailnet before it can reach VPS_HOST at all.
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: latest
+
       # The VPS needs its own `git pull` (not just a new image) so that
       # docker-compose.yml/Caddyfile changes ship too, not just app code.
       # main -> VPS_APP_DIR (prod); staging -> VPS_APP_DIR_UAT (a second,

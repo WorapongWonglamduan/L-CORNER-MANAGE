@@ -49,3 +49,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .playwright-mcp/
+
+# Cloudflare Tunnel credentials + generated config (see
+# deploy/reverse-proxy/README.md) — host-specific secrets, created once by
+# hand on each VPS that needs it, never checked in.
+/deploy/reverse-proxy/cloudflared/
