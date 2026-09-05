@@ -16,6 +16,7 @@ interface WarehouseRef {
 
 interface StockMovement {
   id: string;
+  product_id: string;
   movement_type: string;
   direction: string;
   quantity_before: string;
@@ -30,6 +31,17 @@ interface StockMovement {
   // field above only tells you which side of the transfer this particular
   // row is; this carries both ends.
   transfer: { from_warehouse: WarehouseRef; to_warehouse: WarehouseRef } | null;
+  // The product this row actually happened to. For a semi-finished
+  // ("ปรุง") product being viewed, the API mixes in its recipe
+  // ingredients' own movements (since selling it deducts them, never the
+  // product's own stock) — those rows carry the ingredient's id/name/unit
+  // here, not the product being viewed, so we can label them correctly.
+  product: {
+    id: string;
+    code: string;
+    name_i18n: { th: string; en: string };
+    base_unit: { abbreviation_i18n: { th: string; en: string } };
+  } | null;
 }
 
 interface StockHistoryModalProps {
@@ -120,7 +132,13 @@ export function StockHistoryModal({
             <EmptyState icon={FileText} label={t("noHistory")} bordered={false} />
           ) : (
             <div className="space-y-4">
-              {movements.map((movement) => (
+              {movements.map((movement) => {
+                // Falls back to the modal's own product unit on the (should
+                // never happen) chance a movement's product_id no longer
+                // resolves to a live product.
+                const rowUnit =
+                  movement.product?.base_unit.abbreviation_i18n[locale] ?? product.unit;
+                return (
                 <div
                   key={movement.id}
                   className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow"
@@ -147,6 +165,18 @@ export function StockHistoryModal({
                           {t(movement.direction === "in" ? "in" : "out")}
                         </span>
                       </div>
+
+                      {/* Ingredient attribution — only shown when this row
+                          is actually about a different product than the one
+                          the modal was opened for (a semi-finished
+                          product's recipe ingredient, mixed in because the
+                          product itself never gets its own movements). */}
+                      {movement.product && movement.product.id !== product.id && (
+                        <p className="text-sm text-gray-700 dark:text-gray-200 mb-2">
+                          <span className="font-medium">{t("ingredient")}:</span>{" "}
+                          {movement.product.code} - {movement.product.name_i18n[locale]}
+                        </p>
+                      )}
 
                       {/* Branch */}
                       {movement.warehouse && (
@@ -200,7 +230,7 @@ export function StockHistoryModal({
                       <div className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">
                         {Number(movement.quantity_before).toLocaleString()}{" "}
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {product.unit}
+                          {rowUnit}
                         </span>
                       </div>
 
@@ -221,13 +251,14 @@ export function StockHistoryModal({
                       <div className="text-lg font-bold text-gray-900 dark:text-white">
                         {Number(movement.quantity_after).toLocaleString()}{" "}
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {product.unit}
+                          {rowUnit}
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

@@ -67,7 +67,8 @@ services:
     container_name: l-corner-app${ENV_SUFFIX:-}
     restart: unless-stopped
     # No host port published here on purpose — the shared reverse-proxy
-    # stack (see deploy/reverse-proxy/) is the only thing that should be
+    # stack (VPS-level infra, managed outside this repo — Caddy + cloudflared
+    # on the shared-proxy network) is the only thing that should be
     # internet-facing. This service is reachable from it via shared-proxy.
     expose:
       - "3000"
@@ -128,10 +129,10 @@ services:
       # l-corner-network: talks to this project's own postgres, invisible to
       # anything outside this compose file.
       # shared-proxy: the one network the reverse-proxy stack also joins, so
-      # it can route pos.yourdomain.com here. Created once on the host with
-      # `docker network create shared-proxy` (see deploy/reverse-proxy/) —
-      # `external: true` means this compose file expects it to already
-      # exist rather than trying to own/create it itself.
+      # it can route this app's hostname here. Created once on the host with
+      # `docker network create shared-proxy` — `external: true` means this
+      # compose file expects it to already exist rather than trying to
+      # own/create it itself.
       - l-corner-network
       - shared-proxy
     depends_on:
@@ -162,8 +163,9 @@ volumes:
 networks:
   l-corner-network:
     driver: bridge
-  # Owned by deploy/reverse-proxy/docker-compose.yml, not this file. Create
-  # it once, by hand, before starting either stack:
+  # Owned by the shared reverse-proxy stack (VPS-level infra, managed
+  # independently of this repo), not this file. Create it once, by hand,
+  # before starting either stack:
   #   docker network create shared-proxy
   shared-proxy:
     external: true
