@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parsePageSize } from "@/lib/pagination";
 import { auth } from "@/auth";
 import { requirePermission, requireWarehouseAccess } from "@/lib/permissions";
+import { PRODUCTS_TYPES } from "@/constants/input-types";
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,18 +27,7 @@ export async function GET(request: NextRequest) {
       if (deniedWarehouse) return deniedWarehouse;
     }
 
-    interface WhereClause {
-      product_id?: string;
-      warehouse_id?: string | { in: string[] };
-      movement_type?: string;
-      direction?: string;
-      transaction_date?: {
-        gte?: Date;
-        lt?: Date;
-      };
-    }
-
-    const where: WhereClause = {};
+    const where: Prisma.StockMovementWhereInput = {};
 
     // A specific branch scopes to it; omitting the param must still scope
     // to every branch this user is assigned to — previously this endpoint
@@ -61,7 +52,40 @@ export async function GET(request: NextRequest) {
     where.warehouse_id = { in: scopedWarehouses.map((w) => w.id) };
 
     if (productId) {
-      where.product_id = productId;
+      // A SEMI_FINISHED ("ปรุง"/recipe) product never gets its own
+      // StockMovement rows on sale — deductStock() in create-sale.ts
+      // deducts its recipe's ingredients instead (see the comment there).
+      // Filtering strictly on product_id for one of these would always
+      // come back empty even right after a sale, which reads as "the sale
+      // never happened" rather than "this product doesn't hold its own
+      // stock". So for a SEMI_FINISHED product, also pull in whichever
+      // ingredient movements were caused by THIS product's own sale items
+      // — reference_type "sale_item" + reference_id pointing at one of
+      // this product's SaleItem rows (set by createCompletedSale, the void
+      // handler, and the refund handler). Movements that touch the
+      // product's own stock directly (production, manual adjustment,
+      // transfer, count) still match via product_id as before.
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { product_type: { select: { type: true } } },
+      });
+
+      if (product?.product_type.type === PRODUCTS_TYPES.SEMI_FINISHED) {
+        const saleItems = await prisma.saleItem.findMany({
+          where: { product_id: productId },
+          select: { id: true },
+        });
+        const saleItemIds = saleItems.map((si) => si.id);
+
+        where.OR = [
+          { product_id: productId },
+          ...(saleItemIds.length > 0
+            ? [{ reference_type: "sale_item", reference_id: { in: saleItemIds } }]
+            : []),
+        ];
+      } else {
+        where.product_id = productId;
+      }
     }
 
     if (movementType) {
@@ -112,8 +136,14 @@ export async function GET(request: NextRequest) {
           .map((m) => m.reference_id as string),
       ),
     ];
+    // A SEMI_FINISHED product's history (above) can mix in rows whose
+    // product_id is actually one of its recipe's ingredients, not the
+    // product being viewed — the client needs each row's own product
+    // name/unit to label those correctly instead of assuming every row is
+    // about the product it opened the modal for.
+    const productIds = [...new Set(movements.map((m) => m.product_id))];
 
-    const [movementWarehouses, transfers] = await Promise.all([
+    const [movementWarehouses, transfers, products] = await Promise.all([
       prisma.warehouse.findMany({
         where: { id: { in: warehouseIds } },
         select: { id: true, code: true, name_i18n: true },
@@ -128,9 +158,19 @@ export async function GET(request: NextRequest) {
             },
           })
         : Promise.resolve([]),
+      prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: {
+          id: true,
+          code: true,
+          name_i18n: true,
+          base_unit: { select: { abbreviation_i18n: true } },
+        },
+      }),
     ]);
     const warehouseById = new Map(movementWarehouses.map((w) => [w.id, w]));
     const transferById = new Map(transfers.map((t) => [t.id, t]));
+    const productById = new Map(products.map((p) => [p.id, p]));
 
     const items = movements.map((movement) => ({
       ...movement,
@@ -139,6 +179,7 @@ export async function GET(request: NextRequest) {
         movement.reference_type === "transfer" && movement.reference_id
           ? transferById.get(movement.reference_id) ?? null
           : null,
+      product: productById.get(movement.product_id) ?? null,
     }));
 
     return NextResponse.json({

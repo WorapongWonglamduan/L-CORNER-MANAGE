@@ -309,8 +309,12 @@ export async function DELETE(
                     quantity_before: currentQty,
                     quantity_change: quantity,
                     quantity_after: newQty,
-                    reference_type: "sale",
-                    reference_id: sale.id,
+                    // Points at the specific line item being voided, not
+                    // the sale as a whole — same convention as the original
+                    // deduction in createCompletedSale, so a shared
+                    // ingredient's history stays attributable per item.
+                    reference_type: "sale_item",
+                    reference_id: item.id,
                     reason_code: "sale_void",
                     reason_text: `ยกเลิกการขาย: ${sale.sale_number}`,
                     created_by: createdBy || "",
@@ -350,8 +354,8 @@ export async function DELETE(
                       quantity_before: currentQty,
                       quantity_change: ingredientQty,
                       quantity_after: newQty,
-                      reference_type: "sale",
-                      reference_id: sale.id,
+                      reference_type: "sale_item",
+                      reference_id: item.id,
                       reason_code: "sale_void",
                       reason_text: `คืนวัตถุดิบจากการยกเลิกการขาย: ${sale.sale_number}`,
                       created_by: createdBy || "",
@@ -380,8 +384,8 @@ export async function DELETE(
                     quantity_before: currentQty,
                     quantity_change: ingredientRequired,
                     quantity_after: newQty,
-                    reference_type: "sale",
-                    reference_id: sale.id,
+                    reference_type: "sale_item",
+                    reference_id: item.id,
                     reason_code: "sale_void",
                     reason_text: `คืนวัตถุดิบ topping จากการยกเลิกการขาย: ${sale.sale_number}`,
                     created_by: createdBy || "",

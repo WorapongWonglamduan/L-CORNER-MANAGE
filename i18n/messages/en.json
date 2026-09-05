@@ -532,6 +532,7 @@
       "title": "Stock Movement History",
       "noHistory": "No movement history",
       "branch": "Branch",
+      "ingredient": "Ingredient consumed",
       "before": "Before",
       "after": "After",
       "reason": "Reason",
