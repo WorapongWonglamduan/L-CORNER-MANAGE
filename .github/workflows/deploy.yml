@@ -211,7 +211,9 @@ jobs:
           version: latest
 
       # The VPS needs its own `git pull` (not just a new image) so that
-      # docker-compose.yml/Caddyfile changes ship too, not just app code.
+      # docker-compose.yml changes ship too, not just app code — the shared
+      # reverse-proxy stack (Caddy/cloudflared) lives outside this repo now,
+      # managed independently on the VPS.
       # main -> VPS_APP_DIR (prod); staging -> VPS_APP_DIR_UAT (a second,
       # separately cloned checkout on the same VPS — see env.template's
       # ENV_SUFFIX/POSTGRES_HOST_PORT/IMAGE_TAG for how it avoids colliding

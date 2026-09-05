@@ -53,7 +53,12 @@ const SALE_DETAIL_INCLUDE = {
 export type SaleDetail = Prisma.SaleGetPayload<{ include: typeof SALE_DETAIL_INCLUDE }>;
 
 interface DeductStockContext {
-  saleId: string;
+  // The specific SaleItem this deduction is attributable to — not the Sale
+  // itself. Two items on the same sale can share an ingredient (e.g. two
+  // drinks both using Water), so attributing at the sale level would make
+  // it impossible to tell which item's sale actually consumed which
+  // movement when reconstructing a single product's history later.
+  saleItemId: string;
   warehouseId: string;
   createdBy: string | null;
   locale: Locale;
@@ -132,7 +137,7 @@ async function deductStock(
   quantity: number,
   ctx: DeductStockContext,
 ) {
-  const { saleId, warehouseId, createdBy, locale, t } = ctx;
+  const { saleItemId, warehouseId, createdBy, locale, t } = ctx;
 
   const product = await tx.product.findUnique({
     where: { id: productId },
@@ -213,8 +218,8 @@ async function deductStock(
         quantity_before: currentQty,
         quantity_change: quantity,
         quantity_after: newQty,
-        reference_type: "sale",
-        reference_id: saleId,
+        reference_type: "sale_item",
+        reference_id: saleItemId,
         reason_code: "sale",
         reason_text: "ขายสินค้า",
         created_by: createdBy || "",
@@ -296,8 +301,8 @@ async function deductStock(
           quantity_before: currentQty,
           quantity_change: ingredientQty,
           quantity_after: newQty,
-          reference_type: "sale",
-          reference_id: saleId,
+          reference_type: "sale_item",
+          reference_id: saleItemId,
           reason_code: "sale",
           reason_text: `ใช้เป็นวัตถุดิบสำหรับสูตร: ${(product.name_i18n as unknown as I18nText)[locale]}`,
           created_by: createdBy || "",
@@ -316,7 +321,7 @@ async function deductToppingStock(
   servings: number,
   ctx: DeductStockContext,
 ) {
-  const { saleId, warehouseId, createdBy, locale, t } = ctx;
+  const { saleItemId, warehouseId, createdBy, locale, t } = ctx;
 
   const topping = await tx.topping.findUnique({
     where: { id: toppingId },
@@ -380,8 +385,8 @@ async function deductToppingStock(
       quantity_before: currentQty,
       quantity_change: required,
       quantity_after: newQty,
-      reference_type: "sale",
-      reference_id: saleId,
+      reference_type: "sale_item",
+      reference_id: saleItemId,
       reason_code: "sale",
       reason_text: `ใช้เป็นวัตถุดิบสำหรับ topping: ${(topping.name_i18n as unknown as I18nText)[locale]}`,
       created_by: createdBy || "",
@@ -849,16 +854,20 @@ export async function createCompletedSale(
       // Deduct stock for each item (and any toppings on it), inside this same
       // transaction so a shortage anywhere rolls back the whole sale (no
       // partial writes, no half-claimed promotion).
-      const deductCtx: DeductStockContext = {
-        saleId: sale.id,
-        warehouseId: warehouse_id,
-        createdBy,
-        locale,
-        t,
-      };
       for (let i = 0; i < sale.items.length; i++) {
         const saleItem = sale.items[i];
         const processed = processedItems[i];
+        // Built per item, not once for the whole sale — reference_id below
+        // needs to point at this specific line item so a shared ingredient
+        // (e.g. Water used by two different drinks in the same sale) stays
+        // attributable to whichever item actually consumed it.
+        const deductCtx: DeductStockContext = {
+          saleItemId: saleItem.id,
+          warehouseId: warehouse_id,
+          createdBy,
+          locale,
+          t,
+        };
         await deductStock(
           tx,
           saleItem.product_id,
